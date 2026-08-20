@@ -16,7 +16,7 @@ export default function Home() {
     setMessages((previous) => [
       ...previous,
       `${guestName}: ${input}`,
-    ]);
+    ].slice(-12));
 
     setInput("");
   };
