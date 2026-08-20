@@ -22,6 +22,8 @@ body {
   font-family: "IBM Plex Mono", monospace;
 }
 
+/* Main page */
+
 .terminal {
   position: relative;
   min-height: 100vh;
@@ -30,6 +32,7 @@ body {
 }
 
 /* CRT scanlines */
+
 .scanlines {
   position: fixed;
   inset: 0;
@@ -45,7 +48,8 @@ body {
   );
 }
 
-/* Slight CRT glow */
+/* CRT glow */
+
 .terminal,
 .terminal a,
 .terminal input,
@@ -53,116 +57,220 @@ body {
   text-shadow: 0 0 5px rgba(0, 255, 200, 0.45);
 }
 
-/* Navigation */
-.navigation {
-  position: fixed;
-  top: 25px;
-  right: 30px;
-  z-index: 10;
-}
+/* Center everything */
 
-.navigation a {
-  color: var(--terminal-color);
-  text-decoration: none;
-  border: 1px solid var(--terminal-color);
-  padding: 10px 14px;
-  display: block;
-  background: rgba(0, 20, 15, 0.8);
-  transition: 0.15s;
-}
-
-.navigation a:hover {
-  background: var(--terminal-color);
-  color: var(--background-color);
-  text-shadow: none;
-}
-
-/* Terminal window */
-.terminal-window {
+.terminal-container {
   width: 100%;
   max-width: 1000px;
-  min-height: 80vh;
-  margin: 70px auto 0;
+  margin: 40px auto;
+
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Shared terminal styling */
+
+.navigation-terminal,
+.terminal-window {
+  width: 100%;
 
   border: 1px solid var(--terminal-color);
-  padding: 25px;
+
+  background: rgba(0, 20, 15, 0.5);
 
   box-shadow:
     0 0 10px rgba(0, 255, 200, 0.15),
     inset 0 0 20px rgba(0, 255, 200, 0.04);
+}
+
+/* Navigation box */
+
+.navigation-terminal {
+  min-height: 130px;
+}
+
+.terminal-title {
+  border-bottom: 1px solid var(--terminal-color);
+
+  padding: 10px 15px;
+
+  font-size: 14px;
+  letter-spacing: 2px;
+}
+
+/* Navigation contents */
+
+.navigation-content {
+  padding: 20px;
+}
+
+.navigation-content a {
+  display: inline-block;
+
+  color: var(--terminal-color);
+  text-decoration: none;
+
+  border: 1px solid var(--terminal-color);
+
+  padding: 10px 14px;
+
+  transition: 0.15s;
+}
+
+.navigation-content a:hover {
+  background: var(--terminal-color);
+  color: var(--background-color);
+
+  text-shadow: none;
+}
+
+
+/* Guest terminal */
+
+.terminal-window {
+  min-height: 65vh;
+
+  padding-bottom: 20px;
 
   display: flex;
   flex-direction: column;
 }
 
-/* Terminal text */
+/* Output */
+
 .terminal-output {
   flex: 1;
+
+  padding: 20px;
+
   line-height: 1.6;
+
   white-space: pre-wrap;
+
+  overflow-y: auto;
 }
+
 
 /* Command line */
+
 .terminal-input {
   display: flex;
+
   align-items: center;
+
   gap: 8px;
-  margin-top: 25px;
-  border-top: 1px solid rgba(0, 255, 200, 0.3);
+
+  margin: 0 20px;
+
   padding-top: 15px;
+
+  border-top: 1px solid rgba(0, 255, 200, 0.3);
 }
 
-.terminal-input span {
-  white-space: nowrap;
-}
 
-.terminal-input input {
-  flex: 1;
-  min-width: 0;
+/* Three-character ID */
+
+.guest-id {
+  width: 45px;
 
   background: transparent;
+
   border: none;
+
   outline: none;
 
   color: var(--terminal-color);
+
   font-family: inherit;
+
   font-size: 16px;
+
+  text-transform: uppercase;
+
+  letter-spacing: 2px;
 }
 
-.terminal-input button {
+.guest-id::placeholder {
+  color: rgba(0, 255, 200, 0.5);
+}
+
+
+/* Message input */
+
+.message-input {
+  flex: 1;
+
+  min-width: 0;
+
   background: transparent;
-  border: 1px solid var(--terminal-color);
+
+  border: none;
+
+  outline: none;
+
   color: var(--terminal-color);
 
   font-family: inherit;
+
+  font-size: 16px;
+}
+
+.message-input::placeholder {
+  color: rgba(0, 255, 200, 0.35);
+}
+
+
+/* Enter button */
+
+.terminal-input button {
+  background: transparent;
+
+  border: 1px solid var(--terminal-color);
+
+  color: var(--terminal-color);
+
+  font-family: inherit;
+
   padding: 6px 10px;
+
   cursor: pointer;
 }
 
 .terminal-input button:hover {
   background: var(--terminal-color);
+
   color: var(--background-color);
+
   text-shadow: none;
 }
 
+
 /* Mobile */
+
 @media (max-width: 600px) {
+
   .terminal {
     padding: 15px;
   }
 
-  .navigation {
-    top: 15px;
-    right: 15px;
+  .terminal-container {
+    margin: 20px auto;
   }
 
   .terminal-window {
-    margin-top: 65px;
-    padding: 15px;
-    min-height: 85vh;
+    min-height: 70vh;
+  }
+
+  .terminal-input {
+    margin: 0 15px;
   }
 
   .terminal-input button {
     display: none;
+  }
+
+  .guest-id {
+    width: 40px;
   }
 }
