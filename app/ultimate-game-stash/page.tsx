@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { supabase } from "../../lib/supabase";
+
 import "./ugs.css";
 
 type Game = {
@@ -20,57 +22,62 @@ export default function GameTonics() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    loadGames();
-  }, []);
+    let mounted = true;
 
-  async function loadGames() {
-    setLoading(true);
-    setError("");
+    const loadGames = async () => {
+      const { data, error } = await supabase.storage
+        .from(GAME_BUCKET)
+        .list("", {
+          limit: 1000,
+          sortBy: {
+            column: "name",
+            order: "asc",
+          },
+        });
 
-    const { data, error } = await supabase.storage
-      .from(GAME_BUCKET)
-      .list("", {
-        limit: 1000,
-        sortBy: {
-          column: "name",
-          order: "asc",
-        },
-      });
+      if (!mounted) return;
 
-    if (error) {
-      console.error("GameTonics loading error:", error);
-      setError("Unable to load the GameTonics library.");
-      setLoading(false);
-      return;
-    }
+      if (error) {
+        console.error("Error loading GameTonics:", error);
+        setError("Unable to load the GameTonics library.");
+        setLoading(false);
+        return;
+      }
 
-    if (!data) {
-      setGames([]);
-      setLoading(false);
-      return;
-    }
+      if (!data) {
+        setGames([]);
+        setLoading(false);
+        return;
+      }
 
-    const folders: Game[] = data
-      .filter((item) => {
-        if (!item.name || item.name.startsWith(".")) {
-          return false;
-        }
+      const detectedGames: Game[] = data
+        .filter((item) => {
+          if (!item.name || item.name.startsWith(".")) {
+            return false;
+          }
 
-        return item.id === null;
-      })
-      .map((folder) => ({
-        name: folder.name,
-        path: folder.name,
-      }))
-      .sort((a, b) =>
-        a.name.localeCompare(b.name, undefined, {
-          sensitivity: "base",
+          return item.id === null;
         })
-      );
+        .map((folder) => ({
+          name: folder.name,
+          path: folder.name,
+        }))
+        .sort((a, b) =>
+          a.name.localeCompare(b.name, undefined, {
+            sensitivity: "base",
+          })
+        );
 
-    setGames(folders);
-    setLoading(false);
-  }
+      setGames(detectedGames);
+      setLoading(false);
+    };
+
+    loadGames();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const filteredGames = useMemo(() => {
     const searchTerm = search.trim().toLowerCase();
@@ -92,10 +99,7 @@ export default function GameTonics() {
     });
 
     filteredGames.forEach((game) => {
-      const firstCharacter = game.name
-        .trim()
-        .charAt(0)
-        .toUpperCase();
+      const firstCharacter = game.name.trim().charAt(0).toUpperCase();
 
       if (sections[firstCharacter]) {
         sections[firstCharacter].push(game);
@@ -105,119 +109,162 @@ export default function GameTonics() {
     return sections;
   }, [filteredGames]);
 
-  function openGame(game: Game) {
-    // Game launching will be added later.
+  const handleGameClick = (game: Game) => {
+    /*
+     * Game launching will be added later.
+     *
+     * For now, the button simply behaves like
+     * the navigation buttons on the home page.
+     */
     console.log("Selected GameTonics game:", game.path);
-  }
+  };
 
   return (
-    <main className="terminal-page">
-      <div className="crt-overlay" />
+    <main className="terminal">
+      <div className="scanlines" />
 
-      <section className="terminal-window">
-        <header className="terminal-header">
+      <div className="terminal-container">
+
+        {/* Navigation Terminal */}
+
+        <section className="navigation-terminal">
           <div className="terminal-title">
-            ABYSSAL BAR // GAMETONICS
+            GAMETONICS
           </div>
 
-          <div className="terminal-status">
-            ONLINE
+          <div className="navigation-content">
+            <Link href="/">
+              ABYSSAL BAR
+            </Link>
           </div>
-        </header>
+        </section>
 
-        <div className="terminal-body">
-          <div className="terminal-intro">
-            <div>&gt; GAMETONICS LIBRARY</div>
-            <div>&gt; SEARCHING GAME DATABASE...</div>
 
-            {!loading && !error && (
-              <div>
-                &gt; {games.length} GAME
-                {games.length === 1 ? "" : "S"} FOUND
-              </div>
-            )}
+        {/* GameTonics Terminal */}
+
+        <section className="terminal-window">
+
+          <div className="terminal-title">
+            GAMETONICS GAME LIBRARY
           </div>
 
-          <div className="terminal-search">
+
+          {/* Search */}
+
+          <div className="gametonics-search">
+
             <span>&gt;</span>
 
             <input
               type="text"
               value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="SEARCH GAMES"
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search games..."
               autoComplete="off"
               spellCheck={false}
+              aria-label="Search games"
             />
 
-            <span className="cursor-block" />
           </div>
 
-          {loading && (
-            <div className="terminal-message">
-              &gt; LOADING...
-            </div>
-          )}
 
-          {!loading && error && (
-            <div className="terminal-message terminal-error">
-              &gt; ERROR: {error}
-            </div>
-          )}
+          {/* Library */}
 
-          {!loading && !error && games.length === 0 && (
-            <div className="terminal-message">
-              &gt; NO GAMES HAVE BEEN ADDED YET.
-            </div>
-          )}
+          <div className="game-output">
 
-          {!loading && !error && games.length > 0 && (
-            <div className="game-library">
-              {alphabet.map((letter) => {
-                const letterGames = gamesByLetter[letter];
+            {loading && (
+              <p>
+                Loading GameTonics...
+              </p>
+            )}
 
-                if (letterGames.length === 0) {
-                  return null;
-                }
 
-                return (
-                  <section
-                    key={letter}
-                    className="game-letter-section"
-                  >
-                    <div className="letter-line">
-                      <span>[ {letter} ]</span>
-                    </div>
+            {!loading && error && (
+              <p>
+                {error}
+              </p>
+            )}
 
-                    <div className="game-list">
-                      {letterGames.map((game) => (
-                        <button
-                          key={game.path}
-                          className="game-button"
-                          onClick={() => openGame(game)}
-                        >
-                          <span className="game-prompt">
-                            &gt;
-                          </span>
 
-                          <span className="game-name">
+            {!loading && !error && games.length === 0 && (
+              <p>
+                No games have been added yet.
+              </p>
+            )}
+
+
+            {!loading && !error && games.length > 0 && (
+              <>
+                <p>
+                  {filteredGames.length}{" "}
+                  {filteredGames.length === 1
+                    ? "game"
+                    : "games"}{" "}
+                  found.
+                </p>
+
+                <p>
+                  &nbsp;
+                </p>
+
+
+                {alphabet.map((letter) => {
+
+                  const letterGames =
+                    gamesByLetter[letter];
+
+                  if (letterGames.length === 0) {
+                    return null;
+                  }
+
+                  return (
+                    <section
+                      key={letter}
+                      className="game-letter-section"
+                    >
+
+                      <p className="letter-heading">
+                        [{letter}]
+                      </p>
+
+
+                      <div className="game-list">
+
+                        {letterGames.map((game) => (
+
+                          <button
+                            key={game.path}
+                            className="game-button"
+                            onClick={() =>
+                              handleGameClick(game)
+                            }
+                          >
                             {game.name}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  </section>
-                );
-              })}
-            </div>
-          )}
+                          </button>
 
-          <div className="terminal-footer">
-            <span>&gt; SELECT A GAME</span>
-            <span className="footer-cursor">_</span>
+                        ))}
+
+                      </div>
+
+                    </section>
+                  );
+
+                })}
+              </>
+            )}
+
           </div>
-        </div>
-      </section>
+
+
+          {/* Terminal Footer */}
+
+          <div className="gametonics-footer">
+            &gt; SELECT A GAME
+          </div>
+
+        </section>
+
+      </div>
     </main>
   );
 }
