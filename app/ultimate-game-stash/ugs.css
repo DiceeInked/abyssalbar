@@ -1,13 +1,8 @@
-@import url("https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap");
 
 :root {
   --terminal-color: #00ffc8;
-  --terminal-background: #001411;
-  --terminal-panel: #001b17;
-  --terminal-panel-light: #00231e;
-  --terminal-border: rgba(0, 255, 200, 0.38);
-  --terminal-border-strong: rgba(0, 255, 200, 0.65);
-  --terminal-glow: rgba(0, 255, 200, 0.18);
+  --background-color: #00140f;
 }
 
 * {
@@ -22,320 +17,194 @@ body {
 }
 
 body {
-  background: var(--terminal-background);
+  background: var(--background-color);
   color: var(--terminal-color);
-  font-family: "JetBrains Mono", "Courier New", monospace;
+  font-family: "IBM Plex Mono", monospace;
 }
 
-button,
-input {
-  font-family: inherit;
-}
+/* Main page */
 
-/* -------------------------------------------------- */
-/* MAIN PAGE                                           */
-/* -------------------------------------------------- */
-
-.terminal-page {
+.terminal {
   position: relative;
-
   min-height: 100vh;
-
-  padding: 24px;
-
-  background:
-    radial-gradient(
-      circle at 50% 30%,
-      #00241f 0%,
-      #001713 45%,
-      #000c0a 100%
-    );
-
-  overflow-x: hidden;
-}
-
-/* -------------------------------------------------- */
-/* CRT EFFECT                                          */
-/* -------------------------------------------------- */
-
-.crt-overlay {
-  position: fixed;
-
-  inset: 0;
-
-  pointer-events: none;
-
-  z-index: 100;
-
-  background:
-    repeating-linear-gradient(
-      to bottom,
-      rgba(0, 255, 200, 0.018) 0px,
-      rgba(0, 255, 200, 0.018) 1px,
-      transparent 1px,
-      transparent 4px
-    );
-
-  opacity: 0.65;
-}
-
-/* -------------------------------------------------- */
-/* TERMINAL WINDOW                                     */
-/* -------------------------------------------------- */
-
-.terminal-window {
-  position: relative;
-
-  width: min(100%, 1000px);
-
-  min-height: calc(100vh - 48px);
-
-  margin: 0 auto;
-
-  display: flex;
-
-  flex-direction: column;
-
-  background:
-    linear-gradient(
-      180deg,
-      rgba(0, 35, 29, 0.96),
-      rgba(0, 19, 16, 0.98)
-    );
-
-  border: 1px solid var(--terminal-border-strong);
-
-  border-radius: 14px;
-
-  box-shadow:
-    0 0 20px rgba(0, 255, 200, 0.08),
-    inset 0 0 30px rgba(0, 255, 200, 0.025);
-
+  padding: 30px;
   overflow: hidden;
 }
 
-/* -------------------------------------------------- */
-/* HEADER                                              */
-/* -------------------------------------------------- */
+/* CRT scanlines */
 
-.terminal-header {
+.scanlines {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 100;
+
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 255, 200, 0.025) 0px,
+    rgba(0, 255, 200, 0.025) 1px,
+    transparent 1px,
+    transparent 4px
+  );
+}
+
+/* CRT glow */
+
+.terminal,
+.terminal a,
+.terminal input,
+.terminal button {
+  text-shadow: 0 0 5px rgba(0, 255, 200, 0.45);
+}
+
+/* Center everything */
+
+.terminal-container {
+  width: 100%;
+  max-width: 1000px;
+  margin: 40px auto;
+
   display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
 
-  align-items: center;
+/* Shared terminal styling */
 
-  justify-content: space-between;
+.navigation-terminal,
+.terminal-window {
+  width: 100%;
 
-  min-height: 54px;
+  border: 1px solid var(--terminal-color);
 
-  padding: 0 20px;
+  background: rgba(0, 20, 15, 0.5);
 
-  border-bottom: 1px solid var(--terminal-border);
+  box-shadow:
+    0 0 10px rgba(0, 255, 200, 0.15),
+    inset 0 0 20px rgba(0, 255, 200, 0.04);
+}
 
-  background:
-    rgba(0, 255, 200, 0.035);
+/* Navigation box */
+
+.navigation-terminal {
+  min-height: 130px;
 }
 
 .terminal-title {
+  border-bottom: 1px solid var(--terminal-color);
+
+  padding: 10px 15px;
+
   font-size: 14px;
+  letter-spacing: 2px;
+}
 
-  font-weight: 600;
+/* Navigation contents */
 
-  letter-spacing: 0.5px;
+.navigation-content {
+  padding: 20px;
+}
+
+.navigation-content a {
+  display: inline-block;
 
   color: var(--terminal-color);
+  text-decoration: none;
+
+  border: 1px solid var(--terminal-color);
+
+  padding: 10px 14px;
+
+  transition: 0.15s;
 }
 
-.terminal-status {
-  font-size: 11px;
+.navigation-content a:hover {
+  background: var(--terminal-color);
+  color: var(--background-color);
 
-  opacity: 0.65;
-
-  letter-spacing: 0.5px;
+  text-shadow: none;
 }
 
-/* -------------------------------------------------- */
-/* BODY                                                */
-/* -------------------------------------------------- */
+/* GameTonics terminal */
 
-.terminal-body {
-  flex: 1;
+.terminal-window {
+  min-height: 65vh;
 
-  padding: 24px;
+  padding-bottom: 20px;
 
-  overflow-y: auto;
-
-  scrollbar-width: thin;
-
-  scrollbar-color:
-    rgba(0, 255, 200, 0.35)
-    transparent;
+  display: flex;
+  flex-direction: column;
 }
 
-.terminal-body::-webkit-scrollbar {
-  width: 7px;
-}
+/* Search */
 
-.terminal-body::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.terminal-body::-webkit-scrollbar-thumb {
-  background: rgba(0, 255, 200, 0.28);
-
-  border-radius: 10px;
-}
-
-.terminal-body::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 255, 200, 0.45);
-}
-
-/* -------------------------------------------------- */
-/* INTRO                                               */
-/* -------------------------------------------------- */
-
-.terminal-intro {
-  margin-bottom: 22px;
-
-  line-height: 1.75;
-
-  font-size: 13px;
-
-  opacity: 0.82;
-}
-
-/* -------------------------------------------------- */
-/* SEARCH                                              */
-/* -------------------------------------------------- */
-
-.terminal-search {
+.gametonics-search {
   display: flex;
 
   align-items: center;
 
-  gap: 9px;
+  gap: 8px;
 
-  width: 100%;
+  margin: 20px 20px 0;
 
-  margin-bottom: 28px;
+  padding: 10px 0;
 
-  padding: 10px 12px;
-
-  background:
-    rgba(0, 0, 0, 0.18);
-
-  border: 1px solid var(--terminal-border);
-
-  border-radius: 7px;
-
-  transition:
-    border-color 0.15s ease,
-    background 0.15s ease;
+  border-bottom: 1px solid rgba(0, 255, 200, 0.3);
 }
 
-.terminal-search:focus-within {
-  border-color: var(--terminal-border-strong);
-
-  background:
-    rgba(0, 255, 200, 0.035);
+.gametonics-search span {
+  flex: 0 0 auto;
 }
 
-.terminal-search > span:first-child {
-  opacity: 0.7;
-}
-
-.terminal-search input {
+.gametonics-search input {
   flex: 1;
 
   min-width: 0;
+
+  background: transparent;
 
   border: none;
 
   outline: none;
 
-  background: transparent;
-
   color: var(--terminal-color);
 
-  font-size: 13px;
+  font-family: inherit;
 
-  caret-color: var(--terminal-color);
+  font-size: 16px;
 }
 
-.terminal-search input::placeholder {
-  color: rgba(0, 255, 200, 0.38);
+.gametonics-search input::placeholder {
+  color: rgba(0, 255, 200, 0.35);
 }
 
-/*
- * No blinking cursor here.
- *
- * The normal text caret from the input is enough.
- */
+/* Game output */
 
-.cursor-block {
-  display: none;
+.game-output {
+  flex: 1;
+
+  padding: 20px;
+
+  line-height: 1.6;
+
+  white-space: normal;
+
+  overflow-y: auto;
 }
 
-/* -------------------------------------------------- */
-/* STATUS MESSAGES                                     */
-/* -------------------------------------------------- */
-
-.terminal-message {
-  padding: 14px;
-
-  border: 1px solid var(--terminal-border);
-
-  border-radius: 7px;
-
-  background: rgba(0, 0, 0, 0.15);
-
-  font-size: 13px;
-}
-
-.terminal-error {
-  color: #ff7777;
-
-  border-color: rgba(255, 100, 100, 0.4);
-}
-
-/* -------------------------------------------------- */
-/* GAME LIBRARY                                        */
-/* -------------------------------------------------- */
-
-.game-library {
-  display: flex;
-
-  flex-direction: column;
-
-  gap: 28px;
-}
+/* Letter sections */
 
 .game-letter-section {
-  width: 100%;
+  margin-top: 24px;
 }
 
-.letter-line {
-  display: flex;
-
-  align-items: center;
-
-  margin-bottom: 10px;
-
-  padding: 6px 10px;
-
-  border-bottom: 1px solid var(--terminal-border);
-
-  color: var(--terminal-color);
-
-  font-size: 12px;
-
-  font-weight: 600;
+.letter-heading {
+  margin: 0 0 10px;
 
   opacity: 0.8;
 }
 
-/* -------------------------------------------------- */
-/* GAME BUTTONS                                        */
-/* -------------------------------------------------- */
+/* Game buttons */
 
 .game-list {
   display: flex;
@@ -344,180 +213,87 @@ input {
 
   align-items: flex-start;
 
-  gap: 7px;
+  gap: 8px;
 }
 
 .game-button {
-  display: inline-flex;
+  display: inline-block;
 
-  align-items: center;
+  background: transparent;
 
-  gap: 9px;
-
-  width: auto;
-
-  max-width: 100%;
-
-  padding: 9px 13px;
-
-  border: 1px solid var(--terminal-border);
-
-  border-radius: 7px;
-
-  background:
-    rgba(0, 255, 200, 0.035);
+  border: 1px solid var(--terminal-color);
 
   color: var(--terminal-color);
 
-  font-size: 13px;
+  font-family: inherit;
 
-  line-height: 1.4;
+  font-size: 15px;
 
-  text-align: left;
+  padding: 10px 14px;
 
   cursor: pointer;
 
-  transition:
-    background 0.12s ease,
-    border-color 0.12s ease,
-    transform 0.08s ease;
+  text-align: left;
+
+  transition: 0.15s;
 }
 
 .game-button:hover {
-  background:
-    rgba(0, 255, 200, 0.085);
+  background: var(--terminal-color);
 
-  border-color:
-    var(--terminal-border-strong);
+  color: var(--background-color);
+
+  text-shadow: none;
 }
 
 .game-button:active {
   transform: translateY(2px);
-
-  background:
-    rgba(0, 255, 200, 0.12);
 }
 
-.game-button:focus-visible {
-  outline: 1px solid var(--terminal-color);
+/* Footer */
 
-  outline-offset: 2px;
+.gametonics-footer {
+  margin: 0 20px;
+
+  padding-top: 15px;
+
+  border-top: 1px solid rgba(0, 255, 200, 0.3);
 }
 
-.game-prompt {
-  opacity: 0.55;
-}
+/* Mobile */
 
-.game-name {
-  overflow-wrap: anywhere;
-}
-
-/* -------------------------------------------------- */
-/* FOOTER                                              */
-/* -------------------------------------------------- */
-
-.terminal-footer {
-  display: flex;
-
-  align-items: center;
-
-  margin-top: 34px;
-
-  padding-top: 16px;
-
-  border-top: 1px solid var(--terminal-border);
-
-  font-size: 12px;
-
-  opacity: 0.72;
-}
-
-.footer-cursor {
-  margin-left: 3px;
-
-  opacity: 0.8;
-
-  animation: footer-cursor-blink 1.1s steps(2, start) infinite;
-}
-
-@keyframes footer-cursor-blink {
-  50% {
-    opacity: 0;
+@media (max-width: 600px) {
+  .terminal {
+    padding: 15px;
   }
-}
 
-/* -------------------------------------------------- */
-/* MOBILE                                              */
-/* -------------------------------------------------- */
-
-@media (max-width: 700px) {
-  .terminal-page {
-    padding: 8px;
+  .terminal-container {
+    margin: 20px auto;
   }
 
   .terminal-window {
-    min-height: calc(100vh - 16px);
-
-    border-radius: 11px;
+    min-height: 70vh;
   }
 
-  .terminal-header {
-    min-height: 48px;
-
-    padding: 0 14px;
+  .game-output {
+    padding: 15px;
   }
 
-  .terminal-title {
-    font-size: 11px;
+  .gametonics-search {
+    margin: 15px 15px 0;
   }
 
-  .terminal-status {
-    font-size: 9px;
-  }
-
-  .terminal-body {
-    padding: 17px 13px;
-  }
-
-  .terminal-intro {
-    font-size: 11px;
-  }
-
-  .terminal-search {
-    padding: 9px 10px;
-  }
-
-  .terminal-search input {
-    font-size: 12px;
+  .gametonics-search input {
+    font-size: 14px;
   }
 
   .game-button {
-    max-width: 100%;
+    font-size: 14px;
 
     padding: 9px 12px;
-
-    font-size: 12px;
   }
 
-  .letter-line {
-    font-size: 11px;
-  }
-
-  .terminal-footer {
-    font-size: 10px;
-  }
-}
-
-/* -------------------------------------------------- */
-/* ACCESSIBILITY                                       */
-/* -------------------------------------------------- */
-
-@media (prefers-reduced-motion: reduce) {
-  .footer-cursor {
-    animation: none;
-  }
-
-  .game-button {
-    transition: none;
+  .gametonics-footer {
+    margin: 0 15px;
   }
 }
