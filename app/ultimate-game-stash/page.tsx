@@ -56,7 +56,6 @@ export default function GameTonics() {
           return false;
         }
 
-        // Supabase folder entries have a null id.
         return item.id === null;
       })
       .map((folder) => ({
@@ -106,125 +105,119 @@ export default function GameTonics() {
     return sections;
   }, [filteredGames]);
 
-  function scrollToLetter(letter: string) {
-    document
-      .getElementById(`letter-${letter}`)
-      ?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-  }
-
   function openGame(game: Game) {
-    /*
-     * We will finish the game-launching system after
-     * testing the first game format.
-     *
-     * Supabase currently serves HTML files as plain text,
-     * so we don't want to assume that opening index.html
-     * directly will work correctly.
-     */
+    // Game launching will be added later.
     console.log("Selected GameTonics game:", game.path);
   }
 
   return (
-    <main className="ugs-page">
-      <div className="ugs-scanlines" />
+    <main className="terminal-page">
+      <div className="crt-overlay" />
 
-      <aside className="ugs-sidebar">
-        {alphabet.map((letter) => (
-          <button
-            key={letter}
-            className="ugs-sidebar-btn"
-            onClick={() => scrollToLetter(letter)}
-          >
-            {letter}
-          </button>
-        ))}
-      </aside>
+      <section className="terminal-window">
+        <header className="terminal-header">
+          <div className="terminal-title">
+            ABYSSAL BAR // GAMETONICS
+          </div>
 
-      <div className="ugs-main-content">
-        <h1>GAMETONICS</h1>
+          <div className="terminal-status">
+            ONLINE
+          </div>
+        </header>
 
-        <h2 className="ugs-subtitle">
-          Abyssal Bar Game Library
-        </h2>
+        <div className="terminal-body">
+          <div className="terminal-intro">
+            <div>&gt; GAMETONICS LIBRARY</div>
+            <div>&gt; SEARCHING GAME DATABASE...</div>
 
-        <div className="ugs-search-container">
-          <input
-            type="text"
-            placeholder="Search..."
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            className="ugs-search"
-            autoComplete="off"
-            spellCheck="false"
-          />
+            {!loading && !error && (
+              <div>
+                &gt; {games.length} GAME
+                {games.length === 1 ? "" : "S"} FOUND
+              </div>
+            )}
+          </div>
+
+          <div className="terminal-search">
+            <span>&gt;</span>
+
+            <input
+              type="text"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="SEARCH GAMES"
+              autoComplete="off"
+              spellCheck={false}
+            />
+
+            <span className="cursor-block" />
+          </div>
+
+          {loading && (
+            <div className="terminal-message">
+              &gt; LOADING...
+            </div>
+          )}
+
+          {!loading && error && (
+            <div className="terminal-message terminal-error">
+              &gt; ERROR: {error}
+            </div>
+          )}
+
+          {!loading && !error && games.length === 0 && (
+            <div className="terminal-message">
+              &gt; NO GAMES HAVE BEEN ADDED YET.
+            </div>
+          )}
+
+          {!loading && !error && games.length > 0 && (
+            <div className="game-library">
+              {alphabet.map((letter) => {
+                const letterGames = gamesByLetter[letter];
+
+                if (letterGames.length === 0) {
+                  return null;
+                }
+
+                return (
+                  <section
+                    key={letter}
+                    className="game-letter-section"
+                  >
+                    <div className="letter-line">
+                      <span>[ {letter} ]</span>
+                    </div>
+
+                    <div className="game-list">
+                      {letterGames.map((game) => (
+                        <button
+                          key={game.path}
+                          className="game-button"
+                          onClick={() => openGame(game)}
+                        >
+                          <span className="game-prompt">
+                            &gt;
+                          </span>
+
+                          <span className="game-name">
+                            {game.name}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </section>
+                );
+              })}
+            </div>
+          )}
+
+          <div className="terminal-footer">
+            <span>&gt; SELECT A GAME</span>
+            <span className="footer-cursor">_</span>
+          </div>
         </div>
-
-        {loading && (
-          <div className="ugs-status">
-            Loading GameTonics library...
-          </div>
-        )}
-
-        {!loading && error && (
-          <div className="ugs-status ugs-error">
-            {error}
-          </div>
-        )}
-
-        {!loading && !error && games.length === 0 && (
-          <div className="ugs-status">
-            No games have been added yet.
-          </div>
-        )}
-
-        {!loading && !error && games.length > 0 && (
-          <div className="ugs-status">
-            {filteredGames.length} game
-            {filteredGames.length === 1 ? "" : "s"} found.
-          </div>
-        )}
-
-        <div className="ugs-sections-container">
-          {alphabet.map((letter) => {
-            const letterGames = gamesByLetter[letter];
-
-            return (
-              <section
-                key={letter}
-                id={`letter-${letter}`}
-                className={`ugs-letter-section ${
-                  letterGames.length === 0 ? "empty" : ""
-                }`}
-              >
-                <h2 className="ugs-letter-header">
-                  {letter}
-                </h2>
-
-                {letterGames.length > 0 ? (
-                  <div className="ugs-buttons-container">
-                    {letterGames.map((game) => (
-                      <button
-                        key={game.path}
-                        className="ugs-game-button"
-                        onClick={() => openGame(game)}
-                      >
-                        {game.name}
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="ugs-empty-message">
-                    No games.
-                  </div>
-                )}
-              </section>
-            );
-          })}
-        </div>
-      </div>
+      </section>
     </main>
   );
 }
