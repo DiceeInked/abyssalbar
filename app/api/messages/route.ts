@@ -1,8 +1,7 @@
-import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { NextResponse } from "next/server";
 import { supabase } from "../../../lib/supabase";
-
-const SESSION_COOKIE = "abyssal_session";
+import { SESSION_COOKIE } from "../../../lib/constants";
 
 export async function POST(request: Request) {
   try {
@@ -12,7 +11,10 @@ export async function POST(request: Request) {
     const token = cookieStore.get(SESSION_COOKIE)?.value;
 
     if (!token) {
-      return NextResponse.json({ error: "You must be signed in." }, { status: 401 });
+      return NextResponse.json(
+        { error: "You must be signed in." },
+        { status: 401 }
+      );
     }
 
     const { data, error } = await supabase.rpc("send_account_message", {
