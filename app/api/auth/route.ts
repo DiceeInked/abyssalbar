@@ -4,6 +4,17 @@ import { supabase } from "../../../lib/supabase";
 
 const SESSION_COOKIE = "abyssal_session";
 
+const setSessionCookie = async (token: string) => {
+  const cookieStore = await cookies();
+  cookieStore.set(SESSION_COOKIE, token, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 60 * 60 * 24 * 30,
+  });
+};
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -12,16 +23,48 @@ export async function POST(request: Request) {
     const password = typeof body?.password === "string" ? body.password : "";
 
     if (action === "sign_up") {
-      const { data, error } = await supabase.rpc("create_account", {
-        p_username: username,
-        p_password: password,
-      });
+      const { data: account, error: createError } = await supabase.rpc(
+        "create_account",
+        {
+          p_username: username,
+          p_password: password,
+        }
+      );
 
-      if (error) {
-        return NextResponse.json({ error: error.message }, { status: 400 });
+      if (createError) {
+        return NextResponse.json(
+          { error: createError.message },
+          { status: 400 }
+        );
       }
 
-      return NextResponse.json({ account: data });
+      // Sign the new account in immediately so /sign up leaves the user logged in.
+      const { data: session, error: sessionError } = await supabase.rpc(
+        "create_account_session",
+        {
+          p_username: username,
+          p_password: password,
+        }
+      );
+
+      if (sessionError || !session) {
+        return NextResponse.json(
+          { error: sessionError?.message ?? "Account created, but sign-in failed." },
+          { status: 500 }
+        );
+      }
+
+      const result = session as {
+        token: string;
+        id: string;
+        username: string;
+      };
+
+      await setSessionCookie(result.token);
+
+      return NextResponse.json({
+        account: account,
+      });
     }
 
     if (action === "sign_in") {
@@ -40,14 +83,7 @@ export async function POST(request: Request) {
         username: string;
       };
 
-      const cookieStore = await cookies();
-      cookieStore.set(SESSION_COOKIE, result.token, {
-        httpOnly: true,
-        sameSite: "lax",
-        secure: process.env.NODE_ENV === "production",
-        path: "/",
-        maxAge: 60 * 60 * 24 * 30,
-      });
+      await setSessionCookie(result.token);
 
       return NextResponse.json({
         account: {
@@ -78,7 +114,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: true });
     }
 
-    return NextResponse.json({ error: "Unknown authentication action." }, { status: 400 });
+    return NextResponse.json(
+      { error: "Unknown authentication action." },
+      { status: 400 }
+    );
   } catch {
     return NextResponse.json({ error: "Invalid request." }, { status: 400 });
   }
