@@ -47,11 +47,12 @@ input {
   pointer-events: none;
   background: repeating-linear-gradient(
     to bottom,
-    rgba(0, 255, 200, 0.025) 0px,
-    rgba(0, 255, 200, 0.025) 1px,
-    transparent 1px,
-    transparent 4px
+    rgba(0, 255, 200, 0.055) 0px,
+    rgba(0, 255, 200, 0.055) 2px,
+    rgba(0, 20, 15, 0.035) 2px,
+    rgba(0, 20, 15, 0.035) 4px
   );
+  mix-blend-mode: screen;
 }
 
 .terminal-container {
