@@ -1,198 +1,22 @@
-@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap");
-
-:root {
-  --terminal-color: #00ffc8;
-  --background-color: #00140f;
-}
-
-* {
-  box-sizing: border-box;
-}
-
-html,
-body {
-  margin: 0;
-  padding: 0;
-  min-height: 100%;
-}
-
-body {
-  background: var(--background-color);
-  color: var(--terminal-color);
-  font-family: "IBM Plex Mono", monospace;
-}
-
-/* Main page */
-
-.terminal {
-  position: relative;
-  min-height: 100vh;
-  padding: 30px;
-  overflow: hidden;
-}
-
-/* CRT scanlines */
-
-.scanlines {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  z-index: 100;
-
-  background: repeating-linear-gradient(
-    to bottom,
-    rgba(0, 255, 200, 0.025) 0px,
-    rgba(0, 255, 200, 0.025) 1px,
-    transparent 1px,
-    transparent 4px
-  );
-}
-
-/* CRT glow */
-
-.terminal,
-.terminal a,
-.terminal input,
-.terminal button {
-  text-shadow: 0 0 5px rgba(0, 255, 200, 0.45);
-}
-
-/* Center everything */
-
-.terminal-container {
-  width: 100%;
-  max-width: 1000px;
-  margin: 40px auto;
-
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-/* Shared terminal styling */
-
-.navigation-terminal,
-.terminal-window {
-  width: 100%;
-
-  border: 1px solid var(--terminal-color);
-
-  background: rgba(0, 20, 15, 0.5);
-
-  box-shadow:
-    0 0 10px rgba(0, 255, 200, 0.15),
-    inset 0 0 20px rgba(0, 255, 200, 0.04);
-}
-
-/* Navigation box */
-
-.navigation-terminal {
-  min-height: 130px;
-}
-
-.terminal-title {
-  border-bottom: 1px solid var(--terminal-color);
-
-  padding: 10px 15px;
-
-  font-size: 14px;
-  letter-spacing: 2px;
-}
-
-/* Navigation contents */
-
-.navigation-content {
-  padding: 20px;
-}
-
-.navigation-content a {
-  display: inline-block;
-
-  color: var(--terminal-color);
-  text-decoration: none;
-
-  border: 1px solid var(--terminal-color);
-
-  padding: 10px 14px;
-
-  transition: 0.15s;
-}
-
-.navigation-content a:hover {
-  background: var(--terminal-color);
-  color: var(--background-color);
-
-  text-shadow: none;
-}
-
-/* GameTonics terminal */
-
-.terminal-window {
-  min-height: 65vh;
-
-  padding-bottom: 20px;
-
-  display: flex;
-  flex-direction: column;
-}
-
-/* Search */
-
 .gametonics-search {
   display: flex;
-
   align-items: center;
-
   gap: 8px;
-
   margin: 20px 20px 0;
-
   padding: 10px 0;
-
-  border-bottom: 1px solid rgba(0, 255, 200, 0.3);
+  border-bottom: 1px solid var(--terminal-border);
 }
 
 .gametonics-search span {
   flex: 0 0 auto;
 }
 
-.gametonics-search input {
-  flex: 1;
-
-  min-width: 0;
-
-  background: transparent;
-
-  border: none;
-
-  outline: none;
-
-  color: var(--terminal-color);
-
-  font-family: inherit;
-
-  font-size: 16px;
-}
-
-.gametonics-search input::placeholder {
-  color: rgba(0, 255, 200, 0.35);
-}
-
-/* Game output */
-
 .game-output {
   flex: 1;
-
   padding: 20px;
-
   line-height: 1.6;
-
-  white-space: normal;
-
   overflow-y: auto;
 }
-
-/* Letter sections */
 
 .game-letter-section {
   margin-top: 24px;
@@ -200,81 +24,33 @@ body {
 
 .letter-heading {
   margin: 0 0 10px;
-
   opacity: 0.8;
 }
 
-/* Game buttons */
-
 .game-list {
   display: flex;
-
   flex-direction: column;
-
   align-items: flex-start;
-
   gap: 8px;
 }
 
 .game-button {
-  display: inline-block;
-
-  background: transparent;
-
-  border: 1px solid var(--terminal-color);
-
-  color: var(--terminal-color);
-
-  font-family: inherit;
-
-  font-size: 15px;
-
   padding: 10px 14px;
-
-  cursor: pointer;
-
+  font-size: 15px;
   text-align: left;
-
-  transition: 0.15s;
-}
-
-.game-button:hover {
-  background: var(--terminal-color);
-
-  color: var(--background-color);
-
-  text-shadow: none;
 }
 
 .game-button:active {
   transform: translateY(2px);
 }
 
-/* Footer */
-
 .gametonics-footer {
   margin: 0 20px;
-
   padding-top: 15px;
-
-  border-top: 1px solid rgba(0, 255, 200, 0.3);
+  border-top: 1px solid var(--terminal-border);
 }
 
-/* Mobile */
-
 @media (max-width: 600px) {
-  .terminal {
-    padding: 15px;
-  }
-
-  .terminal-container {
-    margin: 20px auto;
-  }
-
-  .terminal-window {
-    min-height: 70vh;
-  }
-
   .game-output {
     padding: 15px;
   }
@@ -283,14 +59,9 @@ body {
     margin: 15px 15px 0;
   }
 
-  .gametonics-search input {
-    font-size: 14px;
-  }
-
   .game-button {
-    font-size: 14px;
-
-    padding: 9px 12px;
+    padding: 8px 10px;
+    font-size: 13px;
   }
 
   .gametonics-footer {
