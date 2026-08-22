@@ -14,7 +14,7 @@ type Message = {
 type Account = {
   id: string;
   username: string;
-  created_at: string;
+  created_at?: string;
 };
 
 const USERNAME_MIN = 3;
@@ -35,46 +35,18 @@ export default function Home() {
   useEffect(() => {
     let mounted = true;
 
-    const loadAccount = async (userId: string) => {
-      const { data, error } = await supabase
-        .from("accounts")
-        .select("id, username, created_at")
-        .eq("id", userId)
-        .maybeSingle();
+    const loadAccount = async () => {
+      try {
+        const response = await fetch("/api/auth", { cache: "no-store" });
+        const result = await response.json();
 
-      if (error) {
-        console.error("Error loading account:", error);
-        return;
-      }
-
-      if (mounted) {
-        setAccount(data);
-      }
-    };
-
-    const loadSession = async () => {
-      const { data } = await supabase.auth.getSession();
-
-      if (!mounted) return;
-
-      if (data.session?.user) {
-        await loadAccount(data.session.user.id);
-      }
-    };
-
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
-        if (!mounted) return;
-
-        if (session?.user) {
-          await loadAccount(session.user.id);
-        } else {
-          setAccount(null);
+        if (mounted) {
+          setAccount(result.account ?? null);
         }
+      } catch (error) {
+        console.error("Error loading account session:", error);
       }
-    );
-
-    loadSession();
+    };
 
     const loadMessages = async () => {
       const { data, error } = await supabase
@@ -119,11 +91,11 @@ export default function Home() {
         setConnected(status === "SUBSCRIBED");
       });
 
+    loadAccount();
     loadMessages();
 
     return () => {
       mounted = false;
-      authListener.subscription.unsubscribe();
       supabase.removeChannel(channel);
     };
   }, []);
@@ -140,7 +112,11 @@ export default function Home() {
     return command.trim().split(/\s+/).slice(1);
   };
 
-  const handleSignUp = async (username: string, password: string) => {
+  const authenticate = async (
+    action: "sign_up" | "sign_in",
+    username: string,
+    password: string
+  ) => {
     if (!isValidCredential(username, USERNAME_MIN, USERNAME_MAX)) {
       setCommandOutput(
         `USERNAME ERROR: name must be ${USERNAME_MIN}-${USERNAME_MAX} characters and contain no spaces.`
@@ -158,111 +134,34 @@ export default function Home() {
     setBusy(true);
 
     try {
-      // Supabase Auth uses an email-shaped identifier internally. The public
-      // terminal still exposes only the username to the user.
-      const authIdentifier = `${username.toLowerCase()}@accounts.abyssalbar.local`;
-
-      const { data, error } = await supabase.auth.signUp({
-        email: authIdentifier,
-        password,
-        options: {
-          data: {
-            username,
-          },
+      const response = await fetch("/api/auth", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-      });
-
-      if (error) {
-        setCommandOutput(`SIGN UP ERROR: ${error.message}`);
-        return;
-      }
-
-      if (!data.user) {
-        setCommandOutput("SIGN UP ERROR: account could not be created.");
-        return;
-      }
-
-      if (data.session) {
-        const { error: accountError } = await supabase.from("accounts").upsert({
-          id: data.user.id,
+        body: JSON.stringify({
+          action,
           username,
-        });
-
-        if (accountError) {
-          console.error("Error creating account profile:", accountError);
-          setCommandOutput(
-            `ACCOUNT AUTHENTICATED, BUT PROFILE CREATION FAILED: ${accountError.message}`
-          );
-          return;
-        }
-
-        const { data: createdAccount } = await supabase
-          .from("accounts")
-          .select("id, username, created_at")
-          .eq("id", data.user.id)
-          .single();
-
-        setAccount(createdAccount);
-        setCommandOutput(`ACCOUNT CREATED. Welcome, ${username}!`);
-      } else {
-        setCommandOutput(
-          "ACCOUNT CREATED. Supabase is requiring email confirmation before you can sign in."
-        );
-      }
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const handleSignIn = async (username: string, password: string) => {
-    if (!isValidCredential(username, USERNAME_MIN, USERNAME_MAX)) {
-      setCommandOutput(
-        `USERNAME ERROR: name must be ${USERNAME_MIN}-${USERNAME_MAX} characters and contain no spaces.`
-      );
-      return;
-    }
-
-    if (!isValidCredential(password, PASSWORD_MIN, PASSWORD_MAX)) {
-      setCommandOutput(
-        `PASSWORD ERROR: password must be ${PASSWORD_MIN}-${PASSWORD_MAX} characters and contain no spaces.`
-      );
-      return;
-    }
-
-    setBusy(true);
-
-    try {
-      const authIdentifier = `${username.toLowerCase()}@accounts.abyssalbar.local`;
-
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: authIdentifier,
-        password,
+          password,
+        }),
       });
 
-      if (error) {
-        setCommandOutput(`SIGN IN ERROR: ${error.message}`);
+      const result = await response.json();
+
+      if (!response.ok) {
+        setCommandOutput(`${action === "sign_up" ? "SIGN UP" : "SIGN IN"} ERROR: ${result.error}`);
         return;
       }
 
-      if (!data.user) {
-        setCommandOutput("SIGN IN ERROR: account could not be loaded.");
-        return;
-      }
-
-      const { data: signedInAccount, error: accountError } = await supabase
-        .from("accounts")
-        .select("id, username, created_at")
-        .eq("id", data.user.id)
-        .single();
-
-      if (accountError) {
-        console.error("Error loading account profile:", accountError);
-        setCommandOutput(`SIGN IN ERROR: ${accountError.message}`);
-        return;
-      }
-
-      setAccount(signedInAccount);
-      setCommandOutput(`SIGNED IN. Welcome back, ${signedInAccount.username}!`);
+      setAccount(result.account);
+      setCommandOutput(
+        action === "sign_up"
+          ? `ACCOUNT CREATED. Welcome, ${result.account.username}!`
+          : `SIGNED IN. Welcome back, ${result.account.username}!`
+      );
+    } catch (error) {
+      console.error("Authentication error:", error);
+      setCommandOutput("AUTHENTICATION ERROR: Unable to contact the server.");
     } finally {
       setBusy(false);
     }
@@ -272,15 +171,26 @@ export default function Home() {
     setBusy(true);
 
     try {
-      const { error } = await supabase.auth.signOut();
+      const response = await fetch("/api/auth", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ action: "sign_out" }),
+      });
 
-      if (error) {
-        setCommandOutput(`SIGN OUT ERROR: ${error.message}`);
+      const result = await response.json();
+
+      if (!response.ok) {
+        setCommandOutput(`SIGN OUT ERROR: ${result.error}`);
         return;
       }
 
       setAccount(null);
       setCommandOutput("SIGNED OUT.");
+    } catch (error) {
+      console.error("Sign out error:", error);
+      setCommandOutput("SIGN OUT ERROR: Unable to contact the server.");
     } finally {
       setBusy(false);
     }
@@ -308,7 +218,7 @@ export default function Home() {
             return;
           }
 
-          await handleSignUp(parts[1], parts[2]);
+          await authenticate("sign_up", parts[1], parts[2]);
           return;
         }
 
@@ -318,7 +228,7 @@ export default function Home() {
             return;
           }
 
-          await handleSignIn(parts[1], parts[2]);
+          await authenticate("sign_in", parts[1], parts[2]);
           return;
         }
 
@@ -346,21 +256,36 @@ export default function Home() {
       return;
     }
 
-    if (!connected) return;
-
-    const { error } = await supabase.from("messages").insert({
-      account_id: account.id,
-      username: account.username,
-      message: trimmedInput,
-    });
-
-    if (error) {
-      console.error("Error sending message:", error);
-      setCommandOutput(`MESSAGE ERROR: ${error.message}`);
+    if (!connected) {
+      setCommandOutput("MESSAGE ERROR: Chat is still connecting.");
       return;
     }
 
-    setInput("");
+    setBusy(true);
+
+    try {
+      const response = await fetch("/api/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ message: trimmedInput }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        setCommandOutput(`MESSAGE ERROR: ${result.error}`);
+        return;
+      }
+
+      setInput("");
+    } catch (error) {
+      console.error("Error sending message:", error);
+      setCommandOutput("MESSAGE ERROR: Unable to contact the server.");
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
