@@ -88,8 +88,6 @@ export default function Home() {
           table: "messages",
         },
         () => {
-          // Realtime tells us the database changed. Supabase remains the
-          // source of truth, so fetch exactly the latest visible messages.
           void loadMessages();
         }
       )
@@ -273,9 +271,6 @@ export default function Home() {
         setCommandOutput(`Message error: ${result.error}`);
         return;
       }
-
-      // The realtime INSERT will synchronize this message from Supabase.
-      // We intentionally do not maintain a separate local chat state here.
     } catch (error) {
       console.error("Error sending message:", error);
       setCommandOutput("Message error: unable to contact the server.");
@@ -301,7 +296,7 @@ export default function Home() {
           <div className="terminal-title">Abyssal Bar Terminal</div>
 
           <div className="terminal-output">
-            <p>Abyssal Bar Terminal v2.0</p>
+            <p>Abyssal Bar Terminal v2.1</p>
             <p>--------------------------------</p>
             <p>
               Connection status: {connected ? "Online" : "Connecting..."}
