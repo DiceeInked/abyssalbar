@@ -27,8 +27,15 @@ type Account = {
 const isValidCredential = (value: string, min: number, max: number) =>
   value.length >= min && value.length <= max && !/\s/.test(value);
 
-const getCommandParts = (command: string) =>
-  command.trim().split(/\s+/);
+const getCommandParts = (command: string) => command.trim().split(/\s+/);
+
+const sortMessages = (messages: Message[]) =>
+  [...messages]
+    .sort(
+      (a, b) =>
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    )
+    .slice(-MAX_MESSAGES);
 
 export default function Home() {
   const [input, setInput] = useState("");
@@ -69,43 +76,76 @@ export default function Home() {
       }
 
       if (mounted && data) {
-        setMessages(data.reverse());
+        setMessages(sortMessages(data));
       }
     };
 
+    const refreshMessages = () => {
+      void loadMessages();
+    };
+
     const channel = supabase
-      .channel("abyssal-bar-chat")
+      .channel(`abyssal-bar-chat-${crypto.randomUUID()}`)
       .on(
         "postgres_changes",
         {
-          event: "INSERT",
+          event: "*",
           schema: "public",
           table: "messages",
         },
         (payload) => {
-          const newMessage = payload.new as Message;
+          if (payload.eventType === "INSERT") {
+            const newMessage = payload.new as Message;
 
-          setMessages((previous) => {
-            if (previous.some((message) => message.id === newMessage.id)) {
-              return previous;
-            }
+            setMessages((previous) => {
+              if (previous.some((message) => message.id === newMessage.id)) {
+                return previous;
+              }
 
-            return [...previous, newMessage].slice(-MAX_MESSAGES);
-          });
+              return sortMessages([...previous, newMessage]);
+            });
+          } else if (
+            payload.eventType === "UPDATE" ||
+            payload.eventType === "DELETE"
+          ) {
+            refreshMessages();
+          }
         }
       )
       .subscribe((status) => {
-        if (mounted) {
-          setConnected(status === "SUBSCRIBED");
+        if (!mounted) {
+          return;
+        }
+
+        const isSubscribed = status === "SUBSCRIBED";
+        setConnected(isSubscribed);
+
+        // Re-fetch immediately after the realtime connection is established.
+        // This closes the small race where a message is inserted between the
+        // initial query and the realtime subscription becoming active.
+        if (isSubscribed) {
+          refreshMessages();
         }
       });
 
     loadAccount();
     loadMessages();
 
+    // Keep the terminal resilient if a network transition temporarily drops
+    // realtime events. This is only a safety net; normal updates use realtime.
+    const fallbackRefresh = window.setInterval(refreshMessages, 15000);
+
+    const handleOnline = () => {
+      refreshMessages();
+    };
+
+    window.addEventListener("online", handleOnline);
+
     return () => {
       mounted = false;
-      supabase.removeChannel(channel);
+      window.clearInterval(fallbackRefresh);
+      window.removeEventListener("online", handleOnline);
+      void supabase.removeChannel(channel);
     };
   }, []);
 
@@ -276,7 +316,7 @@ export default function Home() {
           return previous;
         }
 
-        return [...previous, sentMessage].slice(-MAX_MESSAGES);
+        return sortMessages([...previous, sentMessage]);
       });
     } catch (error) {
       console.error("Error sending message:", error);
