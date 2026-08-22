@@ -142,7 +142,7 @@ export default function Home() {
 
             {messages.map((message) => (
               <p key={message.id}>
-                [{message.created_at}] {message.username}: {message.message}
+                {message.created_at} {message.username}: {message.message}
               </p>
             ))}
 
