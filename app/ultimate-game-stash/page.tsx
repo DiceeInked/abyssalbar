@@ -4,8 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { supabase } from "../../lib/supabase";
 import { GAME_BUCKET } from "../../lib/constants";
-
-import "./ugs.css";
+import "../globals.css";
 
 type Game = {
   name: string;
@@ -46,13 +45,20 @@ export default function GameTonics() {
       }
 
       const detectedGames: Game[] = (data ?? [])
-        .filter((item) => item.name && !item.name.startsWith(".") && item.id === null)
+        .filter(
+          (item) =>
+            item.name &&
+            !item.name.startsWith(".") &&
+            item.id === null
+        )
         .map((folder) => ({
           name: folder.name,
           path: folder.name,
         }))
         .sort((a, b) =>
-          a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
+          a.name.localeCompare(b.name, undefined, {
+            sensitivity: "base",
+          })
         );
 
       setGames(detectedGames);
@@ -141,7 +147,8 @@ export default function GameTonics() {
             {!loading && !error && games.length > 0 && (
               <>
                 <p>
-                  {filteredGames.length} {filteredGames.length === 1 ? "game" : "games"} found.
+                  {filteredGames.length}{" "}
+                  {filteredGames.length === 1 ? "game" : "games"} found.
                 </p>
 
                 <p>&nbsp;</p>
