@@ -1,6 +1,6 @@
 -- Run AFTER username_auth.sql.
--- This implements username/password authentication without Supabase Auth emails.
--- Passwords are stored as bcrypt hashes using pgcrypto, never plaintext.
+-- Username/password authentication without Supabase Auth emails.
+-- Passwords are stored as bcrypt hashes, never plaintext.
 
 create table if not exists public.account_sessions (
   id uuid primary key default gen_random_uuid(),
@@ -11,14 +11,10 @@ create table if not exists public.account_sessions (
 );
 
 alter table public.account_sessions enable row level security;
-
 revoke all on public.account_sessions from anon, authenticated;
 revoke all on public.accounts from anon, authenticated;
 
-create or replace function public.create_account(
-  p_username text,
-  p_password text
-)
+create or replace function public.create_account(p_username text, p_password text)
 returns json
 language plpgsql
 security definer
@@ -42,10 +38,7 @@ begin
     raise exception 'Password must be 3-30 characters and contain no spaces.';
   end if;
 
-  if exists (
-    select 1 from public.accounts
-    where lower(username) = lower(clean_username)
-  ) then
+  if exists (select 1 from public.accounts where lower(username) = lower(clean_username)) then
     raise exception 'That username is already taken.';
   end if;
 
@@ -53,17 +46,11 @@ begin
   values (clean_username, crypt(p_password, gen_salt('bf', 10)))
   returning id into new_id;
 
-  return json_build_object(
-    'id', new_id,
-    'username', clean_username
-  );
+  return json_build_object('id', new_id, 'username', clean_username);
 end;
 $$;
 
-create or replace function public.create_account_session(
-  p_username text,
-  p_password text
-)
+create or replace function public.create_account_session(p_username text, p_password text)
 returns json
 language plpgsql
 security definer
@@ -73,12 +60,16 @@ declare
   found_account public.accounts%rowtype;
   raw_token text;
 begin
+  if p_username is null or p_password is null then
+    raise exception 'Invalid username or password.';
+  end if;
+
   select * into found_account
   from public.accounts
   where lower(username) = lower(trim(p_username))
   limit 1;
 
-  if not found_account.id is not null
+  if found_account.id is null
      or found_account.password_hash is null
      or crypt(p_password, found_account.password_hash) <> found_account.password_hash then
     raise exception 'Invalid username or password.';
@@ -87,10 +78,7 @@ begin
   raw_token := encode(gen_random_bytes(32), 'hex');
 
   insert into public.account_sessions (account_id, token_hash)
-  values (
-    found_account.id,
-    digest(raw_token, 'sha256')
-  );
+  values (found_account.id, digest(raw_token, 'sha256'));
 
   return json_build_object(
     'token', raw_token,
@@ -100,9 +88,7 @@ begin
 end;
 $$;
 
-create or replace function public.get_session_account(
-  p_token text
-)
+create or replace function public.get_session_account(p_token text)
 returns json
 language plpgsql
 security definer
@@ -111,6 +97,10 @@ as $$
 declare
   result json;
 begin
+  if p_token is null then
+    return null;
+  end if;
+
   select json_build_object(
     'id', a.id,
     'username', a.username,
@@ -133,14 +123,11 @@ security definer
 set search_path = public, extensions
 as $$
   delete from public.account_sessions
-  where token_hash = digest(p_token, 'sha256');
+  where p_token is not null and token_hash = digest(p_token, 'sha256');
   select true;
 $$;
 
-create or replace function public.send_account_message(
-  p_token text,
-  p_message text
-)
+create or replace function public.send_account_message(p_token text, p_message text)
 returns public.messages
 language plpgsql
 security definer
@@ -150,6 +137,10 @@ declare
   account_row public.accounts%rowtype;
   new_message public.messages%rowtype;
 begin
+  if p_token is null then
+    raise exception 'You must be signed in.';
+  end if;
+
   select a.* into account_row
   from public.account_sessions s
   join public.accounts a on a.id = s.account_id
@@ -172,15 +163,12 @@ begin
 end;
 $$;
 
--- These functions are the only account-changing interface exposed to the
--- browser through Supabase RPC.
 grant execute on function public.create_account(text, text) to anon, authenticated;
 grant execute on function public.create_account_session(text, text) to anon, authenticated;
 grant execute on function public.get_session_account(text) to anon, authenticated;
 grant execute on function public.delete_account_session(text) to anon, authenticated;
 grant execute on function public.send_account_message(text, text) to anon, authenticated;
 
--- Remove expired sessions periodically when this function is called.
 create or replace function public.clean_expired_sessions()
 returns void
 language sql
