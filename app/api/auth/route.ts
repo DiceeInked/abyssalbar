@@ -1,11 +1,11 @@
-import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
+import { NextResponse } from "next/server";
 import { supabase } from "../../../lib/supabase";
-
-const SESSION_COOKIE = "abyssal_session";
+import { SESSION_COOKIE } from "../../../lib/constants";
 
 const setSessionCookie = async (token: string) => {
   const cookieStore = await cookies();
+
   cookieStore.set(SESSION_COOKIE, token, {
     httpOnly: true,
     sameSite: "lax",
@@ -38,7 +38,6 @@ export async function POST(request: Request) {
         );
       }
 
-      // Sign the new account in immediately so /sign up leaves the user logged in.
       const { data: session, error: sessionError } = await supabase.rpc(
         "create_account_session",
         {
@@ -49,7 +48,11 @@ export async function POST(request: Request) {
 
       if (sessionError || !session) {
         return NextResponse.json(
-          { error: sessionError?.message ?? "Account created, but sign-in failed." },
+          {
+            error:
+              sessionError?.message ??
+              "Account created, but sign-in failed.",
+          },
           { status: 500 }
         );
       }
@@ -62,9 +65,7 @@ export async function POST(request: Request) {
 
       await setSessionCookie(result.token);
 
-      return NextResponse.json({
-        account: account,
-      });
+      return NextResponse.json({ account });
     }
 
     if (action === "sign_in") {
