@@ -30,12 +30,10 @@ const isValidCredential = (value: string, min: number, max: number) =>
 const getCommandParts = (command: string) => command.trim().split(/\s+/);
 
 const sortMessages = (messages: Message[]) =>
-  [...messages]
-    .sort(
-      (a, b) =>
-        new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
-    )
-    .slice(-MAX_MESSAGES);
+  [...messages].sort(
+    (a, b) =>
+      new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+  );
 
 export default function Home() {
   const [input, setInput] = useState("");
@@ -76,7 +74,7 @@ export default function Home() {
       }
 
       if (mounted && data) {
-        setMessages(sortMessages(data));
+        setMessages(sortMessages(data.reverse()));
       }
     };
 
@@ -89,16 +87,10 @@ export default function Home() {
           schema: "public",
           table: "messages",
         },
-        (payload) => {
-          const newMessage = payload.new as Message;
-
-          setMessages((previous) => {
-            if (previous.some((message) => message.id === newMessage.id)) {
-              return previous;
-            }
-
-            return sortMessages([...previous, newMessage]);
-          });
+        () => {
+          // Realtime tells us the database changed. Supabase remains the
+          // source of truth, so fetch exactly the latest visible messages.
+          void loadMessages();
         }
       )
       .subscribe((status) => {
@@ -107,6 +99,10 @@ export default function Home() {
         }
 
         setConnected(status === "SUBSCRIBED");
+
+        if (status === "SUBSCRIBED") {
+          void loadMessages();
+        }
       });
 
     loadAccount();
@@ -278,15 +274,8 @@ export default function Home() {
         return;
       }
 
-      const sentMessage = result.message as Message;
-
-      setMessages((previous) => {
-        if (previous.some((message) => message.id === sentMessage.id)) {
-          return previous;
-        }
-
-        return sortMessages([...previous, sentMessage]);
-      });
+      // The realtime INSERT will synchronize this message from Supabase.
+      // We intentionally do not maintain a separate local chat state here.
     } catch (error) {
       console.error("Error sending message:", error);
       setCommandOutput("Message error: unable to contact the server.");
