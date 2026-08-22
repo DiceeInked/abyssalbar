@@ -3,6 +3,11 @@
 :root {
   --terminal-color: #00ffc8;
   --background-color: #00140f;
+  --terminal-border: rgba(0, 255, 200, 0.3);
+  --terminal-glow: rgba(0, 255, 200, 0.15);
+  --terminal-inset-glow: rgba(0, 255, 200, 0.04);
+  --terminal-placeholder: rgba(0, 255, 200, 0.35);
+  --terminal-text-shadow: 0 0 5px rgba(0, 255, 200, 0.45);
 }
 
 * {
@@ -22,23 +27,24 @@ body {
   font-family: "IBM Plex Mono", monospace;
 }
 
-/* Main page */
+button,
+input {
+  font: inherit;
+}
 
 .terminal {
   position: relative;
   min-height: 100vh;
   padding: 30px;
   overflow: hidden;
+  text-shadow: var(--terminal-text-shadow);
 }
-
-/* CRT scanlines */
 
 .scanlines {
   position: fixed;
   inset: 0;
-  pointer-events: none;
   z-index: 100;
-
+  pointer-events: none;
   background: repeating-linear-gradient(
     to bottom,
     rgba(0, 255, 200, 0.025) 0px,
@@ -48,200 +54,166 @@ body {
   );
 }
 
-/* CRT glow */
-
-.terminal,
-.terminal a,
-.terminal input,
-.terminal button {
-  text-shadow: 0 0 5px rgba(0, 255, 200, 0.45);
-}
-
-/* Center everything */
-
 .terminal-container {
   width: 100%;
   max-width: 1000px;
   margin: 40px auto;
-
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
 
-/* Shared terminal styling */
-
 .navigation-terminal,
 .terminal-window {
   width: 100%;
-
   border: 1px solid var(--terminal-color);
-
   background: rgba(0, 20, 15, 0.5);
-
   box-shadow:
-    0 0 10px rgba(0, 255, 200, 0.15),
-    inset 0 0 20px rgba(0, 255, 200, 0.04);
+    0 0 10px var(--terminal-glow),
+    inset 0 0 20px var(--terminal-inset-glow);
 }
-
-/* Navigation box */
 
 .navigation-terminal {
   min-height: 130px;
 }
 
 .terminal-title {
-  border-bottom: 1px solid var(--terminal-color);
-
   padding: 10px 15px;
-
+  border-bottom: 1px solid var(--terminal-color);
   font-size: 14px;
   letter-spacing: 2px;
 }
-
-/* Navigation contents */
 
 .navigation-content {
   padding: 20px;
 }
 
-.navigation-content a {
+.navigation-content a,
+.terminal-button,
+.game-button {
   display: inline-block;
-
   color: var(--terminal-color);
-  text-decoration: none;
-
+  background: transparent;
   border: 1px solid var(--terminal-color);
-
-  padding: 10px 14px;
-
+  text-decoration: none;
+  cursor: pointer;
   transition: 0.15s;
 }
 
-.navigation-content a:hover {
+.navigation-content a,
+.terminal-button {
+  padding: 10px 14px;
+}
+
+.navigation-content a:hover,
+.terminal-button:hover,
+.game-button:hover {
   background: var(--terminal-color);
   color: var(--background-color);
-
   text-shadow: none;
 }
 
-/* Guest terminal */
-
 .terminal-window {
   min-height: 65vh;
-
   padding-bottom: 20px;
-
   display: flex;
   flex-direction: column;
 }
 
-/* Output */
-
 .terminal-output {
   flex: 1;
-
   padding: 20px;
-
   line-height: 1.6;
-
   white-space: pre-wrap;
-
   overflow-y: auto;
 }
 
-/* Command line */
-
 .terminal-input {
   display: flex;
-
   align-items: center;
-
   gap: 8px;
-
   margin: 0 20px;
-
   padding-top: 15px;
-
-  border-top: 1px solid rgba(0, 255, 200, 0.3);
+  border-top: 1px solid var(--terminal-border);
 }
 
-/* Three-character ID */
-
-.guest-id {
-  width: 52px;
-  flex: 0 0 52px;
-
-  background: transparent;
-
-  border: none;
-
-  outline: none;
-
-  color: var(--terminal-color);
-
-  font-family: inherit;
-
-  font-size: 16px;
-
-  letter-spacing: 2px;
-
-  text-transform: none;
-}
-
-.guest-id::placeholder {
-  color: rgba(0, 255, 200, 0.5);
-}
-
-/* Message input */
-
-.message-input {
+.message-input,
+.gametonics-search input {
   flex: 1;
-
   min-width: 0;
-
   background: transparent;
-
   border: none;
-
   outline: none;
-
   color: var(--terminal-color);
-
-  font-family: inherit;
-
   font-size: 16px;
 }
 
-.message-input::placeholder {
-  color: rgba(0, 255, 200, 0.35);
+.message-input::placeholder,
+.gametonics-search input::placeholder {
+  color: var(--terminal-placeholder);
 }
-
-/* Enter button */
 
 .terminal-input button {
-  background: transparent;
-
-  border: 1px solid var(--terminal-color);
-
-  color: var(--terminal-color);
-
-  font-family: inherit;
-
   padding: 6px 10px;
-
-  cursor: pointer;
 }
 
-.terminal-input button:hover {
-  background: var(--terminal-color);
-
-  color: var(--background-color);
-
-  text-shadow: none;
+.terminal-input button:disabled,
+.game-button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
-/* Mobile */
+.gametonics-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 20px 20px 0;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--terminal-border);
+}
+
+.gametonics-search span {
+  flex: 0 0 auto;
+}
+
+.game-output {
+  flex: 1;
+  padding: 20px;
+  line-height: 1.6;
+  overflow-y: auto;
+}
+
+.game-letter-section {
+  margin-top: 24px;
+}
+
+.letter-heading {
+  margin: 0 0 10px;
+  opacity: 0.8;
+}
+
+.game-list {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.game-button {
+  padding: 10px 14px;
+  font-size: 15px;
+  text-align: left;
+}
+
+.game-button:active {
+  transform: translateY(2px);
+}
+
+.gametonics-footer {
+  margin: 0 20px;
+  padding-top: 15px;
+  border-top: 1px solid var(--terminal-border);
+}
 
 @media (max-width: 600px) {
   .terminal {
@@ -261,21 +233,26 @@ body {
     gap: 6px;
   }
 
-  .guest-id {
-    width: 52px;
-    flex: 0 0 52px;
-    letter-spacing: 1px;
-  }
-
-  .message-input {
-    min-width: 0;
+  .message-input,
+  .gametonics-search input {
     font-size: 14px;
   }
 
-  .terminal-input button {
-    display: block;
-    flex: 0 0 auto;
-    padding: 5px 7px;
-    font-size: 12px;
+  .terminal-input button,
+  .game-button {
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+
+  .game-output {
+    padding: 15px;
+  }
+
+  .gametonics-search {
+    margin: 15px 15px 0;
+  }
+
+  .gametonics-footer {
+    margin: 0 15px;
   }
 }
