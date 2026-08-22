@@ -112,7 +112,7 @@ export default function Home() {
 
           <div className="navigation-content">
             <Link href="/ultimate-game-stash">
-              Ultimate Game Stash
+              Game Tonics
             </Link>
           </div>
         </section>
@@ -142,7 +142,7 @@ export default function Home() {
 
             {messages.map((message) => (
               <p key={message.id}>
-                {message.username}: {message.message}
+                {message.id}: {message.username}: {message.message}
               </p>
             ))}
 
