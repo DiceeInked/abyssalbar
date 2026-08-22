@@ -279,6 +279,19 @@ export default function Home() {
         return;
       }
 
+      // Add the message immediately. Realtime will also deliver it to
+      // connected clients, but the duplicate check in the subscription above
+      // prevents this client from showing it twice.
+      const sentMessage = result.message as Message;
+
+      setMessages((previous) => {
+        if (previous.some((message) => message.id === sentMessage.id)) {
+          return previous;
+        }
+
+        return [...previous, sentMessage].slice(-12);
+      });
+
       setInput("");
     } catch (error) {
       console.error("Error sending message:", error);
