@@ -3,6 +3,13 @@
 import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase } from "../lib/supabase";
+import {
+  MAX_MESSAGES,
+  PASSWORD_MAX,
+  PASSWORD_MIN,
+  USERNAME_MAX,
+  USERNAME_MIN,
+} from "../lib/constants";
 
 type Message = {
   id: number;
@@ -17,10 +24,11 @@ type Account = {
   created_at?: string;
 };
 
-const USERNAME_MIN = 3;
-const USERNAME_MAX = 30;
-const PASSWORD_MIN = 3;
-const PASSWORD_MAX = 30;
+const isValidCredential = (value: string, min: number, max: number) =>
+  value.length >= min && value.length <= max && !/\s/.test(value);
+
+const getCommandParts = (command: string) =>
+  command.trim().split(/\s+/);
 
 export default function Home() {
   const [input, setInput] = useState("");
@@ -53,7 +61,7 @@ export default function Home() {
         .from("messages")
         .select("id, username, message, created_at")
         .order("created_at", { ascending: false })
-        .limit(12);
+        .limit(MAX_MESSAGES);
 
       if (error) {
         console.error("Error loading messages:", error);
@@ -82,13 +90,14 @@ export default function Home() {
               return previous;
             }
 
-            return [...previous, newMessage].slice(-12);
+            return [...previous, newMessage].slice(-MAX_MESSAGES);
           });
         }
       )
       .subscribe((status) => {
-        if (!mounted) return;
-        setConnected(status === "SUBSCRIBED");
+        if (mounted) {
+          setConnected(status === "SUBSCRIBED");
+        }
       });
 
     loadAccount();
@@ -100,18 +109,6 @@ export default function Home() {
     };
   }, []);
 
-  const isValidCredential = (value: string, min: number, max: number) => {
-    return (
-      value.length >= min &&
-      value.length <= max &&
-      !/\s/.test(value)
-    );
-  };
-
-  const getArguments = (command: string) => {
-    return command.trim().split(/\s+/).slice(1);
-  };
-
   const authenticate = async (
     action: "sign_up" | "sign_in",
     username: string,
@@ -119,14 +116,14 @@ export default function Home() {
   ) => {
     if (!isValidCredential(username, USERNAME_MIN, USERNAME_MAX)) {
       setCommandOutput(
-        `USERNAME ERROR: name must be ${USERNAME_MIN}-${USERNAME_MAX} characters and contain no spaces.`
+        `Username error: name must be ${USERNAME_MIN}-${USERNAME_MAX} characters and contain no spaces.`
       );
       return;
     }
 
     if (!isValidCredential(password, PASSWORD_MIN, PASSWORD_MAX)) {
       setCommandOutput(
-        `PASSWORD ERROR: password must be ${PASSWORD_MIN}-${PASSWORD_MAX} characters and contain no spaces.`
+        `Password error: password must be ${PASSWORD_MIN}-${PASSWORD_MAX} characters and contain no spaces.`
       );
       return;
     }
@@ -136,32 +133,28 @@ export default function Home() {
     try {
       const response = await fetch("/api/auth", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          action,
-          username,
-          password,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, username, password }),
       });
 
       const result = await response.json();
 
       if (!response.ok) {
-        setCommandOutput(`${action === "sign_up" ? "SIGN UP" : "SIGN IN"} ERROR: ${result.error}`);
+        setCommandOutput(
+          `${action === "sign_up" ? "Sign up" : "Sign in"} error: ${result.error}`
+        );
         return;
       }
 
       setAccount(result.account);
       setCommandOutput(
         action === "sign_up"
-          ? `ACCOUNT CREATED. Welcome, ${result.account.username}!`
-          : `SIGNED IN. Welcome back, ${result.account.username}!`
+          ? `Account created. Welcome, ${result.account.username}!`
+          : `Signed in. Welcome back, ${result.account.username}!`
       );
     } catch (error) {
       console.error("Authentication error:", error);
-      setCommandOutput("AUTHENTICATION ERROR: Unable to contact the server.");
+      setCommandOutput("Authentication error: unable to contact the server.");
     } finally {
       setBusy(false);
     }
@@ -173,91 +166,90 @@ export default function Home() {
     try {
       const response = await fetch("/api/auth", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "sign_out" }),
       });
 
       const result = await response.json();
 
       if (!response.ok) {
-        setCommandOutput(`SIGN OUT ERROR: ${result.error}`);
+        setCommandOutput(`Sign out error: ${result.error}`);
         return;
       }
 
       setAccount(null);
-      setCommandOutput("SIGNED OUT.");
+      setCommandOutput("Signed out.");
     } catch (error) {
       console.error("Sign out error:", error);
-      setCommandOutput("SIGN OUT ERROR: Unable to contact the server.");
+      setCommandOutput("Sign out error: unable to contact the server.");
     } finally {
       setBusy(false);
     }
   };
 
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
+  const handleCommand = async (parts: string[]) => {
+    const action = parts[1]?.toLowerCase();
+
+    if (action === "up") {
+      if (parts.length !== 4) {
+        setCommandOutput("Usage: /sign up <username> <password>");
+        return;
+      }
+
+      await authenticate("sign_up", parts[2], parts[3]);
+      return;
+    }
+
+    if (action === "in") {
+      if (parts.length !== 4) {
+        setCommandOutput("Usage: /sign in <username> <password>");
+        return;
+      }
+
+      await authenticate("sign_in", parts[2], parts[3]);
+      return;
+    }
+
+    if (action === "out") {
+      if (parts.length !== 2) {
+        setCommandOutput("Usage: /sign out");
+        return;
+      }
+
+      await handleSignOut();
+      return;
+    }
+
+    setCommandOutput(
+      "Unknown command. Available: /sign up, /sign in, /sign out"
+    );
+  };
+
+  const handleSubmit = async (event: FormEvent) => {
+    event.preventDefault();
 
     const trimmedInput = input.trim();
 
-    if (!trimmedInput || busy) return;
+    if (!trimmedInput || busy) {
+      return;
+    }
+
+    setInput("");
 
     if (trimmedInput.startsWith("/")) {
-      const parts = getArguments(trimmedInput);
-      const command = trimmedInput.split(/\s+/)[0].toLowerCase();
-
-      setInput("");
-
-      if (command === "/sign" && parts.length >= 1) {
-        const action = parts[0].toLowerCase();
-
-        if (action === "up") {
-          if (parts.length !== 3) {
-            setCommandOutput("USAGE: /sign up <username> <password>");
-            return;
-          }
-
-          await authenticate("sign_up", parts[1], parts[2]);
-          return;
-        }
-
-        if (action === "in") {
-          if (parts.length !== 3) {
-            setCommandOutput("USAGE: /sign in <username> <password>");
-            return;
-          }
-
-          await authenticate("sign_in", parts[1], parts[2]);
-          return;
-        }
-
-        if (action === "out") {
-          if (parts.length !== 1) {
-            setCommandOutput("USAGE: /sign out");
-            return;
-          }
-
-          await handleSignOut();
-          return;
-        }
-      }
-
-      setCommandOutput(
-        "UNKNOWN COMMAND. Available: /sign up, /sign in, /sign out"
-      );
+      await handleCommand(getCommandParts(trimmedInput));
       return;
     }
 
     if (!account) {
       setCommandOutput(
-        "SIGN IN REQUIRED. Use /sign up <username> <password> or /sign in <username> <password>."
+        "Sign in required. Use /sign up <username> <password> or /sign in <username> <password>."
       );
       return;
     }
 
     if (!connected) {
-      setCommandOutput("MESSAGE ERROR: Chat is still connecting.");
+      setCommandOutput("Message error: chat is still connecting.");
       return;
     }
 
@@ -266,22 +258,17 @@ export default function Home() {
     try {
       const response = await fetch("/api/messages", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: trimmedInput }),
       });
 
       const result = await response.json();
 
       if (!response.ok) {
-        setCommandOutput(`MESSAGE ERROR: ${result.error}`);
+        setCommandOutput(`Message error: ${result.error}`);
         return;
       }
 
-      // Add the message immediately. Realtime will also deliver it to
-      // connected clients, but the duplicate check in the subscription above
-      // prevents this client from showing it twice.
       const sentMessage = result.message as Message;
 
       setMessages((previous) => {
@@ -289,13 +276,11 @@ export default function Home() {
           return previous;
         }
 
-        return [...previous, sentMessage].slice(-12);
+        return [...previous, sentMessage].slice(-MAX_MESSAGES);
       });
-
-      setInput("");
     } catch (error) {
       console.error("Error sending message:", error);
-      setCommandOutput("MESSAGE ERROR: Unable to contact the server.");
+      setCommandOutput("Message error: unable to contact the server.");
     } finally {
       setBusy(false);
     }
@@ -307,7 +292,7 @@ export default function Home() {
 
       <div className="terminal-container">
         <section className="navigation-terminal">
-          <div className="terminal-title">NAVIGATION</div>
+          <div className="terminal-title">Navigation</div>
 
           <div className="navigation-content">
             <Link href="/ultimate-game-stash">Game Tonics</Link>
@@ -315,17 +300,15 @@ export default function Home() {
         </section>
 
         <section className="terminal-window">
-          <div className="terminal-title">GUEST TERMINAL</div>
+          <div className="terminal-title">Abyssal Bar Terminal</div>
 
           <div className="terminal-output">
-            <p>ABYSSAL BAR TERMINAL v2.0</p>
+            <p>Abyssal Bar Terminal v2.0</p>
             <p>--------------------------------</p>
             <p>
-              Connection status: {connected ? "ONLINE" : "CONNECTING..."}
+              Connection status: {connected ? "Online" : "Connecting..."}
             </p>
-            <p>
-              Account: {account ? account.username : "NOT SIGNED IN"}
-            </p>
+            <p>Account: {account ? account.username : "Not signed in"}</p>
             <p>{commandOutput}</p>
             <p>&nbsp;</p>
 
@@ -337,13 +320,13 @@ export default function Home() {
           </div>
 
           <form onSubmit={handleSubmit} className="terminal-input">
-            <span>&gt;</span>
+            <span aria-hidden="true">&gt;</span>
 
             <input
               className="message-input"
               type="text"
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={(event) => setInput(event.target.value)}
               placeholder={
                 account
                   ? "Type a message or /command..."
@@ -355,8 +338,12 @@ export default function Home() {
               disabled={busy}
             />
 
-            <button type="submit" disabled={!connected || busy}>
-              ENTER
+            <button
+              className="terminal-button"
+              type="submit"
+              disabled={!connected || busy}
+            >
+              Enter
             </button>
           </form>
         </section>
