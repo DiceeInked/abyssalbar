@@ -80,36 +80,25 @@ export default function Home() {
       }
     };
 
-    const refreshMessages = () => {
-      void loadMessages();
-    };
-
     const channel = supabase
-      .channel(`abyssal-bar-chat-${crypto.randomUUID()}`)
+      .channel("abyssal-bar-chat")
       .on(
         "postgres_changes",
         {
-          event: "*",
+          event: "INSERT",
           schema: "public",
           table: "messages",
         },
         (payload) => {
-          if (payload.eventType === "INSERT") {
-            const newMessage = payload.new as Message;
+          const newMessage = payload.new as Message;
 
-            setMessages((previous) => {
-              if (previous.some((message) => message.id === newMessage.id)) {
-                return previous;
-              }
+          setMessages((previous) => {
+            if (previous.some((message) => message.id === newMessage.id)) {
+              return previous;
+            }
 
-              return sortMessages([...previous, newMessage]);
-            });
-          } else if (
-            payload.eventType === "UPDATE" ||
-            payload.eventType === "DELETE"
-          ) {
-            refreshMessages();
-          }
+            return sortMessages([...previous, newMessage]);
+          });
         }
       )
       .subscribe((status) => {
@@ -117,34 +106,14 @@ export default function Home() {
           return;
         }
 
-        const isSubscribed = status === "SUBSCRIBED";
-        setConnected(isSubscribed);
-
-        // Re-fetch immediately after the realtime connection is established.
-        // This closes the small race where a message is inserted between the
-        // initial query and the realtime subscription becoming active.
-        if (isSubscribed) {
-          refreshMessages();
-        }
+        setConnected(status === "SUBSCRIBED");
       });
 
     loadAccount();
     loadMessages();
 
-    // Keep the terminal resilient if a network transition temporarily drops
-    // realtime events. This is only a safety net; normal updates use realtime.
-    const fallbackRefresh = window.setInterval(refreshMessages, 15000);
-
-    const handleOnline = () => {
-      refreshMessages();
-    };
-
-    window.addEventListener("online", handleOnline);
-
     return () => {
       mounted = false;
-      window.clearInterval(fallbackRefresh);
-      window.removeEventListener("online", handleOnline);
       void supabase.removeChannel(channel);
     };
   }, []);
