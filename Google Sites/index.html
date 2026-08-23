@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Abyssal Bar</title>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; background: #000; }
+    body { color: #00ffc8; font-family: monospace; }
+    .terminal { min-height: 100vh; padding: 16px; position: relative; overflow: hidden; }
+    .scanlines { position: fixed; inset: 0; pointer-events: none; background: repeating-linear-gradient(to bottom, rgba(0,255,200,.08) 0 1px, transparent 1px 3px); z-index: 10; }
+    .window { border: 1px solid #00ffc8; padding: 14px; max-width: 1100px; margin: 0 auto; box-shadow: 0 0 14px rgba(0,255,200,.18); }
+    .title { border-bottom: 1px solid #00ffc8; padding-bottom: 8px; margin-bottom: 12px; }
+    .output { min-height: 55vh; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .input-row { display: flex; gap: 8px; align-items: center; }
+    input, button { background: #000; color: #00ffc8; border: 1px solid #00ffc8; font: inherit; padding: 7px; }
+    input { flex: 1; min-width: 0; }
+    button { cursor: pointer; }
+    button:hover { background: #00ffc8; color: #000; }
+    a { color: #00ffc8; }
+    .status { opacity: .8; }
+  </style>
+</head>
+<body>
+  <main class="terminal">
+    <div class="scanlines"></div>
+    <section class="window">
+      <div class="title">Abyssal Bar Terminal <span id="version">v2.15</span></div>
+      <div id="output" class="output"></div>
+      <form id="commandForm" class="input-row">
+        <span>&gt;</span>
+        <input id="commandInput" autocomplete="off" spellcheck="false" placeholder="Type a command...">
+        <button type="submit">Enter</button>
+      </form>
+    </section>
+  </main>
+
+  <script>
+    /*
+      Google Sites edition
+      --------------------
+      This is intentionally standalone. It does not import the Next.js app.
+      Supabase integration can be added here without changing the structure.
+    */
+
+    const SUPABASE_URL = "";
+    const SUPABASE_PUBLISHABLE_KEY = "";
+    const GAME_BUCKET = "gametonics";
+
+    const output = document.getElementById("output");
+    const input = document.getElementById("commandInput");
+    const form = document.getElementById("commandForm");
+
+    const write = (text) => {
+      const line = document.createElement("div");
+      line.textContent = text;
+      output.appendChild(line);
+      output.scrollTop = output.scrollHeight;
+    };
+
+    const commands = {
+      "/help": () => {
+        write("Available commands:");
+        write("/help");
+        write("/egg");
+        write("/etho");
+        write("/gametonics");
+      },
+      "/egg": () => {
+        window.open("https://abyssalbar.vercel.app/egg", "_blank", "noopener,noreferrer");
+      },
+      "/etho": () => {
+        window.open("https://abyssalbar.vercel.app/etho", "_blank", "noopener,noreferrer");
+      },
+      "/gametonics": () => {
+        window.open("https://abyssalbar.vercel.app/ultimate-game-stash", "_blank", "noopener,noreferrer");
+      }
+    };
+
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const value = input.value.trim();
+      if (!value) return;
+      write("> " + value);
+      input.value = "";
+
+      const command = value.split(/\s+/)[0].toLowerCase();
+      if (commands[command]) {
+        commands[command]();
+      } else {
+        write("Unknown command. Type /help.");
+      }
+    });
+
+    write("Abyssal Bar Google Sites edition");
+    write("Standalone HTML test build.");
+    write("Type /help for available commands.");
+  </script>
+</body>
+</html>
