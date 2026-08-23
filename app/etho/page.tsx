@@ -4,11 +4,11 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 import styles from "./Etho.module.css";
 
 const COMMANDS: Record<string, string> = {
-  "/help": "TRY /room OR /call"
+  "/help": "TRY /room OR /call",
   "/call": "YOUR CALLS WONT BE ANSWERED YOU WONT BE HELPED YOU WILL SUFER",
   "/room": "THERE IS A TREE HERE",
   "/tree": "HE IS BEHIND THE TREE",
-  "/man": "THE MAN GIVES YOU AN EGG,THERE IS NO MAN HERE",
+  "/man": "THE MAN GIVES YOU AN EGG, THERE IS NO MAN HERE",
 };
 
 export default function Etho() {
@@ -66,7 +66,7 @@ export default function Etho() {
     }
 
     const response =
-      COMMANDS[command] ?? `unknown command: ${command}`;
+      COMMANDS[command] ?? `UNKNOWN COMMAND: ${command.toUpperCase()}`;
 
     setInput("");
     typeText(response);
@@ -82,7 +82,9 @@ export default function Etho() {
         <div className={styles.content}>
           <div className={styles.output}>
             {output}
-            {typing && <span className={styles.cursor}>_</span>}
+            {typing && (
+              <span className={styles.cursor}>_</span>
+            )}
           </div>
 
           <form
@@ -96,7 +98,7 @@ export default function Etho() {
               type="text"
               value={input}
               onChange={(event) => setInput(event.target.value)}
-              placeholder="type /command..."
+              placeholder="TYPE /COMMAND..."
               autoComplete="off"
               spellCheck={false}
               aria-label="Etho command input"
