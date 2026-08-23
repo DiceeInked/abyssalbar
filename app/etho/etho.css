@@ -1,30 +1,149 @@
+:global(html),
+:global(body) {
+  margin: 0;
+  min-height: 100%;
+}
+
+:global(body) {
+  background: #050806;
+}
+
 /* ============================================================
-   OLD CRT TV / TERMINAL LOOK
+   CRT PAGE
+   Everything here is scoped to the Etho page.
    ============================================================ */
 
 .terminal {
+  --crt-green: #9cff9c;
+  --crt-dark: #071007;
+
   position: relative;
   min-height: 100vh;
   overflow: hidden;
-  isolation: isolate;
-  background: #050805;
-  color: #b8ffb8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px 90px;
+  box-sizing: border-box;
+  background:
+    radial-gradient(circle at center, #132015 0%, #050806 62%, #010201 100%);
+  color: var(--crt-green);
   font-family: "Courier New", Courier, monospace;
-  text-shadow: 0 0 5px rgba(120, 255, 120, 0.8);
+  isolation: isolate;
 }
 
-/* Soft phosphor glow around the screen */
-.crt-glow {
-  position: fixed;
+/* The TV body */
+.tv {
+  position: relative;
+  z-index: 2;
+  width: min(1000px, 92vw);
+  padding: clamp(18px, 3vw, 38px);
+  border-radius: 7% / 5%;
+  background:
+    linear-gradient(145deg, #20231f, #090b09 48%, #171a16);
+  border: 3px solid #30352e;
+  box-shadow:
+    0 0 0 8px #050605,
+    0 20px 70px rgba(0, 0, 0, 0.9),
+    inset 0 0 35px rgba(0, 0, 0, 0.9);
+}
+
+/* Curved CRT glass */
+.screen {
+  position: relative;
+  overflow: hidden;
+  min-height: min(650px, 68vh);
+  border-radius: 8% / 6%;
+  background: #020702;
+  border: 8px solid #0a0d0a;
+  box-shadow:
+    inset 0 0 45px rgba(0, 0, 0, 0.95),
+    inset 0 0 120px rgba(60, 255, 90, 0.07),
+    0 0 20px rgba(110, 255, 130, 0.12);
+}
+
+/* Subtle curved-glass reflection */
+.screen::before {
+  content: "";
+  position: absolute;
   inset: 0;
-  z-index: -4;
+  z-index: 10;
   pointer-events: none;
-  background: radial-gradient(
-    ellipse at center,
-    rgba(90, 255, 90, 0.08) 0%,
-    rgba(20, 90, 20, 0.04) 45%,
-    rgba(0, 0, 0, 0.85) 100%
-  );
+  border-radius: inherit;
+  background:
+    linear-gradient(
+      115deg,
+      rgba(255, 255, 255, 0.06) 0%,
+      rgba(255, 255, 255, 0) 18%,
+      rgba(255, 255, 255, 0) 82%,
+      rgba(255, 255, 255, 0.025) 100%
+    );
+}
+
+/* Terminal content */
+.terminalWindow {
+  position: relative;
+  min-height: 100%;
+  box-sizing: border-box;
+  padding: 24px;
+  text-shadow:
+    0 0 4px rgba(150, 255, 150, 0.95),
+    0 0 12px rgba(80, 255, 100, 0.55);
+  animation: screenFlicker 7s infinite;
+}
+
+.terminalTitle {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(156, 255, 156, 0.5);
+  font-size: clamp(16px, 2vw, 24px);
+  letter-spacing: 0.16em;
+}
+
+.rec {
+  font-size: 0.65em;
+  opacity: 0.75;
+  animation: recBlink 1.4s steps(2, end) infinite;
+}
+
+.terminalOutput {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  padding: clamp(25px, 5vw, 55px) 0;
+  font-size: clamp(16px, 2vw, 21px);
+  line-height: 1.7;
+}
+
+.terminalOutput p {
+  width: 100%;
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+/* Your image */
+.contentImage {
+  width: min(600px, 100%);
+  overflow: hidden;
+  border: 1px solid rgba(156, 255, 156, 0.35);
+  box-shadow:
+    0 0 12px rgba(100, 255, 120, 0.18),
+    inset 0 0 18px rgba(0, 0, 0, 0.7);
+}
+
+.contentImage img {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  filter:
+    grayscale(0.45)
+    sepia(0.15)
+    brightness(0.8)
+    contrast(1.15);
 }
 
 /* Horizontal CRT scanlines */
@@ -33,160 +152,133 @@
   inset: 0;
   z-index: 20;
   pointer-events: none;
-  opacity: 0.32;
-  background: repeating-linear-gradient(
-    to bottom,
-    rgba(180, 255, 180, 0.08) 0px,
-    rgba(180, 255, 180, 0.08) 1px,
-    rgba(0, 0, 0, 0.28) 1px,
-    rgba(0, 0, 0, 0.28) 3px
-  );
+  opacity: 0.23;
+  background:
+    repeating-linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.55) 0px,
+      rgba(0, 0, 0, 0.55) 1px,
+      rgba(156, 255, 156, 0.05) 2px,
+      rgba(0, 0, 0, 0.1) 4px
+    );
+  animation: scanlineMove 0.18s linear infinite;
 }
 
-/* Very subtle analog TV noise */
-.crt-noise {
+/* Tiny analog noise */
+.noise {
   position: fixed;
   inset: -50%;
   z-index: 21;
   pointer-events: none;
-  opacity: 0.055;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.7'/%3E%3C/svg%3E");
-  animation: crt-noise 0.18s steps(2) infinite;
+  opacity: 0.035;
+  background-image:
+    radial-gradient(rgba(255, 255, 255, 0.8) 0.7px, transparent 0.7px);
+  background-size: 4px 4px;
+  animation: noiseMove 0.22s steps(2, end) infinite;
 }
 
-/* Dark corners = curved CRT glass */
-.crt-vignette {
+/* Dark edges of an old CRT */
+.vignette {
   position: fixed;
   inset: 0;
   z-index: 22;
   pointer-events: none;
-  box-shadow: inset 0 0 110px 35px rgba(0, 0, 0, 0.92);
-  background: radial-gradient(
-    ellipse at center,
-    transparent 45%,
-    rgba(0, 0, 0, 0.2) 70%,
-    rgba(0, 0, 0, 0.75) 100%
-  );
+  background:
+    radial-gradient(
+      ellipse at center,
+      transparent 48%,
+      rgba(0, 0, 0, 0.18) 70%,
+      rgba(0, 0, 0, 0.75) 100%
+    );
 }
 
-.terminal-container {
-  position: relative;
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 6vw;
-  animation: crt-flicker 5s infinite;
-}
-
-.terminal-window {
-  position: relative;
-  width: min(900px, 92vw);
-  min-height: 520px;
-  padding: 0;
-  overflow: hidden;
-  border: 2px solid rgba(150, 255, 150, 0.32);
-  border-radius: 24px;
-  background: rgba(3, 10, 4, 0.82);
-  box-shadow:
-    0 0 8px rgba(100, 255, 100, 0.25),
-    0 0 35px rgba(50, 255, 50, 0.08),
-    inset 0 0 35px rgba(80, 255, 80, 0.06);
-  transform: perspective(900px) rotateX(0.25deg);
-}
-
-/* CRT glass highlight */
-.terminal-window::after {
-  content: "";
+/* Little fake TV controls */
+.tvControls {
   position: absolute;
-  inset: 0;
-  pointer-events: none;
-  border-radius: inherit;
-  background: linear-gradient(
-    110deg,
-    rgba(255, 255, 255, 0.035),
-    transparent 25%,
-    transparent 75%,
-    rgba(120, 255, 120, 0.02)
-  );
-}
-
-.terminal-title {
-  position: relative;
-  padding: 12px 18px;
-  border-bottom: 1px solid rgba(150, 255, 150, 0.25);
-  background: rgba(80, 255, 80, 0.035);
-  letter-spacing: 0.18em;
-  font-weight: bold;
-  color: #c5ffc5;
-}
-
-.terminal-output {
-  position: relative;
+  z-index: 3;
+  bottom: 24px;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 24px;
-  padding: 42px;
-  min-height: 430px;
-  box-sizing: border-box;
+  gap: 18px;
+  color: #7c8179;
+  font-family: Arial, sans-serif;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-shadow: none;
 }
 
-.content-image {
-  width: min(600px, 100%);
-  overflow: hidden;
-  border: 1px solid rgba(150, 255, 150, 0.22);
-  box-shadow:
-    0 0 8px rgba(100, 255, 100, 0.18),
-    inset 0 0 15px rgba(0, 0, 0, 0.7);
-  filter: contrast(1.05) brightness(0.9) saturate(0.7);
+.powerLight {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #9cff9c;
+  box-shadow: 0 0 10px rgba(120, 255, 130, 0.9);
+  animation: powerPulse 2s ease-in-out infinite;
 }
 
-.content-image img {
-  display: block;
-  width: 100%;
-  height: auto;
-  object-fit: contain;
-  filter: blur(0.15px);
+/* CRT animations */
+@keyframes screenFlicker {
+  0%, 100% { opacity: 1; }
+  92% { opacity: 1; }
+  92.2% { opacity: 0.96; }
+  92.4% { opacity: 1; }
+  96% { opacity: 0.985; }
+  96.2% { opacity: 1; }
 }
 
-.content-image + p {
-  width: 100%;
-  margin: 0;
-  color: #b8ffb8;
-  font-size: clamp(16px, 2vw, 21px);
-  line-height: 1.6;
-  text-align: center;
+@keyframes recBlink {
+  50% { opacity: 0.2; }
 }
 
-@keyframes crt-flicker {
-  0%, 19%, 21%, 63%, 65%, 100% { opacity: 1; }
-  20% { opacity: 0.985; }
-  64% { opacity: 0.97; }
+@keyframes scanlineMove {
+  from { transform: translateY(0); }
+  to { transform: translateY(4px); }
 }
 
-@keyframes crt-noise {
+@keyframes noiseMove {
   0% { transform: translate(0, 0); }
   25% { transform: translate(2%, -1%); }
   50% { transform: translate(-1%, 2%); }
   75% { transform: translate(1%, 1%); }
-  100% { transform: translate(-2%, -1%); }
+  100% { transform: translate(0, 0); }
+}
+
+@keyframes powerPulse {
+  50% { opacity: 0.55; }
 }
 
 @media (max-width: 600px) {
-  .terminal-window {
-    min-height: 70vh;
-    border-radius: 18px;
+  .terminal {
+    padding: 20px 8px 70px;
   }
 
-  .terminal-output {
-    padding: 28px 20px;
+  .tv {
+    width: 94vw;
+    padding: 10px;
+    border-width: 2px;
+  }
+
+  .screen {
+    min-height: 70vh;
+    border-width: 5px;
+  }
+
+  .terminalWindow {
+    padding: 16px;
+  }
+
+  .tvControls {
+    gap: 9px;
+    font-size: 7px;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .terminal-container,
-  .crt-noise {
+  .terminalWindow,
+  .rec,
+  .scanlines,
+  .noise,
+  .powerLight {
     animation: none;
   }
 }
