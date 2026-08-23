@@ -2,7 +2,6 @@
 
 import { FormEvent, useEffect, useRef, useState } from "react";
 import styles from "./Etho.module.css";
-import weirdRouteJingle from "./weird-route-jingle.mp3";
 
 const COMMANDS: Record<string, string> = {
   "/help": "TRY /girl OR /call out",
@@ -26,14 +25,16 @@ export default function Etho() {
   const [typing, setTyping] = useState(false);
 
   const typingTimer = useRef<ReturnType<typeof setInterval> | null>(null);
-
   const jingle = useRef<HTMLAudioElement | null>(null);
 
   /*
-   * Load the sound when the page starts.
+   * Load the sound.
+   *
+   * Because the MP3 is inside /public, the browser
+   * can access it at /weird-route-jingle.mp3
    */
   useEffect(() => {
-    jingle.current = new Audio(weirdRouteJingle);
+    jingle.current = new Audio("/weird-route-jingle.mp3");
 
     return () => {
       if (typingTimer.current) {
@@ -48,7 +49,7 @@ export default function Etho() {
   }, []);
 
   /*
-   * Types the message onto the CRT one character at a time.
+   * Types the response one character at a time.
    */
   const typeText = (text: string, playSound = false) => {
     if (typingTimer.current) {
@@ -66,7 +67,7 @@ export default function Etho() {
       setOutput(text.slice(0, index));
 
       /*
-       * When the entire message has finished typing...
+       * The entire message has finished typing.
        */
       if (index >= text.length) {
         if (typingTimer.current) {
@@ -77,13 +78,13 @@ export default function Etho() {
         setTyping(false);
 
         /*
-         * Play the special sound after /1225 finishes.
+         * Play the sound AFTER /1225 finishes typing.
          */
         if (playSound && jingle.current) {
           jingle.current.currentTime = 0;
 
           void jingle.current.play().catch((error) => {
-            console.error("Could not play sound:", error);
+            console.error("Could not play jingle:", error);
           });
         }
       }
@@ -91,7 +92,7 @@ export default function Etho() {
   };
 
   /*
-   * Handles commands entered into the terminal.
+   * Handles terminal commands.
    */
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
@@ -115,14 +116,13 @@ export default function Etho() {
     setInput("");
 
     /*
-     * Only /1225 triggers the weird-route-jingle.mp3 sound.
+     * Only /1225 plays the jingle.
      */
     typeText(response, command === "/1225");
   };
 
   /*
-   * Finds YOU, YOUR, YOU'RE and YOURE
-   * and makes them red.
+   * Makes YOU, YOUR, YOU'RE and YOURE red.
    */
   const renderOutput = () => {
     const words = output.split(/(\s+)/);
@@ -159,15 +159,14 @@ export default function Etho() {
 
   return (
     <main className={styles.page}>
-      {/* CRT effects */}
       <div className={styles.crt}>
+        {/* CRT effects */}
         <div className={styles.scanlines} />
         <div className={styles.screenNoise} />
         <div className={styles.vignette} />
 
-        {/* Terminal content */}
         <div className={styles.content}>
-          {/* Command output */}
+          {/* Terminal output */}
           <div className={styles.output}>
             {renderOutput()}
 
@@ -178,7 +177,7 @@ export default function Etho() {
             )}
           </div>
 
-          {/* Command input */}
+          {/* Terminal input */}
           <form
             className={styles.inputArea}
             onSubmit={handleSubmit}
