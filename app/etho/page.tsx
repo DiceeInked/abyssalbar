@@ -1,8 +1,30 @@
 "use client";
 
+import { FormEvent, useState } from "react";
 import styles from "./Etho.module.css";
 
 export default function Etho() {
+  const [input, setInput] = useState("");
+  const [output, setOutput] = useState("Etho page hehe =]");
+
+  const handleSubmit = (event: FormEvent) => {
+    event.preventDefault();
+
+    const command = input.trim().toLowerCase();
+
+    if (command === "/tree") {
+      setOutput(
+        "he is behind the tree, there is a man here, he gives you an egg"
+      );
+    } else if (command === "") {
+      return;
+    } else {
+      setOutput(`unknown command: ${command}`);
+    }
+
+    setInput("");
+  };
+
   return (
     <main className={styles.page}>
       <div className={styles.scanlines} />
@@ -12,8 +34,27 @@ export default function Etho() {
           <div className={styles.title}>ETHO</div>
 
           <div className={styles.output}>
-            <p>Etho page hehe =]</p>
+            <p>{output}</p>
           </div>
+
+          <form className={styles.inputArea} onSubmit={handleSubmit}>
+            <span className={styles.prompt}>&gt;</span>
+
+            <input
+              className={styles.input}
+              type="text"
+              value={input}
+              onChange={(event) => setInput(event.target.value)}
+              placeholder="type /command..."
+              autoComplete="off"
+              spellCheck={false}
+              aria-label="Etho command input"
+            />
+
+            <button className={styles.button} type="submit">
+              ENTER
+            </button>
+          </form>
         </section>
       </div>
     </main>
