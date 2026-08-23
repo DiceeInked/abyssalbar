@@ -210,9 +210,19 @@ export default function Home() {
       return;
     }
 
+    if (command === "/etho") {
+      if (parts.length === 1) {
+        router.push("/etho");
+        return;
+      }
+
+      setCommandOutput("Usage: /etho");
+      return;
+    }
+
     if (command !== "/sign") {
       setCommandOutput(
-        "Unknown command. Available: /sign up, /sign in, /sign out, /egg"
+        "Unknown command. Available: /sign up, /sign in, /sign out, /egg, /etho"
       );
       return;
     }
@@ -250,7 +260,7 @@ export default function Home() {
     }
 
     setCommandOutput(
-      "Unknown command. Available: /sign up, /sign in, /sign out, /egg"
+      "Unknown command. Available: /sign up, /sign in, /sign out, /egg, /etho"
     );
   };
 
@@ -321,7 +331,7 @@ export default function Home() {
           <div className="terminal-title">Abyssal Bar Terminal</div>
 
           <div className="terminal-output">
-            <p>Abyssal Bar Terminal v2.9</p>
+            <p>Abyssal Bar Terminal v2.10</p>
             <p>--------------------------------</p>
             <p>
               Connection status: {connected ? "Online" : "Connecting..."}
