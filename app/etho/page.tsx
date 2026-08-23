@@ -1,47 +1,92 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import styles from "./Etho.module.css";
+
+const COMMANDS: Record<string, string> = {
+  "/room": "there is a tree here",
+  "/tree": "he is behind the tree",
+  "/man": "he gives you an egg",
+};
 
 export default function Etho() {
   const [input, setInput] = useState("");
-  const [output, setOutput] = useState("Etho page hehe =]");
+  const [output, setOutput] = useState("");
+  const [typing, setTyping] = useState(false);
+
+  const typingTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (typingTimer.current) {
+        clearInterval(typingTimer.current);
+      }
+    };
+  }, []);
+
+  const typeText = (text: string) => {
+    if (typingTimer.current) {
+      clearInterval(typingTimer.current);
+    }
+
+    setOutput("");
+    setTyping(true);
+
+    let index = 0;
+
+    typingTimer.current = setInterval(() => {
+      index++;
+
+      setOutput(text.slice(0, index));
+
+      if (index >= text.length) {
+        if (typingTimer.current) {
+          clearInterval(typingTimer.current);
+        }
+
+        typingTimer.current = null;
+        setTyping(false);
+      }
+    }, 45);
+  };
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
 
-    const command = input.trim().toLowerCase();
-
-    if (command === "") {
+    if (typing) {
       return;
     }
 
-    if (command === "/room") {
-      setOutput("there is a tree here");
-    } else if (command === "/tree") {
-      setOutput("he is behind the tree");
-    } else if (command === "/man") {
-      setOutput("he gives you an egg");
-    } else {
-      setOutput(`unknown command: ${command}`);
+    const command = input.trim().toLowerCase();
+
+    if (!command) {
+      return;
     }
 
+    const response =
+      COMMANDS[command] ?? `unknown command: ${command}`;
+
     setInput("");
+    typeText(response);
   };
 
   return (
     <main className={styles.page}>
-      <div className={styles.scanlines} />
+      <div className={styles.crt}>
+        <div className={styles.scanlines} />
+        <div className={styles.screenNoise} />
+        <div className={styles.vignette} />
 
-      <div className={styles.container}>
-        <section className={styles.window}>
-          <div className={styles.title}>ETHO</div>
-
+        <div className={styles.content}>
           <div className={styles.output}>
-            <p>{output}</p>
+            {output}
+            {typing && <span className={styles.cursor}>_</span>}
           </div>
 
-          <form className={styles.inputArea} onSubmit={handleSubmit}>
+          <form
+            className={styles.inputArea}
+            onSubmit={handleSubmit}
+          >
             <span className={styles.prompt}>&gt;</span>
 
             <input
@@ -53,13 +98,11 @@ export default function Etho() {
               autoComplete="off"
               spellCheck={false}
               aria-label="Etho command input"
+              disabled={typing}
+              autoFocus
             />
-
-            <button className={styles.button} type="submit">
-              ENTER
-            </button>
           </form>
-        </section>
+        </div>
       </div>
     </main>
   );
