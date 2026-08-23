@@ -101,8 +101,11 @@ export default function GameTonics() {
   }, [filteredGames]);
 
   const handleGameClick = (game: Game) => {
-    // Game launching is intentionally left unchanged for now.
-    console.log("Selected GameTonics game:", game.path);
+    const { data } = supabase.storage
+      .from(GAME_BUCKET)
+      .getPublicUrl(`${game.path}/index.html`);
+
+    window.open(data.publicUrl, "_blank", "noopener,noreferrer");
   };
 
   return (
