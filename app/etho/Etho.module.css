@@ -10,13 +10,12 @@
 
   font-family: Arial, Helvetica, sans-serif;
 
-  /* CRT glow */
   text-shadow:
-    0 0 4px rgba(0, 191, 255, 0.7),
-    0 0 12px rgba(0, 191, 255, 0.25);
+    0 0 4px rgba(0, 191, 255, 0.8),
+    0 0 12px rgba(0, 191, 255, 0.3);
 }
 
-/* CRT screen */
+/* CRT body / curved screen */
 .container {
   position: relative;
 
@@ -25,19 +24,19 @@
 
   margin: 40px auto;
 
-  /* Curved screen */
-  border-radius: 28px;
+  border-radius: 42px;
 
   overflow: hidden;
 
-  /* Screen glow */
+  background: #020609;
+
   box-shadow:
     0 0 15px rgba(0, 191, 255, 0.25),
-    0 0 50px rgba(0, 191, 255, 0.12),
+    0 0 60px rgba(0, 191, 255, 0.12),
     inset 0 0 40px rgba(0, 191, 255, 0.08);
 }
 
-/* Actual CRT display */
+/* Screen */
 .window {
   position: relative;
 
@@ -45,94 +44,125 @@
 
   padding: 30px;
 
-  border: 2px solid rgba(0, 191, 255, 0.7);
-  border-radius: 28px;
-
-  background:
-    radial-gradient(
-      ellipse at center,
-      rgba(0, 35, 50, 0.95) 0%,
-      rgba(2, 10, 15, 0.98) 75%,
-      #020508 100%
-    );
-
   overflow: hidden;
 
-  /* CRT screen curvature */
-  transform: perspective(1000px);
+  border: 2px solid rgba(0, 191, 255, 0.65);
+  border-radius: 42px;
+
+  /*
+   * Bright center fading into darker edges.
+   * This is what makes the screen feel "bulged".
+   */
+  background:
+    radial-gradient(
+      ellipse 75% 65% at 50% 48%,
+      rgba(0, 45, 65, 1) 0%,
+      rgba(0, 28, 40, 0.98) 35%,
+      rgba(0, 12, 18, 0.98) 68%,
+      #010304 100%
+    );
 
   box-shadow:
-    inset 0 0 30px rgba(0, 191, 255, 0.12),
-    inset 0 0 100px rgba(0, 0, 0, 0.65);
+    inset 0 0 25px rgba(0, 191, 255, 0.15),
+    inset 0 0 80px rgba(0, 0, 0, 0.8),
+    inset 0 0 150px rgba(0, 0, 0, 0.55);
+
+  /*
+   * Slight perspective exaggeration.
+   */
+  transform:
+    perspective(900px)
+    rotateX(0.3deg);
 }
 
-/* Scanlines */
+/*
+ * Scanlines
+ */
 .scanlines {
   position: absolute;
 
-  inset: 0;
+  inset: -5%;
 
-  z-index: 5;
+  z-index: 20;
 
   pointer-events: none;
 
-  border-radius: 28px;
+  border-radius: 42px;
 
   background: repeating-linear-gradient(
     to bottom,
-    rgba(0, 191, 255, 0.08) 0px,
-    rgba(0, 191, 255, 0.08) 1px,
-    rgba(0, 0, 0, 0.12) 2px,
-    rgba(0, 0, 0, 0.12) 4px
+    rgba(0, 191, 255, 0.10) 0px,
+    rgba(0, 191, 255, 0.10) 1px,
+    rgba(0, 0, 0, 0.15) 2px,
+    rgba(0, 0, 0, 0.15) 4px
   );
 
-  mix-blend-mode: screen;
+  opacity: 0.7;
 
-  opacity: 0.65;
+  mix-blend-mode: screen;
 }
 
-/* Subtle CRT glass reflection */
+/*
+ * CRT glass glow.
+ * Bright in the middle, dark around the edges.
+ */
 .window::before {
   content: "";
 
   position: absolute;
-  inset: 0;
+  inset: -10%;
+
+  z-index: 15;
 
   pointer-events: none;
 
-  border-radius: 28px;
+  border-radius: 50%;
 
   background:
     radial-gradient(
-      ellipse at center,
-      transparent 55%,
-      rgba(0, 0, 0, 0.35) 100%
+      ellipse 65% 55% at 50% 45%,
+      rgba(0, 191, 255, 0.08) 0%,
+      rgba(0, 191, 255, 0.025) 40%,
+      transparent 70%
     );
 
-  z-index: 3;
+  box-shadow:
+    inset 0 0 80px rgba(0, 0, 0, 0.65),
+    inset 0 0 160px rgba(0, 0, 0, 0.55);
 }
 
-/* Dark edges / CRT vignette */
+/*
+ * Heavy CRT vignette.
+ * This gives the edges that rounded-tube feeling.
+ */
 .window::after {
   content: "";
 
   position: absolute;
-  inset: 0;
+  inset: -5%;
+
+  z-index: 16;
 
   pointer-events: none;
 
-  border-radius: 28px;
+  border-radius: 50%;
 
-  box-shadow:
-    inset 0 0 50px rgba(0, 0, 0, 0.8),
-    inset 0 0 120px rgba(0, 0, 0, 0.35);
-
-  z-index: 4;
+  background:
+    radial-gradient(
+      ellipse 75% 70% at 50% 50%,
+      transparent 45%,
+      rgba(0, 0, 0, 0.18) 65%,
+      rgba(0, 0, 0, 0.55) 82%,
+      rgba(0, 0, 0, 0.9) 100%
+    );
 }
 
+/*
+ * Text sits above the CRT effects.
+ */
 .title {
   position: relative;
-  z-index: 10;
+  z-index: 30;
 
   padding-bottom: 15px;
   margin-bottom: 25px;
@@ -141,42 +171,53 @@
 
   font-size: 28px;
   font-weight: bold;
-
   letter-spacing: 4px;
 
   color: #00bfff;
+
+  text-shadow:
+    0 0 4px #00bfff,
+    0 0 12px rgba(0, 191, 255, 0.6);
 }
 
 .output {
   position: relative;
-  z-index: 10;
+  z-index: 30;
 
   font-size: 18px;
   line-height: 1.7;
 
   color: #00bfff;
+
+  text-shadow:
+    0 0 4px #00bfff,
+    0 0 10px rgba(0, 191, 255, 0.45);
 }
 
-/* Slight CRT flicker */
+/*
+ * Very subtle CRT brightness fluctuation.
+ */
 @keyframes crt-flicker {
   0% {
-    opacity: 1;
+    filter: brightness(1);
   }
 
   50% {
-    opacity: 0.98;
+    filter: brightness(0.985);
   }
 
   100% {
-    opacity: 1;
+    filter: brightness(1);
   }
 }
 
 .page {
-  animation: crt-flicker 0.12s infinite;
+  animation: crt-flicker 0.15s infinite;
 }
 
-/* Mobile */
+/*
+ * Mobile
+ */
 @media (max-width: 600px) {
   .page {
     padding: 15px;
@@ -184,17 +225,17 @@
 
   .container {
     margin: 20px auto;
-    border-radius: 20px;
+    border-radius: 28px;
   }
 
   .window {
     min-height: 70vh;
     padding: 20px;
-    border-radius: 20px;
+    border-radius: 28px;
   }
 
   .scanlines {
-    border-radius: 20px;
+    border-radius: 28px;
   }
 
   .title {
