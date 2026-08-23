@@ -1,43 +1,65 @@
-"use client";
+ "use client";
 
 import Image from "next/image";
+import styles from "./etho.module.css";
 
 /*
  * ============================================================
  * EDIT ONLY THIS SECTION
- * Change the text and image below. Everything else can stay alone.
+ * ============================================================
+ *
+ * Put your image in this same folder:
+ * app/etho/etho-image.png
+ *
+ * Then you can change the text below whenever you want.
+ */
+
+const PAGE_TEXT = "Etho page hehe =]";
+const IMAGE_ALT = "Etho image";
+
+/*
+ * ============================================================
+ * PAGE
  * ============================================================
  */
-const PAGE_TEXT = "Etho page hehe =]";
-const IMAGE_SRC = "/etho-image.png";
-const IMAGE_ALT = "Etho image";
 
 export default function Etho() {
   return (
-    <main className="terminal">
-      <div className="crt-glow" />
-      <div className="scanlines" />
-      <div className="crt-noise" />
-      <div className="crt-vignette" />
+    <main className={styles.terminal}>
+      <div className={styles.scanlines} />
+      <div className={styles.noise} />
+      <div className={styles.vignette} />
 
-      <div className="terminal-container">
-        <section className="terminal-window">
-          <div className="terminal-title">ETHO</div>
-
-          <div className="terminal-output">
-            <div className="content-image">
-              <Image
-                src={IMAGE_SRC}
-                alt={IMAGE_ALT}
-                width={600}
-                height={400}
-                priority
-              />
+      <div className={styles.tv}>
+        <div className={styles.screen}>
+          <div className={styles.terminalWindow}>
+            <div className={styles.terminalTitle}>
+              <span>ETHO</span>
+              <span className={styles.rec}>● REC</span>
             </div>
 
-            <p>{PAGE_TEXT}</p>
+            <div className={styles.terminalOutput}>
+              <div className={styles.contentImage}>
+                <Image
+                  src="/etho/etho-image.png"
+                  alt={IMAGE_ALT}
+                  width={600}
+                  height={400}
+                  priority
+                />
+              </div>
+
+              <p>{PAGE_TEXT}</p>
+            </div>
           </div>
-        </section>
+        </div>
+      </div>
+
+      <div className={styles.tvControls} aria-hidden="true">
+        <span className={styles.powerLight} />
+        <span>POWER</span>
+        <span>CHANNEL</span>
+        <span>VOLUME</span>
       </div>
     </main>
   );
