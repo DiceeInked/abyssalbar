@@ -17,8 +17,6 @@ const COMMANDS: Record<string, string> = {
 
   "/next":
     "IT WAS THE MOST POWER SHE HAD FELT, you DID THIS THIS IS YOUR FAULT YOU HAVE TO DEAL WITH IT",
-
-  "/dess": "",
 };
 
 const ERROR_MESSAGES = [
@@ -56,57 +54,25 @@ export default function Etho() {
   const [output, setOutput] = useState("");
   const [typing, setTyping] = useState(false);
 
-  // Initial ERROR screen
-  const [showIntro, setShowIntro] = useState(true);
-
   const [dessMode, setDessMode] = useState(false);
   const [errorWindows, setErrorWindows] = useState<ErrorWindow[]>([]);
 
-  const typingTimer =
-    useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const errorTimer =
-    useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const introTimer =
-    useRef<ReturnType<typeof setTimeout> | null>(null);
+  const typingTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const errorTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const jingle = useRef<HTMLAudioElement | null>(null);
   const music = useRef<HTMLAudioElement | null>(null);
 
-  const audioContext =
-    useRef<AudioContext | null>(null);
-
-  const musicSource =
-    useRef<MediaElementAudioSourceNode | null>(null);
-
-  const musicGain =
-    useRef<GainNode | null>(null);
-
-  const musicDelay =
-    useRef<DelayNode | null>(null);
-
-  const musicReverb =
-    useRef<ConvolverNode | null>(null);
+  const audioContext = useRef<AudioContext | null>(null);
+  const musicSource = useRef<MediaElementAudioSourceNode | null>(null);
+  const musicGain = useRef<GainNode | null>(null);
+  const musicDelay = useRef<DelayNode | null>(null);
+  const musicReverb = useRef<ConvolverNode | null>(null);
 
   useEffect(() => {
-    /*
-     * Initial ERROR screen.
-     *
-     * Change 1800 to make it stay longer.
-     */
-    introTimer.current = setTimeout(() => {
-      setShowIntro(false);
-    }, 1800);
+    jingle.current = new Audio("/weird-route-jingle.mp3");
 
-    jingle.current = new Audio(
-      "/weird-route-jingle.mp3"
-    );
-
-    music.current = new Audio(
-      "/glacier.ogg"
-    );
-
+    music.current = new Audio("/glacier.ogg");
     music.current.loop = true;
     music.current.crossOrigin = "anonymous";
 
@@ -117,10 +83,6 @@ export default function Etho() {
 
       if (errorTimer.current) {
         clearInterval(errorTimer.current);
-      }
-
-      if (introTimer.current) {
-        clearTimeout(introTimer.current);
       }
 
       if (jingle.current) {
@@ -162,9 +124,7 @@ export default function Etho() {
         musicReverb.current =
           audioContext.current.createConvolver();
 
-        const sampleRate =
-          audioContext.current.sampleRate;
-
+        const sampleRate = audioContext.current.sampleRate;
         const duration = 3;
 
         const impulse =
@@ -174,57 +134,34 @@ export default function Etho() {
             sampleRate
           );
 
-        for (
-          let channel = 0;
-          channel < 2;
-          channel++
-        ) {
-          const data =
-            impulse.getChannelData(channel);
+        for (let channel = 0; channel < 2; channel++) {
+          const data = impulse.getChannelData(channel);
 
-          for (
-            let i = 0;
-            i < data.length;
-            i++
-          ) {
+          for (let i = 0; i < data.length; i++) {
             const decay = Math.pow(
               1 - i / data.length,
               2
             );
 
             data[i] =
-              (Math.random() * 2 - 1) *
-              decay;
+              (Math.random() * 2 - 1) * decay;
           }
         }
 
         musicReverb.current.buffer = impulse;
 
-        musicSource.current.connect(
-          musicGain.current
-        );
+        musicSource.current.connect(musicGain.current);
 
-        musicSource.current.connect(
-          musicDelay.current
-        );
-
-        musicDelay.current.connect(
-          musicReverb.current
-        );
-
-        musicReverb.current.connect(
-          musicGain.current
-        );
+        musicSource.current.connect(musicDelay.current);
+        musicDelay.current.connect(musicReverb.current);
+        musicReverb.current.connect(musicGain.current);
 
         musicGain.current.connect(
           audioContext.current.destination
         );
       }
 
-      if (
-        audioContext.current.state ===
-        "suspended"
-      ) {
+      if (audioContext.current.state === "suspended") {
         void audioContext.current.resume();
       }
 
@@ -238,14 +175,12 @@ export default function Etho() {
         musicDelay.current.delayTime.value = 0.8;
       }
 
-      void music.current.play().catch(
-        (error) => {
-          console.error(
-            "Could not play slowed music:",
-            error
-          );
-        }
-      );
+      void music.current.play().catch((error) => {
+        console.error(
+          "Could not play slowed music:",
+          error
+        );
+      });
     } catch (error) {
       console.error(
         "Could not create audio effects:",
@@ -277,8 +212,7 @@ export default function Etho() {
         message:
           ERROR_MESSAGES[
             Math.floor(
-              Math.random() *
-                ERROR_MESSAGES.length
+              Math.random() * ERROR_MESSAGES.length
             )
           ],
 
@@ -315,21 +249,17 @@ export default function Etho() {
     setOutput("");
     setTyping(true);
 
+    // Start music immediately when /girl begins typing.
     if (startMusic && music.current) {
       music.current.currentTime = 0;
+      music.current.playbackRate = 1;
 
-      /*
-       * Music begins at the exact same time
-       * as the first character.
-       */
-      void music.current.play().catch(
-        (error) => {
-          console.error(
-            "Could not play background music:",
-            error
-          );
-        }
-      );
+      void music.current.play().catch((error) => {
+        console.error(
+          "Could not play background music:",
+          error
+        );
+      });
     }
 
     let index = 0;
@@ -337,51 +267,39 @@ export default function Etho() {
     typingTimer.current = setInterval(() => {
       index++;
 
-      setOutput(
-        text.slice(0, index)
-      );
+      setOutput(text.slice(0, index));
 
       if (index >= text.length) {
         if (typingTimer.current) {
-          clearInterval(
-            typingTimer.current
-          );
+          clearInterval(typingTimer.current);
         }
 
         typingTimer.current = null;
         setTyping(false);
 
-        if (
-          playJingle &&
-          jingle.current
-        ) {
+        // Play jingle after /1225 finishes.
+        if (playJingle && jingle.current) {
           jingle.current.currentTime = 0;
 
-          void jingle.current
-            .play()
-            .catch((error) => {
-              console.error(
-                "Could not play jingle:",
-                error
-              );
-            });
+          void jingle.current.play().catch((error) => {
+            console.error(
+              "Could not play jingle:",
+              error
+            );
+          });
         }
       }
     }, 45);
   };
 
-  const handleSubmit = (
-    event: FormEvent
-  ) => {
+  const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
 
     if (typing || dessMode) {
       return;
     }
 
-    const command = input
-      .trim()
-      .toLowerCase();
+    const command = input.trim().toLowerCase();
 
     if (!command) {
       return;
@@ -406,271 +324,138 @@ export default function Etho() {
     );
   };
 
+  /*
+   * Makes YOU / YOUR / YOU'RE red.
+   */
   const renderOutput = () => {
-    const words =
-      output.split(/(\s+)/);
+    const words = output.split(/(\s+)/);
 
-    return words.map(
-      (word, index) => {
-        const cleanWord =
-          word
-            .replace(
-              /[.,!?;:'"]/g,
-              ""
-            )
-            .toLowerCase();
+    return words.map((word, index) => {
+      const cleanWord = word
+        .replace(/[.,!?;:'"]/g, "")
+        .toLowerCase();
 
-        const isRed =
-          cleanWord === "you" ||
-          cleanWord === "your" ||
-          cleanWord === "you're" ||
-          cleanWord === "youre";
+      const isRed =
+        cleanWord === "you" ||
+        cleanWord === "your" ||
+        cleanWord === "you're" ||
+        cleanWord === "youre";
 
-        if (isRed) {
-          return (
-            <span
-              key={index}
-              className={
-                styles.redText
-              }
-            >
-              {word}
-            </span>
-          );
-        }
-
+      if (isRed) {
         return (
-          <span key={index}>
+          <span
+            key={index}
+            className={styles.redText}
+          >
             {word}
           </span>
         );
       }
-    );
+
+      return (
+        <span key={index}>
+          {word}
+        </span>
+      );
+    });
   };
-
-  /*
-   * ========================================
-   * INITIAL ERROR SCREEN
-   * ========================================
-   */
-
-  if (showIntro) {
-    return (
-      <main
-        className={
-          styles.introPage
-        }
-      >
-        <div
-          className={
-            styles.introScanlines
-          }
-        />
-
-        <div
-          className={
-            styles.introNoise
-          }
-        />
-
-        <div
-          className={
-            styles.introVignette
-          }
-        />
-
-        <div
-          className={
-            styles.introError
-          }
-        >
-          <div
-            className={
-              styles.errorGlitch
-            }
-          >
-            ERROR
-          </div>
-
-          <div
-            className={
-              styles.errorSubtext
-            }
-          >
-            SYSTEM FAILURE
-          </div>
-        </div>
-      </main>
-    );
-  }
-
-  /*
-   * ========================================
-   * NORMAL PAGE
-   * ========================================
-   */
 
   return (
     <main
       className={`${styles.page} ${
-        dessMode
-          ? styles.dessPage
-          : ""
+        dessMode ? styles.dessPage : ""
       }`}
     >
-      <div
-        className={styles.crt}
-      >
+      {/* CRT SCREEN */}
+
+      <div className={styles.crt}>
+
+        {/* CRT EFFECTS STAY ACTIVE */}
+        <div className={styles.scanlines} />
+        <div className={styles.screenNoise} />
+        <div className={styles.vignette} />
+
+        {/* NORMAL TERMINAL */}
+
         {!dessMode && (
-          <>
-            <div
-              className={
-                styles.scanlines
-              }
-            />
+          <div className={styles.content}>
+            <div className={styles.output}>
+              {renderOutput()}
 
-            <div
-              className={
-                styles.screenNoise
-              }
-            />
-
-            <div
-              className={
-                styles.vignette
-              }
-            />
-
-            <div
-              className={
-                styles.content
-              }
-            >
-              <div
-                className={
-                  styles.output
-                }
-              >
-                {renderOutput()}
-
-                {typing && (
-                  <span
-                    className={
-                      styles.cursor
-                    }
-                  >
-                    _
-                  </span>
-                )}
-              </div>
-
-              <form
-                className={
-                  styles.inputArea
-                }
-                onSubmit={
-                  handleSubmit
-                }
-              >
-                <span
-                  className={
-                    styles.prompt
-                  }
-                >
-                  &gt;
+              {typing && (
+                <span className={styles.cursor}>
+                  _
                 </span>
-
-                <input
-                  className={
-                    styles.input
-                  }
-                  type="text"
-                  value={input}
-                  onChange={(
-                    event
-                  ) =>
-                    setInput(
-                      event.target
-                        .value
-                    )
-                  }
-                  placeholder="TYPE /COMMAND..."
-                  autoComplete="off"
-                  spellCheck={false}
-                  aria-label="Etho command input"
-                  disabled={typing}
-                  autoFocus
-                />
-              </form>
+              )}
             </div>
-          </>
+
+            <form
+              className={styles.inputArea}
+              onSubmit={handleSubmit}
+            >
+              <span className={styles.prompt}>
+                &gt;
+              </span>
+
+              <input
+                className={styles.input}
+                type="text"
+                value={input}
+                onChange={(event) =>
+                  setInput(event.target.value)
+                }
+                placeholder="TYPE /COMMAND..."
+                autoComplete="off"
+                spellCheck={false}
+                aria-label="Etho command input"
+                disabled={typing}
+                autoFocus
+              />
+            </form>
+          </div>
         )}
 
+        {/* DESS ERROR SCREEN */}
+
         {dessMode && (
-          <div
-            className={
-              styles.errorScreen
-            }
-          >
-            {errorWindows.map(
-              (error) => (
-                <div
-                  key={error.id}
-                  className={
-                    styles.errorWindow
-                  }
-                  style={{
-                    left: `${error.x}%`,
-                    top: `${error.y}%`,
-                  }}
-                >
-                  <div
-                    className={
-                      styles.errorTitle
-                    }
-                  >
-                    SYSTEM ERROR
-                  </div>
-
-                  <div
-                    className={
-                      styles.errorBody
-                    }
-                  >
-                    <div
-                      className={
-                        styles.errorIcon
-                      }
-                    >
-                      !
-                    </div>
-
-                    <div>
-                      <strong>
-                        {
-                          error.message
-                        }
-                      </strong>
-
-                      <p>
-                        AN UNEXPECTED
-                        ERROR HAS
-                        OCCURRED.
-                      </p>
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    className={
-                      styles.errorButton
-                    }
-                  >
-                    OK
-                  </button>
+          <div className={styles.errorScreen}>
+            {errorWindows.map((error) => (
+              <div
+                key={error.id}
+                className={styles.errorWindow}
+                style={{
+                  left: `${error.x}%`,
+                  top: `${error.y}%`,
+                }}
+              >
+                <div className={styles.errorTitle}>
+                  SYSTEM ERROR
                 </div>
-              )
-            )}
+
+                <div className={styles.errorBody}>
+                  <div className={styles.errorIcon}>
+                    !
+                  </div>
+
+                  <div>
+                    <strong>
+                      {error.message}
+                    </strong>
+
+                    <p>
+                      AN UNEXPECTED ERROR HAS OCCURRED.
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  className={styles.errorButton}
+                >
+                  OK
+                </button>
+              </div>
+            ))}
           </div>
         )}
       </div>
