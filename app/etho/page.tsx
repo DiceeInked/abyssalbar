@@ -5,11 +5,17 @@ import styles from "./Etho.module.css";
 export default function Etho() {
   return (
     <main className={styles.page}>
-      <h1 className={styles.test}>ETHO TEST</h1>
+      <div className={styles.scanlines} />
 
-      <p className={styles.output}>
-        Etho page hehe =]
-      </p>
+      <div className={styles.container}>
+        <section className={styles.window}>
+          <div className={styles.title}>ETHO</div>
+
+          <div className={styles.output}>
+            <p>Etho page hehe =]</p>
+          </div>
+        </section>
+      </div>
     </main>
   );
 }
