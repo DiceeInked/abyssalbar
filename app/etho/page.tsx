@@ -10,7 +10,7 @@ export default function Etho() {
           <div className="terminal-title">ETHO</div>
 
           <div className="terminal-output">
-            <p>Etho page</p>
+            <p>Etho page hehe =]</p>
           </div>
         </section>
       </div>
