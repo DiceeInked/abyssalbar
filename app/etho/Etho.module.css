@@ -1,19 +1,1 @@
-.page {
-  min-height: 100vh;
-  padding: 50px;
 
-  background: black !important;
-  color: #00bfff !important;
-
-  font-family: Arial, sans-serif;
-}
-
-.test {
-  color: red !important;
-  font-size: 60px;
-}
-
-.output {
-  color: #00bfff !important;
-  font-size: 30px;
-}
