@@ -12,12 +12,16 @@ export default function Etho() {
 
     const command = input.trim().toLowerCase();
 
-    if (command === "/tree") {
-      setOutput(
-        "he is behind the tree, there is a man here, he gives you an egg"
-      );
-    } else if (command === "") {
+    if (command === "") {
       return;
+    }
+
+    if (command === "/room") {
+      setOutput("there is a tree here");
+    } else if (command === "/tree") {
+      setOutput("he is behind the tree");
+    } else if (command === "/man") {
+      setOutput("he gives you an egg");
     } else {
       setOutput(`unknown command: ${command}`);
     }
