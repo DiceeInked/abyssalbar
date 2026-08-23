@@ -196,12 +196,17 @@ export default function Home() {
     const command = parts[0]?.toLowerCase();
 
     if (command === "/egg") {
-      if (parts.length !== 1) {
-        setCommandOutput("Usage: /egg");
+      if (parts.length === 1) {
+        router.push("/egg");
         return;
       }
 
-      router.push("/egg");
+      if (parts.length === 2 && parts[1] === "0") {
+        router.push("/egg?mode=0");
+        return;
+      }
+
+      setCommandOutput("Usage: /egg or /egg 0");
       return;
     }
 
@@ -316,7 +321,7 @@ export default function Home() {
           <div className="terminal-title">Abyssal Bar Terminal</div>
 
           <div className="terminal-output">
-            <p>Abyssal Bar Terminal v2.6</p>
+            <p>Abyssal Bar Terminal v2.8</p>
             <p>--------------------------------</p>
             <p>
               Connection status: {connected ? "Online" : "Connecting..."}
