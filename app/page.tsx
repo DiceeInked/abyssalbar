@@ -274,7 +274,7 @@ export default function Home() {
     }
 
     setCommandOutput(
-      "Unknown command. Available: /sign up, /sign in, /sign out, /egg, /etho, /html"
+      "Unknown command. Available: /sign up, /sign in, /sign out, /egg, /etho, /html, /thisdosenotworksodonttryit"
     );
   };
 
