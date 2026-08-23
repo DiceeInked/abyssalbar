@@ -27,6 +27,7 @@ type Account = {
 type CommandHandler = (args: string[], commandText: string) => void | Promise<void>;
 
 const MESSAGE_LINE_LENGTH = 80;
+const ETHO_TRANSITION_MS = 900;
 
 const isValidCredential = (value: string, min: number, max: number) =>
   value.length >= min && value.length <= max && !/\s/.test(value);
@@ -85,6 +86,7 @@ export default function Home() {
     "Type /sign up <username> <password> to create an account."
   );
   const [busy, setBusy] = useState(false);
+  const [ethoTransition, setEthoTransition] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -152,6 +154,71 @@ export default function Home() {
       void supabase.removeChannel(channel);
     };
   }, []);
+
+  const playEthoGlitchSound = () => {
+    try {
+      const AudioContextClass =
+        window.AudioContext ||
+        (window as typeof window & {
+          webkitAudioContext?: typeof AudioContext;
+        }).webkitAudioContext;
+
+      if (!AudioContextClass) {
+        return;
+      }
+
+      const context = new AudioContextClass();
+      const gain = context.createGain();
+      const oscillator = context.createOscillator();
+      const filter = context.createBiquadFilter();
+
+      oscillator.type = "square";
+      oscillator.frequency.setValueAtTime(70, context.currentTime);
+      oscillator.frequency.exponentialRampToValueAtTime(
+        1800,
+        context.currentTime + 0.16
+      );
+      oscillator.frequency.exponentialRampToValueAtTime(
+        110,
+        context.currentTime + 0.42
+      );
+
+      filter.type = "bandpass";
+      filter.frequency.setValueAtTime(900, context.currentTime);
+      filter.Q.setValueAtTime(7, context.currentTime);
+
+      gain.gain.setValueAtTime(0.0001, context.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.055, context.currentTime + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.0001, context.currentTime + 0.5);
+
+      oscillator.connect(filter);
+      filter.connect(gain);
+      gain.connect(context.destination);
+      oscillator.start();
+      oscillator.stop(context.currentTime + 0.52);
+
+      window.setTimeout(() => {
+        void context.close();
+      }, 650);
+    } catch (error) {
+      console.debug("Etho transition audio unavailable:", error);
+    }
+  };
+
+  const startEthoTransition = async () => {
+    if (ethoTransition) {
+      return;
+    }
+
+    setEthoTransition(true);
+    playEthoGlitchSound();
+
+    await new Promise<void>((resolve) => {
+      window.setTimeout(resolve, ETHO_TRANSITION_MS);
+    });
+
+    router.push("/etho");
+  };
 
   const authenticate = async (
     action: "sign_up" | "sign_in",
@@ -248,13 +315,13 @@ export default function Home() {
       setCommandOutput("Usage: /egg or /egg 0");
     },
 
-    "/etho": (args) => {
+    "/etho": async (args) => {
       if (args.length !== 0) {
         setCommandOutput("Usage: /etho");
         return;
       }
 
-      router.push("/etho");
+      await startEthoTransition();
     },
 
     "/games": (args) => {
@@ -341,7 +408,7 @@ export default function Home() {
 
     const trimmedInput = input.trim();
 
-    if (!trimmedInput || busy) {
+    if (!trimmedInput || busy || ethoTransition) {
       return;
     }
 
@@ -390,12 +457,21 @@ export default function Home() {
     <main className="terminal">
       <div className="scanlines" />
 
+      {ethoTransition && (
+        <div className="etho-glitch-transition" aria-hidden="true">
+          <div className="etho-glitch-layer etho-glitch-layer-one" />
+          <div className="etho-glitch-layer etho-glitch-layer-two" />
+          <div className="etho-glitch-noise" />
+          <div className="etho-glitch-text">ETHO</div>
+        </div>
+      )}
+
       <div className="terminal-container">
         <section className="terminal-window">
           <div className="terminal-title">Abyssal Bar Terminal</div>
 
           <div className="terminal-output">
-            <p>Abyssal Bar Terminal v2.19</p>
+            <p>Abyssal Bar Terminal v2.20</p>
             <p>--------------------------------</p>
             <p>
               Connection status: {connected ? "Online" : "Connecting..."}
@@ -404,18 +480,23 @@ export default function Home() {
             <p>{commandOutput}</p>
             <p>&nbsp;</p>
 
-            {messages.map((message) => (
-              <p key={message.id}>
-                {wrapText(`${message.username}: ${message.message}`, MESSAGE_LINE_LENGTH).map(
-                  (line, index) => (
+            {messages.map((message) => {
+              const lines = wrapText(
+                `${message.username}: ${message.message}`,
+                MESSAGE_LINE_LENGTH
+              );
+
+              return (
+                <p key={message.id}>
+                  {lines.map((line, index) => (
                     <span key={`${message.id}-${index}`}>
                       {line}
-                      {index < wrapText(`${message.username}: ${message.message}`, MESSAGE_LINE_LENGTH).length - 1 && <br />}
+                      {index < lines.length - 1 && <br />}
                     </span>
-                  )
-                )}
-              </p>
-            ))}
+                  ))}
+                </p>
+              );
+            })}
           </div>
 
           <form onSubmit={handleSubmit} className="terminal-input">
@@ -434,13 +515,13 @@ export default function Home() {
               autoComplete="off"
               spellCheck={false}
               aria-label="Terminal command or message"
-              disabled={busy}
+              disabled={busy || ethoTransition}
             />
 
             <button
               className="terminal-button"
               type="submit"
-              disabled={!connected || busy}
+              disabled={!connected || busy || ethoTransition}
             >
               Enter
             </button>
