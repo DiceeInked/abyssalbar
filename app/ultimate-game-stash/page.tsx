@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
 import { GAME_BUCKET } from "../../lib/constants";
 import "../globals.css";
@@ -14,6 +15,7 @@ type Game = {
 const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
 export default function GameTonics() {
+  const router = useRouter();
   const [games, setGames] = useState<Game[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
@@ -101,11 +103,12 @@ export default function GameTonics() {
   }, [filteredGames]);
 
   const handleGameClick = (game: Game) => {
-    const { data } = supabase.storage
-      .from(GAME_BUCKET)
-      .getPublicUrl(`${game.path}/index.html`);
+    const gamePath = game.path
+      .split("/")
+      .map(encodeURIComponent)
+      .join("/");
 
-    window.open(data.publicUrl, "_blank", "noopener,noreferrer");
+    window.open(`/play/${gamePath}`, "_blank", "noopener,noreferrer");
   };
 
   return (
