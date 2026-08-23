@@ -8,7 +8,6 @@ const HEIGHT = 20;
 
 type Cell = string | null;
 type Board = Cell[][];
-type Point = { x: number; y: number };
 type Piece = { shape: number[][]; x: number; y: number; type: string };
 
 const PIECES: Record<string, number[][]> = {
@@ -45,7 +44,13 @@ const rotate = (shape: number[][]) =>
     shape.map((row) => row[column]).reverse()
   );
 
-const collides = (board: Board, piece: Piece, shape = piece.shape, x = piece.x, y = piece.y) => {
+const collides = (
+  board: Board,
+  piece: Piece,
+  shape = piece.shape,
+  x = piece.x,
+  y = piece.y
+) => {
   for (let row = 0; row < shape.length; row += 1) {
     for (let column = 0; column < shape[row].length; column += 1) {
       if (!shape[row][column]) continue;
@@ -102,9 +107,9 @@ export default function Tetris() {
     setGameOver(false);
   }, []);
 
-  const lockPiece = useCallback(() => {
+  const lockPiece = useCallback((pieceToLock: Piece = piece) => {
     setBoard((currentBoard) => {
-      const merged = mergePiece(currentBoard, piece);
+      const merged = mergePiece(currentBoard, pieceToLock);
       const result = clearLines(merged);
       const nextPiece = createPiece();
 
@@ -133,6 +138,18 @@ export default function Tetris() {
     return false;
   }, [board, piece, gameOver, lockPiece]);
 
+  const hardDrop = useCallback(() => {
+    if (gameOver) return;
+
+    let finalY = piece.y;
+
+    while (!collides(board, piece, piece.shape, piece.x, finalY + 1)) {
+      finalY += 1;
+    }
+
+    lockPiece({ ...piece, y: finalY });
+  }, [board, piece, gameOver, lockPiece]);
+
   const rotatePiece = useCallback(() => {
     if (gameOver) return;
     const rotated = rotate(piece.shape);
@@ -159,17 +176,13 @@ export default function Tetris() {
       else if (event.key === "ArrowRight") move(1, 0);
       else if (event.key === "ArrowDown") move(0, 1);
       else if (event.key === "ArrowUp") rotatePiece();
-      else if (event.key === " ") {
-        let moved = true;
-        while (moved) moved = move(0, 1);
-      } else if (event.key.toLowerCase() === "r") {
-        reset();
-      }
+      else if (event.key === " ") hardDrop();
+      else if (event.key.toLowerCase() === "r") reset();
     };
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [move, rotatePiece, reset]);
+  }, [move, rotatePiece, hardDrop, reset]);
 
   useEffect(() => {
     if (gameOver) return;
