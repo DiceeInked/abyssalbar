@@ -17,6 +17,39 @@ const COMMANDS: Record<string, string> = {
 
   "/next":
     "IT WAS THE MOST POWER SHE HAD FELT, you DID THIS THIS IS YOUR FAULT YOU HAVE TO DEAL WITH IT",
+
+  "/dess":
+    "",
+};
+
+const ERROR_MESSAGES = [
+  "FATAL ERROR",
+  "MEMORY ACCESS VIOLATION",
+  "SYSTEM FAILURE",
+  "UNKNOWN PROCESS",
+  "ERROR: FILE NOT FOUND",
+  "ERROR: CONNECTION LOST",
+  "CRITICAL EXCEPTION",
+  "STACK OVERFLOW",
+  "INVALID MEMORY ADDRESS",
+  "PROCESS TERMINATED",
+  "UNABLE TO READ DATA",
+  "CORRUPTED DATA",
+  "SYSTEM32 FAILURE",
+  "UNKNOWN ERROR",
+  "ACCESS DENIED",
+  "FATAL EXCEPTION",
+  "KERNEL ERROR",
+  "CRITICAL SYSTEM FAILURE",
+  "ERROR 0x00000000",
+  "UNABLE TO CONTINUE",
+];
+
+type ErrorWindow = {
+  id: number;
+  message: string;
+  x: number;
+  y: number;
 };
 
 export default function Etho() {
@@ -24,28 +57,28 @@ export default function Etho() {
   const [output, setOutput] = useState("");
   const [typing, setTyping] = useState(false);
 
+  const [dessMode, setDessMode] = useState(false);
+  const [errorWindows, setErrorWindows] = useState<ErrorWindow[]>([]);
+
   const typingTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const errorTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Sound for /1225
   const jingle = useRef<HTMLAudioElement | null>(null);
-
-  // Background music for /girl
   const music = useRef<HTMLAudioElement | null>(null);
 
-  /*
-   * Load both audio files when the page loads.
-   */
   useEffect(() => {
     jingle.current = new Audio("/weird-route-jingle.mp3");
 
     music.current = new Audio("/glacier.ogg");
-
-    // Make glacier.ogg loop forever
     music.current.loop = true;
 
     return () => {
       if (typingTimer.current) {
         clearInterval(typingTimer.current);
+      }
+
+      if (errorTimer.current) {
+        clearInterval(errorTimer.current);
       }
 
       if (jingle.current) {
@@ -61,13 +94,57 @@ export default function Etho() {
   }, []);
 
   /*
-   * Types text onto the CRT one character at a time.
-   *
-   * playJingle:
-   * Plays weird-route-jingle.mp3 after the text finishes.
-   *
-   * startMusic:
-   * Starts glacier.ogg immediately when typing begins.
+   * Starts the /dess error sequence.
+   */
+  const startDess = () => {
+    if (typingTimer.current) {
+      clearInterval(typingTimer.current);
+    }
+
+    if (errorTimer.current) {
+      clearInterval(errorTimer.current);
+    }
+
+    setTyping(false);
+    setOutput("");
+    setDessMode(true);
+    setErrorWindows([]);
+
+    let errorCount = 0;
+
+    errorTimer.current = setInterval(() => {
+      const newError: ErrorWindow = {
+        id: errorCount,
+        message:
+          ERROR_MESSAGES[
+            Math.floor(Math.random() * ERROR_MESSAGES.length)
+          ],
+        x: Math.random() * 75,
+        y: Math.random() * 80,
+      };
+
+      setErrorWindows((current) => [
+        ...current,
+        newError,
+      ]);
+
+      errorCount++;
+
+      /*
+       * Stop after a large number of fake errors.
+       */
+      if (errorCount >= 35) {
+        if (errorTimer.current) {
+          clearInterval(errorTimer.current);
+        }
+
+        errorTimer.current = null;
+      }
+    }, 100);
+  };
+
+  /*
+   * Types text onto the CRT.
    */
   const typeText = (
     text: string,
@@ -81,9 +158,6 @@ export default function Etho() {
     setOutput("");
     setTyping(true);
 
-    /*
-     * Start glacier immediately.
-     */
     if (startMusic && music.current) {
       music.current.currentTime = 0;
 
@@ -102,9 +176,6 @@ export default function Etho() {
 
       setOutput(text.slice(0, index));
 
-      /*
-       * Text has finished typing.
-       */
       if (index >= text.length) {
         if (typingTimer.current) {
           clearInterval(typingTimer.current);
@@ -113,9 +184,6 @@ export default function Etho() {
         typingTimer.current = null;
         setTyping(false);
 
-        /*
-         * Play the special jingle AFTER /1225 finishes.
-         */
         if (playJingle && jingle.current) {
           jingle.current.currentTime = 0;
 
@@ -130,16 +198,10 @@ export default function Etho() {
     }, 45);
   };
 
-  /*
-   * Handles commands typed into the terminal.
-   */
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
 
-    /*
-     * Don't allow another command while text is typing.
-     */
-    if (typing) {
+    if (typing || dessMode) {
       return;
     }
 
@@ -149,21 +211,20 @@ export default function Etho() {
       return;
     }
 
+    setInput("");
+
+    /*
+     * /dess is special and doesn't use normal text output.
+     */
+    if (command === "/dess") {
+      startDess();
+      return;
+    }
+
     const response =
       COMMANDS[command] ??
       `UNKNOWN COMMAND: ${command.toUpperCase()}`;
 
-    setInput("");
-
-    /*
-     * /1225:
-     *   Text types
-     *   Then weird-route-jingle.mp3 plays
-     *
-     * /girl:
-     *   glacier.ogg starts immediately
-     *   Text types at the same time
-     */
     typeText(
       response,
       command === "/1225",
@@ -208,57 +269,99 @@ export default function Etho() {
   };
 
   return (
-    <main className={styles.page}>
+    <main
+      className={`${styles.page} ${
+        dessMode ? styles.dessPage : ""
+      }`}
+    >
       <div className={styles.crt}>
 
-        {/* CRT scanlines */}
-        <div className={styles.scanlines} />
+        {!dessMode && (
+          <>
+            <div className={styles.scanlines} />
+            <div className={styles.screenNoise} />
+            <div className={styles.vignette} />
 
-        {/* CRT screen noise */}
-        <div className={styles.screenNoise} />
+            <div className={styles.content}>
+              <div className={styles.output}>
+                {renderOutput()}
 
-        {/* Dark edges around the screen */}
-        <div className={styles.vignette} />
+                {typing && (
+                  <span className={styles.cursor}>
+                    _
+                  </span>
+                )}
+              </div>
 
-        <div className={styles.content}>
+              <form
+                className={styles.inputArea}
+                onSubmit={handleSubmit}
+              >
+                <span className={styles.prompt}>
+                  &gt;
+                </span>
 
-          {/* Terminal output */}
-          <div className={styles.output}>
-            {renderOutput()}
+                <input
+                  className={styles.input}
+                  type="text"
+                  value={input}
+                  onChange={(event) =>
+                    setInput(event.target.value)
+                  }
+                  placeholder="TYPE /COMMAND..."
+                  autoComplete="off"
+                  spellCheck={false}
+                  aria-label="Etho command input"
+                  disabled={typing}
+                  autoFocus
+                />
+              </form>
+            </div>
+          </>
+        )}
 
-            {typing && (
-              <span className={styles.cursor}>
-                _
-              </span>
-            )}
+        {dessMode && (
+          <div className={styles.errorScreen}>
+            {errorWindows.map((error) => (
+              <div
+                key={error.id}
+                className={styles.errorWindow}
+                style={{
+                  left: `${error.x}%`,
+                  top: `${error.y}%`,
+                }}
+              >
+                <div className={styles.errorTitle}>
+                  SYSTEM ERROR
+                </div>
+
+                <div className={styles.errorBody}>
+                  <div className={styles.errorIcon}>
+                    !
+                  </div>
+
+                  <div>
+                    <strong>
+                      {error.message}
+                    </strong>
+
+                    <p>
+                      AN UNEXPECTED ERROR HAS OCCURRED.
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  className={styles.errorButton}
+                >
+                  OK
+                </button>
+              </div>
+            ))}
           </div>
+        )}
 
-          {/* Command input */}
-          <form
-            className={styles.inputArea}
-            onSubmit={handleSubmit}
-          >
-            <span className={styles.prompt}>
-              &gt;
-            </span>
-
-            <input
-              className={styles.input}
-              type="text"
-              value={input}
-              onChange={(event) =>
-                setInput(event.target.value)
-              }
-              placeholder="TYPE /COMMAND..."
-              autoComplete="off"
-              spellCheck={false}
-              aria-label="Etho command input"
-              disabled={typing}
-              autoFocus
-            />
-          </form>
-
-        </div>
       </div>
     </main>
   );
