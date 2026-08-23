@@ -1,15 +1,17 @@
 "use client";
 
+import styles from "./Etho.module.css";
+
 export default function Etho() {
   return (
-    <main className="etho-page">
-      <div className="etho-scanlines" />
+    <main className={styles.page}>
+      <div className={styles.scanlines} />
 
-      <div className="etho-container">
-        <section className="etho-window">
-          <div className="etho-title">ETHO</div>
+      <div className={styles.container}>
+        <section className={styles.window}>
+          <div className={styles.title}>ETHO</div>
 
-          <div className="etho-output">
+          <div className={styles.output}>
             <p>Etho page hehe =]</p>
           </div>
         </section>
