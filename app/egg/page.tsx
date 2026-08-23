@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 
 const CHARACTERS =
   "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-/\\[]{}()<>:;,.=+*#@$%&?!|~^";
-const MIN_LINE_LENGTH = 100;
-const MAX_LINE_LENGTH = 300;
+const MIN_LINE_LENGTH = 16;
+const MAX_LINE_LENGTH = 256;
 const VISIBLE_LINES = 180;
 const BATCH_SIZE = 12;
 
