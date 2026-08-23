@@ -1,7 +1,5 @@
-<script>
-const SUPABASE_URL = "";
-const SUPABASE_PUBLISHABLE_KEY = "";
-</script>
+<script>const SUPABASE_URL = "";
+const SUPABASE_PUBLISHABLE_KEY = "";</script>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -35,8 +33,6 @@ const SUPABASE_PUBLISHABLE_KEY = "";
     .game-frame { width:100%; height:75vh; border:1px solid var(--teal); background:#000; }
     .game-header { display:flex; gap:8px; align-items:center; justify-content:space-between; margin-bottom:10px; }
     .auth-box { display:grid; gap:8px; max-width:500px; }
-    .message { margin:0 0 5px; }
-    .command-help { margin-top:10px; }
     @media (max-width:700px) { .terminal { padding:8px; } .game-button { width:100%; } }
   </style>
 </head>
@@ -51,6 +47,7 @@ const SUPABASE_PUBLISHABLE_KEY = "";
           <button data-view="games">GameTonics</button>
           <button data-view="egg">Egg</button>
           <button data-view="etho">Etho</button>
+          <button data-view="auth">Account</button>
         </div>
         <div id="terminalOutput" class="output"></div>
         <form id="terminalForm" class="input-row">
@@ -69,6 +66,7 @@ const SUPABASE_PUBLISHABLE_KEY = "";
             <button id="signInButton">Sign In</button>
             <button id="signUpButton">Sign Up</button>
             <button id="signOutButton">Sign Out</button>
+            <button data-view="home">Back</button>
           </div>
           <div id="authStatus" class="muted"></div>
         </div>
@@ -118,7 +116,6 @@ const SUPABASE_PUBLISHABLE_KEY = "";
     const input = $("terminalInput");
     let supabaseClient = null;
     let account = null;
-    let realtimeChannel = null;
     let games = [];
     let eggInterval = null;
 
@@ -129,8 +126,7 @@ const SUPABASE_PUBLISHABLE_KEY = "";
       output.scrollTop = output.scrollHeight;
     };
 
-    const validCredential = (value, min, max) =>
-      value.length >= min && value.length <= max && !/\s/.test(value);
+    const validCredential = (value, min, max) => value.length >= min && value.length <= max && !/\s/.test(value);
 
     const showView = (name) => {
       ["home", "auth", "games", "egg", "etho", "play"].forEach((view) => {
@@ -144,19 +140,21 @@ const SUPABASE_PUBLISHABLE_KEY = "";
       }
     };
 
-    const updateAccountDisplay = () => {
-      $("authStatus").textContent = account
-        ? `Signed in as ${account.username}.`
-        : "Not signed in.";
-    };
-
     const getStoredToken = () => localStorage.getItem("abyssal_session") || "";
     const setStoredToken = (token) => localStorage.setItem("abyssal_session", token);
     const clearStoredToken = () => localStorage.removeItem("abyssal_session");
 
+    const updateAccountDisplay = () => {
+      $("authStatus").textContent = account ? `Signed in as ${account.username}.` : "Not signed in.";
+    };
+
     const initializeSupabase = () => {
       if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
         write("Supabase is not configured. Put your URL on line 1 and publishable key on line 2.");
+        return false;
+      }
+      if (!window.supabase) {
+        write("Supabase library failed to load.");
         return false;
       }
       supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
@@ -220,11 +218,7 @@ const SUPABASE_PUBLISHABLE_KEY = "";
 
     const loadMessages = async () => {
       if (!supabaseClient) return;
-      const { data, error } = await supabaseClient
-        .from("messages")
-        .select("id, username, message, created_at")
-        .order("created_at", { ascending: false })
-        .limit(MAX_MESSAGES);
+      const { data, error } = await supabaseClient.from("messages").select("id, username, message, created_at").order("created_at", { ascending: false }).limit(MAX_MESSAGES);
       if (error) {
         write("Message load error: " + error.message);
         return;
@@ -235,10 +229,7 @@ const SUPABASE_PUBLISHABLE_KEY = "";
 
     const setupRealtime = () => {
       if (!supabaseClient) return;
-      realtimeChannel = supabaseClient
-        .channel("google-sites-chat")
-        .on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, loadMessages)
-        .subscribe();
+      supabaseClient.channel("google-sites-chat").on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, loadMessages).subscribe();
     };
 
     const sendMessage = async (message) => {
@@ -266,9 +257,8 @@ const SUPABASE_PUBLISHABLE_KEY = "";
       if (eggInterval) clearInterval(eggInterval);
       eggOutput.innerHTML = "";
       const render = () => {
-        const lineCount = 14;
         const lines = [];
-        for (let i = 0; i < lineCount; i++) {
+        for (let i = 0; i < 14; i++) {
           const length = zeroMode ? 256 : Math.floor(Math.random() * 241) + 16;
           lines.push(makeEggLine(length, zeroMode));
         }
@@ -281,17 +271,12 @@ const SUPABASE_PUBLISHABLE_KEY = "";
     const loadGames = async () => {
       if (!supabaseClient) return;
       $("gamesStatus").textContent = "Loading games...";
-      const { data, error } = await supabaseClient.storage.from(GAME_BUCKET).list("", {
-        limit: 1000,
-        sortBy: { column: "name", order: "asc" }
-      });
+      const { data, error } = await supabaseClient.storage.from(GAME_BUCKET).list("", { limit: 1000, sortBy: { column: "name", order: "asc" } });
       if (error) {
         $("gamesStatus").textContent = "Unable to load GameTonics: " + error.message;
         return;
       }
-      games = (data || [])
-        .filter((item) => item.name && !item.name.startsWith(".") && item.id === null)
-        .map((item) => ({ name: item.name, path: item.name }));
+      games = (data || []).filter((item) => item.name && !item.name.startsWith(".") && item.id === null).map((item) => ({ name: item.name, path: item.name }));
       renderGames();
     };
 
@@ -312,7 +297,7 @@ const SUPABASE_PUBLISHABLE_KEY = "";
 
     const launchGame = (game) => {
       const path = game.path.split("/").map(encodeURIComponent).join("/");
-      const url = `${SUPABASE_URL.replace(/\\/$/, "")}/storage/v1/object/public/${GAME_BUCKET}/${path}/index.html`;
+      const url = `${SUPABASE_URL.replace(/\/$/, "")}/storage/v1/object/public/${GAME_BUCKET}/${path}/index.html`;
       $("playingTitle").textContent = game.name;
       $("gameFrame").src = url;
       $("gameStatus").textContent = "Loading game from GameTonics...";
@@ -326,7 +311,11 @@ const SUPABASE_PUBLISHABLE_KEY = "";
         write("Commands: /help, /sign up, /sign in, /sign out, /egg, /egg 0, /etho, /gametonics");
         return;
       }
-      if (command === "/egg") { showView("egg"); if (parts[1] === "0") startEgg(true); return; }
+      if (command === "/egg") {
+        showView("egg");
+        if (parts[1] === "0") startEgg(true);
+        return;
+      }
       if (command === "/etho") { showView("etho"); return; }
       if (command === "/gametonics") { showView("games"); return; }
       if (command === "/sign") {
@@ -351,9 +340,7 @@ const SUPABASE_PUBLISHABLE_KEY = "";
       else await sendMessage(value);
     });
 
-    document.querySelectorAll("[data-view]").forEach((button) => {
-      button.addEventListener("click", () => showView(button.dataset.view));
-    });
+    document.querySelectorAll("[data-view]").forEach((button) => button.addEventListener("click", () => showView(button.dataset.view)));
     $("gameSearch").addEventListener("input", renderGames);
     $("signInButton").addEventListener("click", () => authenticate("sign_in"));
     $("signUpButton").addEventListener("click", () => authenticate("sign_up"));
