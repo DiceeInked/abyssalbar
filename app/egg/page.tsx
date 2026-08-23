@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 const CHARACTERS =
   "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-/\\[]{}()<>:;,.=+*#@$%&?!|~^";
-const LINES = 80;
-const LINE_LENGTH = 110;
+const LINE_LENGTH = 180;
+const VISIBLE_LINES = 180;
+const BATCH_SIZE = 12;
 
 const makeLine = () => {
   let line = "";
@@ -17,59 +18,51 @@ const makeLine = () => {
   return line;
 };
 
+const makeLines = (count: number) =>
+  Array.from({ length: count }, makeLine);
+
 export default function Egg() {
   const [lines, setLines] = useState<string[]>(() =>
-    Array.from({ length: LINES }, makeLine)
-  );
-  const outputRef = useRef<HTMLDivElement>(null);
-
-  const generatedLines = useMemo(
-    () => Array.from({ length: 12 }, makeLine),
-    []
+    makeLines(VISIBLE_LINES)
   );
 
   useEffect(() => {
     const interval = window.setInterval(() => {
       setLines((current) => [
-        ...current.slice(generatedLines.length),
-        ...Array.from({ length: generatedLines.length }, makeLine),
+        ...current.slice(BATCH_SIZE),
+        ...makeLines(BATCH_SIZE),
       ]);
     }, 45);
 
     return () => window.clearInterval(interval);
-  }, [generatedLines.length]);
-
-  useEffect(() => {
-    const output = outputRef.current;
-
-    if (output) {
-      output.scrollTop = output.scrollHeight;
-    }
-  }, [lines]);
+  }, []);
 
   return (
     <main
       style={{
         position: "fixed",
         inset: 0,
+        width: "100vw",
+        height: "100vh",
         overflow: "hidden",
+        margin: 0,
+        padding: 0,
         background: "#000",
         color: "#00ffc8",
-        fontFamily: '"IBM Plex Mono", monospace',
+        fontFamily: "monospace",
         fontSize: "8px",
         lineHeight: "1.05",
-        padding: "8px",
         textShadow: "0 0 4px rgba(0, 255, 200, 0.35)",
       }}
     >
       <div
-        ref={outputRef}
-        aria-label="Egg terminal output"
         style={{
-          height: "100%",
+          position: "absolute",
+          inset: 0,
           overflow: "hidden",
+          width: "100%",
+          height: "100%",
           whiteSpace: "pre",
-          wordBreak: "normal",
         }}
       >
         {lines.map((line, index) => (
