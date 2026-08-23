@@ -5,60 +5,72 @@ import { useEffect, useState } from "react";
 const CHARACTERS =
   "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-/\\[]{}()<>:;,.=+*#@$%&?!|~^";
 
-const MIN_LINE_LENGTH = 100;
-const MAX_LINE_LENGTH = 300;
+const MIN_LINE_LENGTH = 16;
+const MAX_LINE_LENGTH = 256;
+const ZERO_MODE_LINE_LENGTH = 300;
 const VISIBLE_LINES = 180;
 const BATCH_SIZE = 12;
 const REFRESH_INTERVAL_MS = 45;
 
-// Lower values make random spaces more common.
-// For example, 8 means roughly a 1-in-8 chance at each eligible position.
-const SPACE_CHANCE_DENOMINATOR = 0;
-
-const makeLine = () => {
-  const length =
-    Math.floor(
-      Math.random() * (MAX_LINE_LENGTH - MIN_LINE_LENGTH + 1)
-    ) + MIN_LINE_LENGTH;
-
+const makeLine = (length: number) => {
   let line = "";
 
   for (let index = 0; index < length; index += 1) {
     line += CHARACTERS[Math.floor(Math.random() * CHARACTERS.length)];
-
-    const nextCharacterExists = index < length - 1;
-    const previousCharacter = line[line.length - 1];
-    const shouldAddSpace =
-      nextCharacterExists &&
-      previousCharacter !== " " &&
-      Math.floor(Math.random() * SPACE_CHANCE_DENOMINATOR) === 0;
-
-    if (shouldAddSpace) {
-      line += " ";
-    }
   }
 
   return line;
 };
 
-const makeLines = (count: number) =>
-  Array.from({ length: count }, makeLine);
+const makeLines = (count: number, length: number) =>
+  Array.from({ length: count }, () => makeLine(length));
 
 export default function Egg() {
-  const [lines, setLines] = useState<string[]>(() =>
-    makeLines(VISIBLE_LINES)
-  );
+  const [zeroMode, setZeroMode] = useState(false);
+  const [lines, setLines] = useState<string[]>([]);
 
   useEffect(() => {
+    const mode = new URLSearchParams(window.location.search).get("mode");
+    setZeroMode(mode === "0");
+  }, []);
+
+  const lineLength = zeroMode
+    ? ZERO_MODE_LINE_LENGTH
+    : Math.floor(
+        Math.random() * (MAX_LINE_LENGTH - MIN_LINE_LENGTH + 1)
+      ) + MIN_LINE_LENGTH;
+
+  useEffect(() => {
+    const initialLines = Array.from({ length: VISIBLE_LINES }, () => {
+      const length = zeroMode
+        ? ZERO_MODE_LINE_LENGTH
+        : Math.floor(
+            Math.random() * (MAX_LINE_LENGTH - MIN_LINE_LENGTH + 1)
+          ) + MIN_LINE_LENGTH;
+
+      return makeLine(length);
+    });
+
+    setLines(initialLines);
+
     const interval = window.setInterval(() => {
-      setLines((current) => [
-        ...current.slice(BATCH_SIZE),
-        ...makeLines(BATCH_SIZE),
-      ]);
+      setLines((current) => {
+        const newLines = Array.from({ length: BATCH_SIZE }, () => {
+          const length = zeroMode
+            ? ZERO_MODE_LINE_LENGTH
+            : Math.floor(
+                Math.random() * (MAX_LINE_LENGTH - MIN_LINE_LENGTH + 1)
+              ) + MIN_LINE_LENGTH;
+
+          return makeLine(length);
+        });
+
+        return [...current.slice(BATCH_SIZE), ...newLines];
+      });
     }, REFRESH_INTERVAL_MS);
 
     return () => window.clearInterval(interval);
-  }, []);
+  }, [zeroMode]);
 
   return (
     <main
@@ -89,7 +101,10 @@ export default function Egg() {
         }}
       >
         {lines.map((line, index) => (
-          <div key={`${index}-${line}`}>{line}</div>
+          <div key={`${index}-${line}`}>
+            {line}
+            {zeroMode && <div style={{ height: "8px" }} />}
+          </div>
         ))}
       </div>
     </main>
