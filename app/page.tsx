@@ -25,10 +25,13 @@ type Account = {
   created_at?: string;
 };
 
+type CommandHandler = (args: string[], commandText: string) => void | Promise<void>;
+
 const isValidCredential = (value: string, min: number, max: number) =>
   value.length >= min && value.length <= max && !/\s/.test(value);
 
-const getCommandParts = (command: string) => command.trim().split(/\s+/);
+const getCommandParts = (commandText: string) =>
+  commandText.trim().split(/\s+/);
 
 const sortMessages = (messages: Message[]) =>
   [...messages].sort(
@@ -192,90 +195,102 @@ export default function Home() {
     }
   };
 
-  const handleCommand = async (commandText: string) => {
-    const parts = getCommandParts(commandText);
-    const command = parts[0]?.toLowerCase();
-
-    if (command === "/egg") {
-      if (parts.length === 1) {
+  // Add new top-level commands to this object.
+  // Each command receives its arguments and the original command text.
+  const commands: Record<string, CommandHandler> = {
+    "/egg": (args) => {
+      if (args.length === 0) {
         router.push("/egg");
         return;
       }
 
-      if (parts.length === 2 && parts[1] === "0") {
+      if (args.length === 1 && args[0] === "0") {
         router.push("/egg?mode=0");
         return;
       }
 
       setCommandOutput("Usage: /egg or /egg 0");
-      return;
-    }
+    },
 
-    if (command === "/etho") {
-      if (parts.length === 1) {
-        router.push("/etho");
+    "/etho": (args) => {
+      if (args.length !== 0) {
+        setCommandOutput("Usage: /etho");
         return;
       }
 
-      setCommandOutput("Usage: /etho");
-      return;
-    }
+      router.push("/etho");
+    },
 
-    if (command === "/html") {
-      const html = commandText.slice("/html".length).trim();
-
-      if (!html) {
+    "/html": (args, commandText) => {
+      if (args.length === 0) {
         setCommandOutput("Usage: /html <HTML code>");
         return;
       }
 
+      const html = commandText.slice("/html".length).trim();
       window.sessionStorage.setItem("abyssal-bar-html", html);
       router.push("/html");
-      return;
-    }
+    },
 
-    if (command !== "/sign") {
+    "/sign": async (args) => {
+      const action = args[0]?.toLowerCase();
+
+      const signCommands: Record<string, () => void | Promise<void>> = {
+        up: async () => {
+          if (args.length !== 3) {
+            setCommandOutput("Usage: /sign up <username> <password>");
+            return;
+          }
+
+          await authenticate("sign_up", args[1], args[2]);
+        },
+
+        in: async () => {
+          if (args.length !== 3) {
+            setCommandOutput("Usage: /sign in <username> <password>");
+            return;
+          }
+
+          await authenticate("sign_in", args[1], args[2]);
+        },
+
+        out: async () => {
+          if (args.length !== 1) {
+            setCommandOutput("Usage: /sign out");
+            return;
+          }
+
+          await handleSignOut();
+        },
+      };
+
+      const handler = action ? signCommands[action] : undefined;
+
+      if (!handler) {
+        setCommandOutput(
+          "Usage: /sign up <username> <password>, /sign in <username> <password>, or /sign out"
+        );
+        return;
+      }
+
+      await handler();
+    },
+  };
+
+  const handleCommand = async (commandText: string) => {
+    const parts = getCommandParts(commandText);
+    const command = parts[0]?.toLowerCase();
+    const args = parts.slice(1);
+    const handler = command ? commands[command] : undefined;
+
+    if (!handler) {
       setCommandOutput(
-        "Unknown command. Available: /sign up, /sign in, /sign out, /egg, /etho, /html, /thisdoesnotworksodonttryit"
+        "Unknown command. Available: /sign, /egg, /etho, /html"
       );
       return;
     }
 
-    const action = parts[1]?.toLowerCase();
-
-    if (action === "up") {
-      if (parts.length !== 4) {
-        setCommandOutput("Usage: /sign up <username> <password>");
-        return;
-      }
-
-      await authenticate("sign_up", parts[2], parts[3]);
-      return;
-    }
-
-    if (action === "in") {
-      if (parts.length !== 4) {
-        setCommandOutput("Usage: /sign in <username> <password>");
-        return;
-      }
-
-      await authenticate("sign_in", parts[2], parts[3]);
-      return;
-    }
-
-    if (action === "out") {
-      if (parts.length !== 2) {
-        setCommandOutput("Usage: /sign out");
-        return;
-      }
-
-      await handleSignOut();
-      return;
-    }
-
-    setCommandOutput(
-      "Unknown command. Available: /sign up, /sign in, /sign out, /egg, /etho, /html"
-    );
+    await handler(args, commandText);
   };
 
   const handleSubmit = async (event: FormEvent) => {
@@ -345,7 +360,7 @@ export default function Home() {
           <div className="terminal-title">Abyssal Bar Terminal</div>
 
           <div className="terminal-output">
-            <p>Abyssal Bar Terminal v2.12</p>
+            <p>Abyssal Bar Terminal v2.13</p>
             <p>--------------------------------</p>
             <p>
               Connection status: {connected ? "Online" : "Connecting..."}
