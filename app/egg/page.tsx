@@ -4,14 +4,20 @@ import { useEffect, useState } from "react";
 
 const CHARACTERS =
   "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-/\\[]{}()<>:;,.=+*#@$%&?!|~^";
-const LINE_LENGTH = 180;
+const MIN_LINE_LENGTH = 100;
+const MAX_LINE_LENGTH = 300;
 const VISIBLE_LINES = 180;
 const BATCH_SIZE = 12;
 
 const makeLine = () => {
+  const length =
+    Math.floor(
+      Math.random() * (MAX_LINE_LENGTH - MIN_LINE_LENGTH + 1)
+    ) + MIN_LINE_LENGTH;
+
   let line = "";
 
-  for (let index = 0; index < LINE_LENGTH; index += 1) {
+  for (let index = 0; index < length; index += 1) {
     line += CHARACTERS[Math.floor(Math.random() * CHARACTERS.length)];
   }
 
