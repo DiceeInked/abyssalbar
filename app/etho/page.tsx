@@ -4,8 +4,8 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 import styles from "./Etho.module.css";
 
 const COMMANDS: Record<string, string> = {
-  "/help": "TRY /room OR /call",
-  "/call": "YOUR CALLS WONT BE ANSWERED YOU WONT BE HELPED YOU WILL SUFER",
+  "/help": "TRY /room OR /call out",
+  "/call out": "YOUR CALLS WONT BE ANSWERED YOU WONT BE HELPED YOU WILL SUFER YOU CHOSE THIS PATH",
   "/room": "THERE IS A TREE HERE",
   "/tree": "HE IS BEHIND THE TREE",
   "/man": "THE MAN GIVES YOU AN EGG, THERE IS NO MAN HERE",
