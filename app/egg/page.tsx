@@ -13,7 +13,7 @@ const REFRESH_INTERVAL_MS = 45;
 
 // Lower values make random spaces more common.
 // For example, 8 means roughly a 1-in-8 chance at each eligible position.
-const SPACE_CHANCE_DENOMINATOR = 16;
+const SPACE_CHANCE_DENOMINATOR = 0;
 
 const makeLine = () => {
   const length =
