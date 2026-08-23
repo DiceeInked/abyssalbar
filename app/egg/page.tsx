@@ -22,9 +22,6 @@ const makeLine = (length: number) => {
   return line;
 };
 
-const makeLines = (count: number, length: number) =>
-  Array.from({ length: count }, () => makeLine(length));
-
 export default function Egg() {
   const [zeroMode, setZeroMode] = useState(false);
   const [lines, setLines] = useState<string[]>([]);
@@ -34,36 +31,25 @@ export default function Egg() {
     setZeroMode(mode === "0");
   }, []);
 
-  const lineLength = zeroMode
-    ? ZERO_MODE_LINE_LENGTH
-    : Math.floor(
-        Math.random() * (MAX_LINE_LENGTH - MIN_LINE_LENGTH + 1)
-      ) + MIN_LINE_LENGTH;
-
   useEffect(() => {
-    const initialLines = Array.from({ length: VISIBLE_LINES }, () => {
-      const length = zeroMode
+    const getLineLength = () =>
+      zeroMode
         ? ZERO_MODE_LINE_LENGTH
         : Math.floor(
             Math.random() * (MAX_LINE_LENGTH - MIN_LINE_LENGTH + 1)
           ) + MIN_LINE_LENGTH;
 
-      return makeLine(length);
-    });
+    const initialLines = Array.from({ length: VISIBLE_LINES }, () =>
+      makeLine(getLineLength())
+    );
 
     setLines(initialLines);
 
     const interval = window.setInterval(() => {
       setLines((current) => {
-        const newLines = Array.from({ length: BATCH_SIZE }, () => {
-          const length = zeroMode
-            ? ZERO_MODE_LINE_LENGTH
-            : Math.floor(
-                Math.random() * (MAX_LINE_LENGTH - MIN_LINE_LENGTH + 1)
-              ) + MIN_LINE_LENGTH;
-
-          return makeLine(length);
-        });
+        const newLines = Array.from({ length: BATCH_SIZE }, () =>
+          makeLine(getLineLength())
+        );
 
         return [...current.slice(BATCH_SIZE), ...newLines];
       });
