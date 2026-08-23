@@ -4,9 +4,11 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 import styles from "./Etho.module.css";
 
 const COMMANDS: Record<string, string> = {
-  "/room": "there is a tree here",
-  "/tree": "he is behind the tree",
-  "/man": "he gives you an egg",
+  "/help": "TRY /room"
+  "/call": "YOUR CALLS WONT BE ANSWERED YOU WONT BE HELPED YOU SUFER",
+  "/room": "THERE IS A TREE HERE",
+  "/tree": "HE IS BEHIND THE TREE",
+  "/man": "THE MAN GIVES YOU AN EGG,THERE IS NO MAN HERE",
 };
 
 export default function Etho() {
