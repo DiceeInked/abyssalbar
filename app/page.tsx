@@ -1,7 +1,6 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "../lib/supabase";
 import {
@@ -27,6 +26,8 @@ type Account = {
 
 type CommandHandler = (args: string[], commandText: string) => void | Promise<void>;
 
+const MESSAGE_LINE_LENGTH = 80;
+
 const isValidCredential = (value: string, min: number, max: number) =>
   value.length >= min && value.length <= max && !/\s/.test(value);
 
@@ -38,6 +39,41 @@ const sortMessages = (messages: Message[]) =>
     (a, b) =>
       new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
   );
+
+const wrapText = (text: string, maxLength: number) => {
+  const words = text.split(" ");
+  const lines: string[] = [];
+  let currentLine = "";
+
+  words.forEach((word) => {
+    if (word.length > maxLength) {
+      if (currentLine) {
+        lines.push(currentLine);
+        currentLine = "";
+      }
+
+      for (let index = 0; index < word.length; index += maxLength) {
+        lines.push(word.slice(index, index + maxLength));
+      }
+      return;
+    }
+
+    const candidate = currentLine ? `${currentLine} ${word}` : word;
+
+    if (candidate.length > maxLength) {
+      lines.push(currentLine);
+      currentLine = word;
+    } else {
+      currentLine = candidate;
+    }
+  });
+
+  if (currentLine) {
+    lines.push(currentLine);
+  }
+
+  return lines.length > 0 ? lines : [""];
+};
 
 export default function Home() {
   const router = useRouter();
@@ -221,6 +257,24 @@ export default function Home() {
       router.push("/etho");
     },
 
+    "/games": (args) => {
+      if (args.length !== 0) {
+        setCommandOutput("Usage: /games");
+        return;
+      }
+
+      router.push("/ultimate-game-stash");
+    },
+
+    "/tetris": (args) => {
+      if (args.length !== 0) {
+        setCommandOutput("Usage: /tetris");
+        return;
+      }
+
+      router.push("/tetris");
+    },
+
     "/sign": async (args) => {
       const action = args[0]?.toLowerCase();
 
@@ -274,7 +328,7 @@ export default function Home() {
 
     if (!handler) {
       setCommandOutput(
-        "Unknown command. Available: /sign, /egg, /etho"
+        "Unknown command. Available: /sign, /egg, /etho, /games, /tetris"
       );
       return;
     }
@@ -337,19 +391,11 @@ export default function Home() {
       <div className="scanlines" />
 
       <div className="terminal-container">
-        <section className="navigation-terminal">
-          <div className="terminal-title">Navigation</div>
-
-          <div className="navigation-content">
-            <Link href="/ultimate-game-stash">Game Tonics</Link>
-          </div>
-        </section>
-
         <section className="terminal-window">
           <div className="terminal-title">Abyssal Bar Terminal</div>
 
           <div className="terminal-output">
-            <p>Abyssal Bar Terminal v2.14</p>
+            <p>Abyssal Bar Terminal v2.19</p>
             <p>--------------------------------</p>
             <p>
               Connection status: {connected ? "Online" : "Connecting..."}
@@ -360,7 +406,14 @@ export default function Home() {
 
             {messages.map((message) => (
               <p key={message.id}>
-                {message.username}: {message.message}
+                {wrapText(`${message.username}: ${message.message}`, MESSAGE_LINE_LENGTH).map(
+                  (line, index) => (
+                    <span key={`${message.id}-${index}`}>
+                      {line}
+                      {index < wrapText(`${message.username}: ${message.message}`, MESSAGE_LINE_LENGTH).length - 1 && <br />}
+                    </span>
+                  )
+                )}
               </p>
             ))}
           </div>
