@@ -331,3 +331,12 @@
     border-radius: 4% / 5%;
   }
 }
+
+.redText {
+  color: #ff2020;
+
+  text-shadow:
+    0 0 3px #ff2020,
+    0 0 8px rgba(255, 32, 32, 0.7),
+    0 0 15px rgba(255, 32, 32, 0.3);
+}
