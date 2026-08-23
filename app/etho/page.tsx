@@ -25,16 +25,23 @@ export default function Etho() {
   const [typing, setTyping] = useState(false);
 
   const typingTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Sound for /1225
   const jingle = useRef<HTMLAudioElement | null>(null);
 
+  // Background music for /girl
+  const music = useRef<HTMLAudioElement | null>(null);
+
   /*
-   * Load the sound.
-   *
-   * Because the MP3 is inside /public, the browser
-   * can access it at /weird-route-jingle.mp3
+   * Load both audio files when the page loads.
    */
   useEffect(() => {
     jingle.current = new Audio("/weird-route-jingle.mp3");
+
+    music.current = new Audio("/glacier.ogg");
+
+    // Make glacier.ogg loop forever
+    music.current.loop = true;
 
     return () => {
       if (typingTimer.current) {
@@ -45,19 +52,48 @@ export default function Etho() {
         jingle.current.pause();
         jingle.current.currentTime = 0;
       }
+
+      if (music.current) {
+        music.current.pause();
+        music.current.currentTime = 0;
+      }
     };
   }, []);
 
   /*
-   * Types the response one character at a time.
+   * Types text onto the CRT one character at a time.
+   *
+   * playJingle:
+   * Plays weird-route-jingle.mp3 after the text finishes.
+   *
+   * startMusic:
+   * Starts glacier.ogg immediately when typing begins.
    */
-  const typeText = (text: string, playSound = false) => {
+  const typeText = (
+    text: string,
+    playJingle = false,
+    startMusic = false
+  ) => {
     if (typingTimer.current) {
       clearInterval(typingTimer.current);
     }
 
     setOutput("");
     setTyping(true);
+
+    /*
+     * Start glacier immediately.
+     */
+    if (startMusic && music.current) {
+      music.current.currentTime = 0;
+
+      void music.current.play().catch((error) => {
+        console.error(
+          "Could not play background music:",
+          error
+        );
+      });
+    }
 
     let index = 0;
 
@@ -67,7 +103,7 @@ export default function Etho() {
       setOutput(text.slice(0, index));
 
       /*
-       * The entire message has finished typing.
+       * Text has finished typing.
        */
       if (index >= text.length) {
         if (typingTimer.current) {
@@ -78,13 +114,16 @@ export default function Etho() {
         setTyping(false);
 
         /*
-         * Play the sound AFTER /1225 finishes typing.
+         * Play the special jingle AFTER /1225 finishes.
          */
-        if (playSound && jingle.current) {
+        if (playJingle && jingle.current) {
           jingle.current.currentTime = 0;
 
           void jingle.current.play().catch((error) => {
-            console.error("Could not play jingle:", error);
+            console.error(
+              "Could not play jingle:",
+              error
+            );
           });
         }
       }
@@ -92,7 +131,7 @@ export default function Etho() {
   };
 
   /*
-   * Handles terminal commands.
+   * Handles commands typed into the terminal.
    */
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
@@ -111,14 +150,25 @@ export default function Etho() {
     }
 
     const response =
-      COMMANDS[command] ?? `UNKNOWN COMMAND: ${command.toUpperCase()}`;
+      COMMANDS[command] ??
+      `UNKNOWN COMMAND: ${command.toUpperCase()}`;
 
     setInput("");
 
     /*
-     * Only /1225 plays the jingle.
+     * /1225:
+     *   Text types
+     *   Then weird-route-jingle.mp3 plays
+     *
+     * /girl:
+     *   glacier.ogg starts immediately
+     *   Text types at the same time
      */
-    typeText(response, command === "/1225");
+    typeText(
+      response,
+      command === "/1225",
+      command === "/girl"
+    );
   };
 
   /*
@@ -160,12 +210,18 @@ export default function Etho() {
   return (
     <main className={styles.page}>
       <div className={styles.crt}>
-        {/* CRT effects */}
+
+        {/* CRT scanlines */}
         <div className={styles.scanlines} />
+
+        {/* CRT screen noise */}
         <div className={styles.screenNoise} />
+
+        {/* Dark edges around the screen */}
         <div className={styles.vignette} />
 
         <div className={styles.content}>
+
           {/* Terminal output */}
           <div className={styles.output}>
             {renderOutput()}
@@ -177,7 +233,7 @@ export default function Etho() {
             )}
           </div>
 
-          {/* Terminal input */}
+          {/* Command input */}
           <form
             className={styles.inputArea}
             onSubmit={handleSubmit}
@@ -201,6 +257,7 @@ export default function Etho() {
               autoFocus
             />
           </form>
+
         </div>
       </div>
     </main>
