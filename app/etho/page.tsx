@@ -2,14 +2,14 @@
 
 export default function Etho() {
   return (
-    <main className="terminal">
-      <div className="scanlines" />
+    <main className="etho-page">
+      <div className="etho-scanlines" />
 
-      <div className="terminal-container">
-        <section className="terminal-window">
-          <div className="terminal-title">ETHO</div>
+      <div className="etho-container">
+        <section className="etho-window">
+          <div className="etho-title">ETHO</div>
 
-          <div className="terminal-output">
+          <div className="etho-output">
             <p>Etho page hehe =]</p>
           </div>
         </section>
