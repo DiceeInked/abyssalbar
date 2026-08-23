@@ -4,11 +4,15 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 import styles from "./Etho.module.css";
 
 const COMMANDS: Record<string, string> = {
-  "/help": "TRY /room OR /call out",
-  "/call out": "YOUR CALLS WONT BE ANSWERED YOU WONT BE HELPED YOU WILL SUFER YOU CHOSE THIS PATH",
-  "/room": "THERE IS A TREE HERE",
-  "/tree": "HE IS BEHIND THE TREE",
-  "/man": "THE MAN GIVES YOU AN EGG, THERE IS NO MAN HERE",
+  "/help": "TRY /girl OR /call out",
+  "/call out":
+    "YOUR CALLS WONT BE ANSWERED, YOU WONT BE HELPED, YOU WILL SUFER, YOU CHOSE THIS PATH",
+  "/girl":
+    "IT ALL STARTED FROM A GIRL WITH ICE POWERS, I WILL TELL MORE IF YOU KNOW THE CODE",
+  "/1225":
+    "you TOLD HER TO FREEZE THEM, ALL OF THEM, THEN THE BRID",
+  "/next":
+    "IT WAS THE MOST POWER SHE HAD FELT, you DID THIS THIS IS YOUR FAULT YOU HAVE TO DEAL WITH IT",
 };
 
 export default function Etho() {
@@ -72,6 +76,38 @@ export default function Etho() {
     typeText(response);
   };
 
+  /*
+   * Makes YOU, YOUR, YOU'RE and similar words red.
+   */
+  const renderOutput = () => {
+    const words = output.split(/(\s+)/);
+
+    return words.map((word, index) => {
+      const cleanWord = word
+        .replace(/[.,!?;:'"]/g, "")
+        .toLowerCase();
+
+      const isRed =
+        cleanWord === "you" ||
+        cleanWord === "your" ||
+        cleanWord === "you're" ||
+        cleanWord === "youre";
+
+      if (isRed) {
+        return (
+          <span
+            key={index}
+            className={styles.redText}
+          >
+            {word}
+          </span>
+        );
+      }
+
+      return <span key={index}>{word}</span>;
+    });
+  };
+
   return (
     <main className={styles.page}>
       <div className={styles.crt}>
@@ -81,7 +117,8 @@ export default function Etho() {
 
         <div className={styles.content}>
           <div className={styles.output}>
-            {output}
+            {renderOutput()}
+
             {typing && (
               <span className={styles.cursor}>_</span>
             )}
