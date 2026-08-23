@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { supabase } from "../lib/supabase";
 import {
   MAX_MESSAGES,
@@ -36,6 +37,7 @@ const sortMessages = (messages: Message[]) =>
   );
 
 export default function Home() {
+  const router = useRouter();
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [connected, setConnected] = useState(false);
@@ -191,6 +193,25 @@ export default function Home() {
   };
 
   const handleCommand = async (parts: string[]) => {
+    const command = parts[0]?.toLowerCase();
+
+    if (command === "/egg") {
+      if (parts.length !== 1) {
+        setCommandOutput("Usage: /egg");
+        return;
+      }
+
+      router.push("/egg");
+      return;
+    }
+
+    if (command !== "/sign") {
+      setCommandOutput(
+        "Unknown command. Available: /sign up, /sign in, /sign out, /egg"
+      );
+      return;
+    }
+
     const action = parts[1]?.toLowerCase();
 
     if (action === "up") {
@@ -224,7 +245,7 @@ export default function Home() {
     }
 
     setCommandOutput(
-      "Unknown command. Available: /sign up, /sign in, /sign out"
+      "Unknown command. Available: /sign up, /sign in, /sign out, /egg"
     );
   };
 
@@ -269,7 +290,6 @@ export default function Home() {
 
       if (!response.ok) {
         setCommandOutput(`Message error: ${result.error}`);
-        return;
       }
     } catch (error) {
       console.error("Error sending message:", error);
@@ -296,7 +316,7 @@ export default function Home() {
           <div className="terminal-title">Abyssal Bar Terminal</div>
 
           <div className="terminal-output">
-            <p>Abyssal Bar Terminal v2.1</p>
+            <p>Abyssal Bar Terminal v2.2</p>
             <p>--------------------------------</p>
             <p>
               Connection status: {connected ? "Online" : "Connecting..."}
