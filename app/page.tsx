@@ -221,17 +221,6 @@ export default function Home() {
       router.push("/etho");
     },
 
-    "/html": (args, commandText) => {
-      if (args.length === 0) {
-        setCommandOutput("Usage: /html <HTML code>");
-        return;
-      }
-
-      const html = commandText.slice("/html".length).trim();
-      window.sessionStorage.setItem("abyssal-bar-html", html);
-      router.push("/html");
-    },
-
     "/sign": async (args) => {
       const action = args[0]?.toLowerCase();
 
@@ -285,7 +274,7 @@ export default function Home() {
 
     if (!handler) {
       setCommandOutput(
-        "Unknown command. Available: /sign, /egg, /etho, /html"
+        "Unknown command. Available: /sign, /egg, /etho"
       );
       return;
     }
@@ -360,7 +349,7 @@ export default function Home() {
           <div className="terminal-title">Abyssal Bar Terminal</div>
 
           <div className="terminal-output">
-            <p>Abyssal Bar Terminal v2.13</p>
+            <p>Abyssal Bar Terminal v2.14</p>
             <p>--------------------------------</p>
             <p>
               Connection status: {connected ? "Online" : "Connecting..."}
