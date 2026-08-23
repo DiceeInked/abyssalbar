@@ -220,9 +220,22 @@ export default function Home() {
       return;
     }
 
+    if (command === "/html") {
+      const html = input.slice("/html".length).trim();
+
+      if (!html) {
+        setCommandOutput("Usage: /html <HTML code>");
+        return;
+      }
+
+      window.sessionStorage.setItem("abyssal-bar-html", html);
+      router.push("/html");
+      return;
+    }
+
     if (command !== "/sign") {
       setCommandOutput(
-        "Unknown command. Available: /sign up, /sign in, /sign out, /egg, /etho"
+        "Unknown command. Available: /sign up, /sign in, /sign out, /egg, /etho, /html"
       );
       return;
     }
@@ -260,7 +273,7 @@ export default function Home() {
     }
 
     setCommandOutput(
-      "Unknown command. Available: /sign up, /sign in, /sign out, /egg, /etho"
+      "Unknown command. Available: /sign up, /sign in, /sign out, /egg, /etho, /html"
     );
   };
 
@@ -331,7 +344,7 @@ export default function Home() {
           <div className="terminal-title">Abyssal Bar Terminal</div>
 
           <div className="terminal-output">
-            <p>Abyssal Bar Terminal v2.10</p>
+            <p>Abyssal Bar Terminal v2.12</p>
             <p>--------------------------------</p>
             <p>
               Connection status: {connected ? "Online" : "Connecting..."}
