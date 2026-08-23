@@ -24,6 +24,10 @@ const VISIBLE_LINES = 180;
 const BATCH_SIZE = 12;
 const REFRESH_INTERVAL_MS = 45;
 
+// Lower values make random spaces more common. For example, 8 means
+// roughly a 1-in-8 chance at each eligible position.
+const SPACE_CHANCE_DENOMINATOR = 16;
+
 const randomFrom = <T,>(values: readonly T[]) =>
   values[Math.floor(Math.random() * values.length)];
 
@@ -35,6 +39,28 @@ const randomCharacters = (length: number) => {
   }
 
   return value;
+};
+
+const addRandomSpaces = (value: string) => {
+  let result = "";
+
+  for (let index = 0; index < value.length; index += 1) {
+    const character = value[index];
+    result += character;
+
+    const nextCharacter = value[index + 1];
+    const canAddSpace =
+      nextCharacter !== undefined &&
+      character !== " " &&
+      nextCharacter !== " " &&
+      Math.floor(Math.random() * SPACE_CHANCE_DENOMINATOR) === 0;
+
+    if (canAddSpace) {
+      result += " ";
+    }
+  }
+
+  return result;
 };
 
 const makeContainerExpression = () => {
@@ -68,11 +94,10 @@ const makeLine = () => {
     const line = `${prefix} ${separator} ${expressions.join(" ")}`;
 
     if (line.length >= MIN_LINE_LENGTH && line.length <= MAX_LINE_LENGTH) {
-      return line;
+      return addRandomSpaces(line);
     }
   }
 
-  // Keep the output usable if a random combination misses the length range.
   const prefix = randomCharacters(randomFrom(PREFIX_LENGTHS));
   const separator = randomFrom(SEPARATORS);
   const expressions: string[] = [];
@@ -81,9 +106,11 @@ const makeLine = () => {
     expressions.push(makeContainerExpression());
   }
 
-  return `${prefix} ${separator} ${expressions.join(" ")}`.slice(
-    0,
-    MAX_LINE_LENGTH
+  return addRandomSpaces(
+    `${prefix} ${separator} ${expressions.join(" ")}`.slice(
+      0,
+      MAX_LINE_LENGTH
+    )
   );
 };
 
