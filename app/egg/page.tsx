@@ -12,10 +12,14 @@ const VISIBLE_LINES = 180;
 const BATCH_SIZE = 12;
 const REFRESH_INTERVAL_MS = 45;
 
-const makeLine = (length: number) => {
+const makeLine = (length: number, spaced: boolean) => {
   let line = "";
 
   for (let index = 0; index < length; index += 1) {
+    if (index > 0 && spaced) {
+      line += " ";
+    }
+
     line += CHARACTERS[Math.floor(Math.random() * CHARACTERS.length)];
   }
 
@@ -40,7 +44,7 @@ export default function Egg() {
           ) + MIN_LINE_LENGTH;
 
     const initialLines = Array.from({ length: VISIBLE_LINES }, () =>
-      makeLine(getLineLength())
+      makeLine(getLineLength(), zeroMode)
     );
 
     setLines(initialLines);
@@ -48,7 +52,7 @@ export default function Egg() {
     const interval = window.setInterval(() => {
       setLines((current) => {
         const newLines = Array.from({ length: BATCH_SIZE }, () =>
-          makeLine(getLineLength())
+          makeLine(getLineLength(), zeroMode)
         );
 
         return [...current.slice(BATCH_SIZE), ...newLines];
@@ -87,10 +91,7 @@ export default function Egg() {
         }}
       >
         {lines.map((line, index) => (
-          <div key={`${index}-${line}`}>
-            {line}
-            {zeroMode && <div style={{ height: "8px" }} />}
-          </div>
+          <div key={`${index}-${line}`}>{line}</div>
         ))}
       </div>
     </main>
