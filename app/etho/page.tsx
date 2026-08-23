@@ -10,9 +10,9 @@ const COMMANDS: Record<string, string> = {
   "/girl":
     "IT ALL STARTED FROM A GIRL WITH ICE POWERS, I WILL TELL MORE IF YOU KNOW THE CODE",
   "/1225":
-    "YOU TOLD HER TO FREEZE THEM, ALL OF THEM, THEN THE BRID",
+    "you TOLD HER TO FREEZE THEM, ALL OF THEM, THEN THE BRID",
   "/next":
-    "IT WAS THE MOST POWER SHE HAD FELT, YOU DID THIS THIS IS YOUR FAULT YOU HAVE TO DEAL WITH IT",
+    "IT WAS THE MOST POWER SHE HAD FELT, you DID THIS THIS IS YOUR FAULT YOU HAVE TO DEAL WITH IT",
 };
 
 export default function Etho() {
@@ -22,15 +22,25 @@ export default function Etho() {
 
   const typingTimer = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // The sound file is in the same folder as this page.
+  const jingle = useRef<HTMLAudioElement | null>(null);
+
   useEffect(() => {
+    jingle.current = new Audio("./weird-route-jingle.mp3");
+
     return () => {
       if (typingTimer.current) {
         clearInterval(typingTimer.current);
       }
+
+      if (jingle.current) {
+        jingle.current.pause();
+        jingle.current.currentTime = 0;
+      }
     };
   }, []);
 
-  const typeText = (text: string) => {
+  const typeText = (text: string, playSound = false) => {
     if (typingTimer.current) {
       clearInterval(typingTimer.current);
     }
@@ -52,6 +62,12 @@ export default function Etho() {
 
         typingTimer.current = null;
         setTyping(false);
+
+        // Play the special sound AFTER the text finishes typing.
+        if (playSound && jingle.current) {
+          jingle.current.currentTime = 0;
+          void jingle.current.play();
+        }
       }
     }, 45);
   };
@@ -73,7 +89,9 @@ export default function Etho() {
       COMMANDS[command] ?? `UNKNOWN COMMAND: ${command.toUpperCase()}`;
 
     setInput("");
-    typeText(response);
+
+    // Only /1225 plays the sound.
+    typeText(response, command === "/1225");
   };
 
   /*
