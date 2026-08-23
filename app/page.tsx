@@ -316,7 +316,7 @@ export default function Home() {
           <div className="terminal-title">Abyssal Bar Terminal</div>
 
           <div className="terminal-output">
-            <p>Abyssal Bar Terminal v2.5</p>
+            <p>Abyssal Bar Terminal v2.6</p>
             <p>--------------------------------</p>
             <p>
               Connection status: {connected ? "Online" : "Connecting..."}
