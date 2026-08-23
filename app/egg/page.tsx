@@ -2,26 +2,89 @@
 
 import { useEffect, useState } from "react";
 
-const CHARACTERS =
-  "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-/\\[]{}()<>:;,.=+*#@$%&?!|~^";
-const MIN_LINE_LENGTH = 16;
-const MAX_LINE_LENGTH = 256;
+const CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+const SEPARATORS = "+-*/=%^";
+const CONTAINERS: Array<[string, string]> = [
+  ["(", ")"],
+  ["[", "]"],
+  ["{", "}"],
+  ["<", ">"],
+];
+
+// All adjustable random quantities use powers of two.
+const BIT_VALUES = [1, 2, 4, 8, 16, 32, 64, 128, 256] as const;
+
+const PREFIX_LENGTHS = [4, 8, 16] as const;
+const CONTAINER_COUNTS = [1, 2, 4, 8, 16] as const;
+const INNER_CHARACTER_COUNTS = [1, 2, 4, 8, 16] as const;
+
+const MIN_LINE_LENGTH = 100;
+const MAX_LINE_LENGTH = 300;
 const VISIBLE_LINES = 180;
 const BATCH_SIZE = 12;
+const REFRESH_INTERVAL_MS = 45;
 
-const makeLine = () => {
-  const length =
-    Math.floor(
-      Math.random() * (MAX_LINE_LENGTH - MIN_LINE_LENGTH + 1)
-    ) + MIN_LINE_LENGTH;
+const randomFrom = <T,>(values: readonly T[]) =>
+  values[Math.floor(Math.random() * values.length)];
 
-  let line = "";
+const randomCharacters = (length: number) => {
+  let value = "";
 
   for (let index = 0; index < length; index += 1) {
-    line += CHARACTERS[Math.floor(Math.random() * CHARACTERS.length)];
+    value += randomFrom(CHARACTERS);
   }
 
-  return line;
+  return value;
+};
+
+const makeContainerExpression = () => {
+  const [opening, closing] = randomFrom(CONTAINERS);
+  const characterCount = randomFrom(INNER_CHARACTER_COUNTS);
+  const separator = randomFrom(SEPARATORS);
+  const charactersBeforeSeparator = Math.max(
+    1,
+    Math.floor(characterCount / 2)
+  );
+  const charactersAfterSeparator = Math.max(
+    1,
+    characterCount - charactersBeforeSeparator
+  );
+
+  return `${opening}${randomCharacters(
+    charactersBeforeSeparator
+  )}${separator}${randomCharacters(charactersAfterSeparator)}${closing}`;
+};
+
+const makeLine = () => {
+  for (let attempt = 0; attempt < BIT_VALUES.length * 2; attempt += 1) {
+    const prefixLength = randomFrom(PREFIX_LENGTHS);
+    const prefix = randomCharacters(prefixLength);
+    const separator = randomFrom(SEPARATORS);
+    const targetContainerCount = randomFrom(CONTAINER_COUNTS);
+    const expressions = Array.from(
+      { length: targetContainerCount },
+      makeContainerExpression
+    );
+    const line = `${prefix} ${separator} ${expressions.join(" ")}`;
+
+    if (line.length >= MIN_LINE_LENGTH && line.length <= MAX_LINE_LENGTH) {
+      return line;
+    }
+  }
+
+  // Keep the output usable if a random combination misses the length range.
+  const prefix = randomCharacters(randomFrom(PREFIX_LENGTHS));
+  const separator = randomFrom(SEPARATORS);
+  const expressions: string[] = [];
+
+  while (`${prefix} ${separator} ${expressions.join(" ")}`.length < MIN_LINE_LENGTH) {
+    expressions.push(makeContainerExpression());
+  }
+
+  return `${prefix} ${separator} ${expressions.join(" ")}`.slice(
+    0,
+    MAX_LINE_LENGTH
+  );
 };
 
 const makeLines = (count: number) =>
@@ -38,7 +101,7 @@ export default function Egg() {
         ...current.slice(BATCH_SIZE),
         ...makeLines(BATCH_SIZE),
       ]);
-    }, 45);
+    }, REFRESH_INTERVAL_MS);
 
     return () => window.clearInterval(interval);
   }, []);
