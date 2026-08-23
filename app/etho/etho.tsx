@@ -1,6 +1,7 @@
  "use client";
 
 import Image from "next/image";
+import ethoImage from "./etho-image.png";
 import styles from "./etho.module.css";
 
 /*
@@ -41,7 +42,7 @@ export default function Etho() {
             <div className={styles.terminalOutput}>
               <div className={styles.contentImage}>
                 <Image
-                  src="/etho/etho-image.png"
+                  src={ethoImage}
                   alt={IMAGE_ALT}
                   width={600}
                   height={400}
