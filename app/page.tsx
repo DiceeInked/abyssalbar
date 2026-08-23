@@ -192,7 +192,8 @@ export default function Home() {
     }
   };
 
-  const handleCommand = async (parts: string[]) => {
+  const handleCommand = async (commandText: string) => {
+    const parts = getCommandParts(commandText);
     const command = parts[0]?.toLowerCase();
 
     if (command === "/egg") {
@@ -221,7 +222,7 @@ export default function Home() {
     }
 
     if (command === "/html") {
-      const html = input.slice("/html".length).trim();
+      const html = commandText.slice("/html".length).trim();
 
       if (!html) {
         setCommandOutput("Usage: /html <HTML code>");
@@ -289,7 +290,7 @@ export default function Home() {
     setInput("");
 
     if (trimmedInput.startsWith("/")) {
-      await handleCommand(getCommandParts(trimmedInput));
+      await handleCommand(trimmedInput);
       return;
     }
 
