@@ -2,21 +2,8 @@
 
 import { useEffect, useState } from "react";
 
-const CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-const SEPARATORS = "+-*/=%^";
-const CONTAINERS: Array<[string, string]> = [
-  ["(", ")"],
-  ["[", "]"],
-  ["{", "}"],
-  ["<", ">"],
-];
-
-// All adjustable random quantities use powers of two.
-const BIT_VALUES = [1, 2, 4, 8, 16, 32, 64, 128, 256] as const;
-
-const PREFIX_LENGTHS = [4, 8, 16] as const;
-const CONTAINER_COUNTS = [1, 2, 4, 8, 16] as const;
-const INNER_CHARACTER_COUNTS = [1, 2, 4, 8, 16] as const;
+const CHARACTERS =
+  "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-/\\[]{}()<>:;,.=+*#@$%&?!|~^";
 
 const MIN_LINE_LENGTH = 100;
 const MAX_LINE_LENGTH = 300;
@@ -24,94 +11,34 @@ const VISIBLE_LINES = 180;
 const BATCH_SIZE = 12;
 const REFRESH_INTERVAL_MS = 45;
 
-// Lower values make random spaces more common. For example, 8 means
-// roughly a 1-in-8 chance at each eligible position.
+// Lower values make random spaces more common.
+// For example, 8 means roughly a 1-in-8 chance at each eligible position.
 const SPACE_CHANCE_DENOMINATOR = 16;
 
-const randomFrom = <T,>(values: readonly T[]) =>
-  values[Math.floor(Math.random() * values.length)];
+const makeLine = () => {
+  const length =
+    Math.floor(
+      Math.random() * (MAX_LINE_LENGTH - MIN_LINE_LENGTH + 1)
+    ) + MIN_LINE_LENGTH;
 
-const randomCharacters = (length: number) => {
-  let value = "";
+  let line = "";
 
   for (let index = 0; index < length; index += 1) {
-    value += randomFrom(CHARACTERS);
-  }
+    line += CHARACTERS[Math.floor(Math.random() * CHARACTERS.length)];
 
-  return value;
-};
-
-const addRandomSpaces = (value: string) => {
-  let result = "";
-
-  for (let index = 0; index < value.length; index += 1) {
-    const character = value[index];
-    result += character;
-
-    const nextCharacter = value[index + 1];
-    const canAddSpace =
-      nextCharacter !== undefined &&
-      character !== " " &&
-      nextCharacter !== " " &&
+    const nextCharacterExists = index < length - 1;
+    const previousCharacter = line[line.length - 1];
+    const shouldAddSpace =
+      nextCharacterExists &&
+      previousCharacter !== " " &&
       Math.floor(Math.random() * SPACE_CHANCE_DENOMINATOR) === 0;
 
-    if (canAddSpace) {
-      result += " ";
+    if (shouldAddSpace) {
+      line += " ";
     }
   }
 
-  return result;
-};
-
-const makeContainerExpression = () => {
-  const [opening, closing] = randomFrom(CONTAINERS);
-  const characterCount = randomFrom(INNER_CHARACTER_COUNTS);
-  const separator = randomFrom(SEPARATORS);
-  const charactersBeforeSeparator = Math.max(
-    1,
-    Math.floor(characterCount / 2)
-  );
-  const charactersAfterSeparator = Math.max(
-    1,
-    characterCount - charactersBeforeSeparator
-  );
-
-  return `${opening}${randomCharacters(
-    charactersBeforeSeparator
-  )}${separator}${randomCharacters(charactersAfterSeparator)}${closing}`;
-};
-
-const makeLine = () => {
-  for (let attempt = 0; attempt < BIT_VALUES.length * 2; attempt += 1) {
-    const prefixLength = randomFrom(PREFIX_LENGTHS);
-    const prefix = randomCharacters(prefixLength);
-    const separator = randomFrom(SEPARATORS);
-    const targetContainerCount = randomFrom(CONTAINER_COUNTS);
-    const expressions = Array.from(
-      { length: targetContainerCount },
-      makeContainerExpression
-    );
-    const line = `${prefix} ${separator} ${expressions.join(" ")}`;
-
-    if (line.length >= MIN_LINE_LENGTH && line.length <= MAX_LINE_LENGTH) {
-      return addRandomSpaces(line);
-    }
-  }
-
-  const prefix = randomCharacters(randomFrom(PREFIX_LENGTHS));
-  const separator = randomFrom(SEPARATORS);
-  const expressions: string[] = [];
-
-  while (`${prefix} ${separator} ${expressions.join(" ")}`.length < MIN_LINE_LENGTH) {
-    expressions.push(makeContainerExpression());
-  }
-
-  return addRandomSpaces(
-    `${prefix} ${separator} ${expressions.join(" ")}`.slice(
-      0,
-      MAX_LINE_LENGTH
-    )
-  );
+  return line;
 };
 
 const makeLines = (count: number) =>
