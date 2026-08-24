@@ -24,6 +24,8 @@ type RouteCommand = {
   playJingle?: boolean;
 };
 
+type ProceedChoice = "proceed" | "stop";
+
 const INTRO: TerminalLine = {
   id: 0,
   kind: "warning",
@@ -135,6 +137,9 @@ export default function Etho() {
   const [routeStage, setRouteStage] = useState(0);
   const [proceedCount, setProceedCount] = useState(0);
   const [whiteoutLevel, setWhiteoutLevel] = useState(0);
+  const [proceedMenuOpen, setProceedMenuOpen] = useState(false);
+  const [proceedChoice, setProceedChoice] = useState<ProceedChoice>("proceed");
+  const [finalScene, setFinalScene] = useState(false);
   const [dessMode, setDessMode] = useState(false);
   const [faultMode, setFaultMode] = useState(false);
   const [errorWindows, setErrorWindows] = useState<ErrorWindow[]>([]);
@@ -142,6 +147,8 @@ export default function Etho() {
   const terminalRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const nextLineId = useRef(1);
+  const whiteoutLevelRef = useRef(0);
+  const musicWasPlayingBeforeProceed = useRef(false);
   const typingTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const errorTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const recoveryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -204,8 +211,10 @@ export default function Etho() {
   }, [history, liveOutput]);
 
   useEffect(() => {
-    if (!typing && !dessMode) inputRef.current?.focus();
-  }, [typing, dessMode]);
+    if (!typing && !dessMode && !proceedMenuOpen && !finalScene) {
+      inputRef.current?.focus();
+    }
+  }, [typing, dessMode, proceedMenuOpen, finalScene]);
 
   const typeText = (
     text: string,
@@ -392,6 +401,42 @@ export default function Etho() {
     jingle.current.playbackRate = 1;
   };
 
+  const restoreNormalAudio = () => {
+    if (audioContext.current?.state === "suspended") {
+      void audioContext.current.resume();
+    }
+
+    if (musicDistortion.current) musicDistortion.current.curve = null;
+    if (dryGain.current) dryGain.current.gain.value = 1;
+    if (wetGain.current) wetGain.current.gain.value = 0;
+    if (masterGain.current) masterGain.current.gain.value = 1;
+    if (musicDelay.current) musicDelay.current.delayTime.value = 0;
+
+    if (jingle.current) {
+      jingle.current.pause();
+      jingle.current.currentTime = 0;
+      jingle.current.playbackRate = 1;
+    }
+    if (jingleDistortion.current) jingleDistortion.current.curve = null;
+    if (jingleFilter.current) {
+      jingleFilter.current.frequency.value = 22000;
+      jingleFilter.current.Q.value = 0;
+    }
+    if (jingleGain.current) jingleGain.current.gain.value = 1;
+
+    if (!music.current) return;
+    music.current.playbackRate = 1;
+
+    if (musicWasPlayingBeforeProceed.current) {
+      void music.current.play().catch(() => undefined);
+    } else {
+      music.current.pause();
+      music.current.currentTime = 0;
+    }
+
+    musicWasPlayingBeforeProceed.current = false;
+  };
+
   const createErrorWindow = (messages: string[]): ErrorWindow => {
     const panelWidth = Math.min(288, Math.max(230, window.innerWidth - 28));
     const panelHeight = 158;
@@ -450,6 +495,8 @@ export default function Etho() {
 
     setTyping(false);
     setLiveOutput("");
+    setProceedMenuOpen(false);
+    setFinalScene(false);
     setFaultMode(true);
     setDessMode(true);
     setErrorWindows([]);
@@ -465,16 +512,39 @@ export default function Etho() {
     }, 135);
   };
 
+  const endProceedRoute = (restoreMusic: boolean, announcement?: string) => {
+    if (proceedFadeTimer.current) clearInterval(proceedFadeTimer.current);
+    if (faultStartTimer.current) clearTimeout(faultStartTimer.current);
+    proceedFadeTimer.current = null;
+    faultStartTimer.current = null;
+
+    whiteoutLevelRef.current = 0;
+    setWhiteoutLevel(0);
+    setProceedCount(0);
+    setProceedMenuOpen(false);
+    setProceedChoice("proceed");
+    setFinalScene(false);
+
+    if (restoreMusic) restoreNormalAudio();
+    else stopAllAudio();
+
+    if (announcement) addLine("warning", announcement);
+  };
+
   const beginProceedFade = () => {
     if (proceedFadeTimer.current) clearInterval(proceedFadeTimer.current);
 
     proceedFadeTimer.current = setInterval(() => {
-      setWhiteoutLevel((current) => {
-        if (current > 1) return current - 1;
-        if (proceedFadeTimer.current) clearInterval(proceedFadeTimer.current);
-        proceedFadeTimer.current = null;
-        return 0;
-      });
+      if (whiteoutLevelRef.current <= 1) {
+        endProceedRoute(
+          true,
+          "[ PROCEED ROUTE TERMINATED // CONNECTION NORMAL ]"
+        );
+        return;
+      }
+
+      whiteoutLevelRef.current -= 1;
+      setWhiteoutLevel(whiteoutLevelRef.current);
     }, 1100);
   };
 
@@ -483,6 +553,7 @@ export default function Etho() {
 
     const nextCount = proceedCount + 1;
     setProceedCount(nextCount);
+    whiteoutLevelRef.current = nextCount;
     setWhiteoutLevel(nextCount);
     playDistortedJingle(nextCount);
     typeText(PROCEED_LINES[nextCount - 1]);
@@ -496,9 +567,70 @@ export default function Etho() {
     proceedFadeTimer.current = null;
     faultStartTimer.current = setTimeout(() => {
       stopAllAudio();
-      startFaultCrash();
+      setFinalScene(true);
+      faultStartTimer.current = setTimeout(() => {
+        startFaultCrash();
+      }, 2400);
     }, 900);
   };
+
+  const openProceedDialog = () => {
+    if (proceedCount === 0) {
+      musicWasPlayingBeforeProceed.current = Boolean(
+        music.current && !music.current.paused
+      );
+    }
+
+    setProceedChoice("proceed");
+    setProceedMenuOpen(true);
+  };
+
+  const resolveProceedChoice = (choice: ProceedChoice) => {
+    setProceedMenuOpen(false);
+
+    if (choice === "stop") {
+      endProceedRoute(
+        true,
+        "YOU PULL YOUR HAND AWAY.\n\nTHE WATER GOES STILL."
+      );
+      return;
+    }
+
+    handleProceed();
+  };
+
+  useEffect(() => {
+    if (!proceedMenuOpen) return;
+
+    const handleChoiceKeys = (event: KeyboardEvent) => {
+      if (
+        event.key === "ArrowUp" ||
+        event.key === "ArrowDown" ||
+        event.key === "ArrowLeft" ||
+        event.key === "ArrowRight"
+      ) {
+        event.preventDefault();
+        setProceedChoice((current) =>
+          current === "proceed" ? "stop" : "proceed"
+        );
+        return;
+      }
+
+      if (event.key === "Enter") {
+        event.preventDefault();
+        resolveProceedChoice(proceedChoice);
+        return;
+      }
+
+      if (event.key === "Escape") {
+        event.preventDefault();
+        resolveProceedChoice("stop");
+      }
+    };
+
+    window.addEventListener("keydown", handleChoiceKeys);
+    return () => window.removeEventListener("keydown", handleChoiceKeys);
+  }, [proceedChoice, proceedMenuOpen, resolveProceedChoice]);
 
   const dismissError = (id: number) => {
     setErrorWindows((current) => current.filter((window) => window.id !== id));
@@ -545,7 +677,7 @@ export default function Etho() {
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (typing || dessMode) return;
+    if (typing || dessMode || proceedMenuOpen || finalScene) return;
 
     const command = input.trim().toLowerCase();
     if (!command) return;
@@ -570,14 +702,8 @@ export default function Etho() {
     }
 
     if (command === "/reset") {
-      stopMusic();
-      if (proceedFadeTimer.current) clearInterval(proceedFadeTimer.current);
-      if (faultStartTimer.current) clearTimeout(faultStartTimer.current);
-      proceedFadeTimer.current = null;
-      faultStartTimer.current = null;
+      endProceedRoute(false);
       setRouteStage(0);
-      setProceedCount(0);
-      setWhiteoutLevel(0);
       typeText("ROUTE STATE CLEARED.\n\nTHE TERMINAL REMEMBERS ANYWAY.\n\nNEXT INPUT: /GIRL");
       return;
     }
@@ -593,7 +719,7 @@ export default function Etho() {
 
     /* /proceed is deliberately omitted from /help. */
     if (command === "/proceed") {
-      handleProceed();
+      openProceedDialog();
       return;
     }
 
@@ -640,7 +766,7 @@ export default function Etho() {
   return (
     <main className={`${styles.page} ${dessMode ? styles.dessPage : ""}`}>
       <div className={styles.crt}>
-        {!dessMode && (
+        {!dessMode && !finalScene && (
           <>
             <div className={styles.scanlines} />
             <div className={styles.screenNoise} />
@@ -677,11 +803,75 @@ export default function Etho() {
                   autoComplete="off"
                   spellCheck={false}
                   aria-label="Echo terminal command input"
-                  disabled={typing || dessMode}
+                  disabled={typing || dessMode || proceedMenuOpen || finalScene}
                 />
               </form>
             </div>
+
+            {proceedMenuOpen && (
+              <div className={styles.choiceOverlay}>
+                <div
+                  className={styles.choiceBox}
+                  role="dialog"
+                  aria-modal="true"
+                  aria-label="Proceed route choice"
+                >
+                  <p className={styles.choiceQuestion}>THE WATER WAITS.</p>
+                  <p className={styles.choicePrompt}>PROCEED?</p>
+                  <div className={styles.choiceList}>
+                    <button
+                      type="button"
+                      className={`${styles.choiceOption} ${
+                        proceedChoice === "proceed" ? styles.choiceSelected : ""
+                      }`}
+                      onMouseEnter={() => setProceedChoice("proceed")}
+                      onFocus={() => setProceedChoice("proceed")}
+                      onClick={() => resolveProceedChoice("proceed")}
+                    >
+                      <span className={styles.soulCursor} aria-hidden="true">
+                        {proceedChoice === "proceed" ? "♥" : ""}
+                      </span>
+                      PROCEED
+                    </button>
+                    <button
+                      type="button"
+                      className={`${styles.choiceOption} ${
+                        proceedChoice === "stop" ? styles.choiceSelected : ""
+                      }`}
+                      onMouseEnter={() => setProceedChoice("stop")}
+                      onFocus={() => setProceedChoice("stop")}
+                      onClick={() => resolveProceedChoice("stop")}
+                    >
+                      <span className={styles.soulCursor} aria-hidden="true">
+                        {proceedChoice === "stop" ? "♥" : ""}
+                      </span>
+                      STOP
+                    </button>
+                  </div>
+                  <p className={styles.choiceHint}>ARROW KEYS + ENTER</p>
+                </div>
+              </div>
+            )}
           </>
+        )}
+
+        {finalScene && (
+          <div className={styles.finalScene} aria-live="assertive">
+            <div className={styles.finalWater} />
+            <p className={styles.finalHeader}>REMOTE VIEW // FINAL FRAME</p>
+            <div className={styles.finalMessage}>
+              <p>THE LAKE IS INSIDE THE SCREEN.</p>
+              <p>KRIS IS STILL WALKING.</p>
+              <p>NOELLE IS STILL FOLLOWING.</p>
+              <p>YOU ARE STILL PRESSING ENTER.</p>
+            </div>
+            <span className={styles.finalSoul} aria-hidden="true">
+              ♥
+            </span>
+            <p className={styles.finalWhisper}>
+              YOU WERE NEVER HOLDING THE CONTROLLER.
+            </p>
+          </div>
         )}
 
         {dessMode && (
