@@ -264,7 +264,6 @@ export default function Etho() {
     ) {
       inputRef.current?.focus();
     }
-  }, [typing, dessMode, proceedMenuOpen, finalScene]);
   }, [warningOpen, typing, dessMode, proceedMenuOpen, finalScene]);
 
   const typeText = (
