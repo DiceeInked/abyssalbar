@@ -195,6 +195,191 @@
   transition: opacity 0.7s ease-out;
 }
 
+.choiceOverlay {
+  position: absolute;
+  z-index: 46;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgb(0 0 0 / 18%);
+}
+
+.choiceBox {
+  width: min(440px, 100%);
+  box-sizing: border-box;
+  padding: 28px;
+  border: 4px solid #fff;
+  background: #050505;
+  color: #fff;
+  box-shadow:
+    0 0 0 5px #050505,
+    0 0 28px rgb(255 255 255 / 28%);
+  font-size: clamp(17px, 2vw, 24px);
+  letter-spacing: 1px;
+  text-align: center;
+}
+
+.choiceQuestion,
+.choicePrompt,
+.choiceHint {
+  margin: 0;
+}
+
+.choiceQuestion {
+  color: #b8deff;
+  font-size: 0.7em;
+}
+
+.choicePrompt {
+  margin: 20px 0 16px;
+  font-size: 1.15em;
+}
+
+.choiceList {
+  display: grid;
+  gap: 8px;
+  width: min(230px, 100%);
+  margin: 0 auto;
+  text-align: left;
+}
+
+.choiceOption {
+  display: grid;
+  grid-template-columns: 1.1em 1fr;
+  align-items: center;
+  width: 100%;
+  padding: 6px 8px;
+  border: 0;
+  background: transparent;
+  color: #a9a9a9;
+  cursor: pointer;
+  font: inherit;
+  letter-spacing: inherit;
+  text-align: left;
+}
+
+.choiceOption:focus-visible {
+  outline: 1px dashed #fff;
+  outline-offset: 3px;
+}
+
+.choiceSelected {
+  color: #fff;
+  text-shadow: 0 0 8px rgb(255 255 255 / 70%);
+}
+
+.soulCursor {
+  color: #ff2020;
+  text-shadow: 0 0 6px #ff2020;
+}
+
+.choiceHint {
+  margin-top: 22px;
+  color: #777;
+  font-size: 0.52em;
+}
+
+.finalScene {
+  position: absolute;
+  z-index: 50;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 30px;
+  box-sizing: border-box;
+  background:
+    radial-gradient(ellipse at 50% 120%, #d9f4ff 0%, #4d739b 9%, #071322 38%, #000 76%),
+    #000;
+  color: #e9f8ff;
+  font-family: "Courier New", Courier, monospace;
+  text-align: center;
+}
+
+.finalScene::after {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 3px,
+    rgb(210 242 255 / 9%) 4px
+  );
+  content: "";
+  pointer-events: none;
+}
+
+.finalWater {
+  position: absolute;
+  width: 170%;
+  height: 70%;
+  bottom: -38%;
+  left: -35%;
+  border-radius: 50%;
+  background: repeating-radial-gradient(
+    ellipse at center,
+    rgb(211 245 255 / 0%) 0 16px,
+    rgb(211 245 255 / 36%) 18px 20px,
+    rgb(24 72 111 / 26%) 22px 42px
+  );
+  filter: blur(1px);
+  animation: waterShift 3.4s ease-in-out infinite alternate;
+}
+
+.finalHeader,
+.finalMessage,
+.finalSoul,
+.finalWhisper {
+  position: relative;
+  z-index: 1;
+}
+
+.finalHeader {
+  margin: 0 0 34px;
+  color: #8fbfdc;
+  font-size: clamp(11px, 1.5vw, 16px);
+  letter-spacing: 3px;
+}
+
+.finalMessage {
+  max-width: 720px;
+  color: #fff;
+  font-size: clamp(18px, 2.4vw, 34px);
+  font-weight: 700;
+  letter-spacing: 1px;
+  line-height: 1.55;
+  text-shadow: 0 0 12px rgb(207 242 255 / 65%);
+  animation: finalFlicker 0.11s steps(2) infinite;
+}
+
+.finalMessage p {
+  margin: 0.35em 0;
+}
+
+.finalMessage p:last-child {
+  color: #ff6a6a;
+  text-shadow: 0 0 10px rgb(255 40 40 / 85%);
+}
+
+.finalSoul {
+  margin: 24px 0 18px;
+  color: #ff2020;
+  font-size: clamp(32px, 5vw, 64px);
+  line-height: 1;
+  text-shadow: 0 0 9px #ff2020;
+  animation: soulBeat 0.6s steps(2) infinite;
+}
+
+.finalWhisper {
+  margin: 0;
+  color: #c1d7e4;
+  font-size: clamp(11px, 1.4vw, 16px);
+  letter-spacing: 2px;
+}
+
 .dessPage,
 .dessPage .crt {
   background: #000;
@@ -325,6 +510,42 @@
   }
 }
 
+@keyframes waterShift {
+  from {
+    transform: translate(-2%, 0) scale(1);
+  }
+
+  to {
+    transform: translate(3%, -4%) scale(1.08);
+  }
+}
+
+@keyframes finalFlicker {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  45% {
+    opacity: 0.92;
+  }
+
+  47% {
+    opacity: 0.54;
+  }
+}
+
+@keyframes soulBeat {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.14);
+  }
+}
+
 @media (max-width: 600px) {
   .content {
     padding: 22px 16px;
@@ -352,7 +573,10 @@
   .crt,
   .cursor,
   .screenNoise,
-  .whiteout {
+  .whiteout,
+  .finalWater,
+  .finalMessage,
+  .finalSoul {
     animation: none;
   }
 
