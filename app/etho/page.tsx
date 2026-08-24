@@ -94,13 +94,49 @@ const ERROR_MESSAGES = [
   "UNABLE TO CONTINUE",
 ];
 
+const PROCEED_LINES = [
+  "STOP.",
+  "WHAT ARE YOU DOING?",
+  "THIS WILL ONLY DIG YOU DEEPER.",
+  "YOU CHOSE THIS.",
+  "GOODBYE.",
+];
+
+const FAULT_MESSAGES = [
+  "IT'S YOUR FAULT.",
+  "YOU DID THIS.",
+  "SHE WAS LISTENING.",
+  "YOU CHOSE THIS.",
+  "YOU KEPT GOING.",
+  "STOP PRETENDING.",
+  "IT IS YOUR FAULT.",
+];
+
+const createDistortionCurve = (amount: number) => {
+  const samples = 44100;
+  const curve = new Float32Array(samples);
+  const degrees = Math.PI / 180;
+
+  for (let index = 0; index < samples; index += 1) {
+    const x = (index * 2) / samples - 1;
+    curve[index] =
+      ((3 + amount) * x * 20 * degrees) /
+      (Math.PI + amount * Math.abs(x));
+  }
+
+  return curve;
+};
+
 export default function Etho() {
   const [input, setInput] = useState("");
   const [history, setHistory] = useState<TerminalLine[]>([INTRO]);
   const [liveOutput, setLiveOutput] = useState("");
   const [typing, setTyping] = useState(false);
   const [routeStage, setRouteStage] = useState(0);
+  const [proceedCount, setProceedCount] = useState(0);
+  const [whiteoutLevel, setWhiteoutLevel] = useState(0);
   const [dessMode, setDessMode] = useState(false);
+  const [faultMode, setFaultMode] = useState(false);
   const [errorWindows, setErrorWindows] = useState<ErrorWindow[]>([]);
 
   const terminalRef = useRef<HTMLDivElement | null>(null);
@@ -109,16 +145,25 @@ export default function Etho() {
   const typingTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const errorTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const recoveryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const proceedFadeTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const faultStartTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const faultReappearTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const nextErrorId = useRef(0);
 
   const jingle = useRef<HTMLAudioElement | null>(null);
   const music = useRef<HTMLAudioElement | null>(null);
   const audioContext = useRef<AudioContext | null>(null);
   const musicSource = useRef<MediaElementAudioSourceNode | null>(null);
+  const musicDistortion = useRef<WaveShaperNode | null>(null);
   const masterGain = useRef<GainNode | null>(null);
   const dryGain = useRef<GainNode | null>(null);
   const wetGain = useRef<GainNode | null>(null);
   const musicDelay = useRef<DelayNode | null>(null);
   const musicReverb = useRef<ConvolverNode | null>(null);
+  const jingleSource = useRef<MediaElementAudioSourceNode | null>(null);
+  const jingleDistortion = useRef<WaveShaperNode | null>(null);
+  const jingleFilter = useRef<BiquadFilterNode | null>(null);
+  const jingleGain = useRef<GainNode | null>(null);
 
   const addLine = (kind: TerminalLine["kind"], text: string) => {
     setHistory((current) => [
@@ -137,6 +182,9 @@ export default function Etho() {
       if (typingTimer.current) clearInterval(typingTimer.current);
       if (errorTimer.current) clearInterval(errorTimer.current);
       if (recoveryTimer.current) clearTimeout(recoveryTimer.current);
+      if (proceedFadeTimer.current) clearInterval(proceedFadeTimer.current);
+      if (faultStartTimer.current) clearTimeout(faultStartTimer.current);
+      faultReappearTimers.current.forEach((timer) => clearTimeout(timer));
 
       jingle.current?.pause();
       if (jingle.current) jingle.current.currentTime = 0;
@@ -199,19 +247,21 @@ export default function Etho() {
     if (wetGain.current) wetGain.current.gain.value = 0;
     if (masterGain.current) masterGain.current.gain.value = 1;
     if (musicDelay.current) musicDelay.current.delayTime.value = 0;
+    if (musicDistortion.current) musicDistortion.current.curve = null;
 
     music.current.playbackRate = 1;
     music.current.currentTime = 0;
     void music.current.play().catch(() => undefined);
   };
 
-  const makeMusicUnsettling = () => {
+  const makeMusicUnsettling = (intensity = 1) => {
     if (!music.current) return;
 
     try {
       if (!audioContext.current) {
         const context = new AudioContext();
         const source = context.createMediaElementSource(music.current);
+        const distortion = context.createWaveShaper();
         const master = context.createGain();
         const dry = context.createGain();
         const wet = context.createGain();
@@ -232,15 +282,17 @@ export default function Etho() {
           }
         }
 
+        distortion.oversample = "4x";
         reverb.buffer = impulse;
         delay.delayTime.value = 0.63;
         dry.gain.value = 0.64;
         wet.gain.value = 0.38;
         master.gain.value = 0.82;
 
-        source.connect(dry);
+        source.connect(distortion);
+        distortion.connect(dry);
         dry.connect(master);
-        source.connect(delay);
+        distortion.connect(delay);
         delay.connect(reverb);
         reverb.connect(wet);
         wet.connect(master);
@@ -248,6 +300,7 @@ export default function Etho() {
 
         audioContext.current = context;
         musicSource.current = source;
+        musicDistortion.current = distortion;
         masterGain.current = master;
         dryGain.current = dry;
         wetGain.current = wet;
@@ -263,13 +316,64 @@ export default function Etho() {
       if (wetGain.current) wetGain.current.gain.value = 0.38;
       if (masterGain.current) masterGain.current.gain.value = 0.82;
       if (musicDelay.current) musicDelay.current.delayTime.value = 0.63;
+      if (musicDistortion.current) {
+        musicDistortion.current.curve = createDistortionCurve(16 + intensity * 28);
+      }
 
-      music.current.playbackRate = 0.68;
+      music.current.playbackRate = Math.max(0.5, 0.82 - intensity * 0.055);
       void music.current.play().catch(() => undefined);
     } catch {
       /* The terminal still works if a browser rejects Web Audio. */
-      music.current.playbackRate = 0.68;
+      music.current.playbackRate = Math.max(0.5, 0.82 - intensity * 0.055);
       void music.current.play().catch(() => undefined);
+    }
+  };
+
+  const playDistortedJingle = (intensity: number) => {
+    if (!jingle.current) return;
+
+    try {
+      /* /proceed starts the background track if the player found it early. */
+      makeMusicUnsettling(intensity);
+      const context = audioContext.current;
+      if (!context) throw new Error("Audio context unavailable");
+
+      if (!jingleSource.current) {
+        const source = context.createMediaElementSource(jingle.current);
+        const distortion = context.createWaveShaper();
+        const filter = context.createBiquadFilter();
+        const gain = context.createGain();
+
+        distortion.oversample = "4x";
+        filter.type = "lowpass";
+        source.connect(distortion);
+        distortion.connect(filter);
+        filter.connect(gain);
+        gain.connect(context.destination);
+
+        jingleSource.current = source;
+        jingleDistortion.current = distortion;
+        jingleFilter.current = filter;
+        jingleGain.current = gain;
+      }
+
+      if (jingleDistortion.current) {
+        jingleDistortion.current.curve = createDistortionCurve(35 + intensity * 45);
+      }
+      if (jingleFilter.current) {
+        jingleFilter.current.frequency.value = Math.max(700, 4600 - intensity * 650);
+        jingleFilter.current.Q.value = 4 + intensity * 2;
+      }
+      if (jingleGain.current) jingleGain.current.gain.value = 0.85;
+
+      jingle.current.playbackRate = Math.max(0.55, 1 - intensity * 0.075);
+      jingle.current.currentTime = 0;
+      void jingle.current.play().catch(() => undefined);
+    } catch {
+      /* Fall back to a pitch-shifted jingle if Web Audio is unavailable. */
+      jingle.current.playbackRate = Math.max(0.55, 1 - intensity * 0.075);
+      jingle.current.currentTime = 0;
+      void jingle.current.play().catch(() => undefined);
     }
   };
 
@@ -280,6 +384,33 @@ export default function Etho() {
     music.current.playbackRate = 1;
   };
 
+  const stopAllAudio = () => {
+    stopMusic();
+    if (!jingle.current) return;
+    jingle.current.pause();
+    jingle.current.currentTime = 0;
+    jingle.current.playbackRate = 1;
+  };
+
+  const createErrorWindow = (messages: string[]): ErrorWindow => {
+    const panelWidth = Math.min(288, Math.max(230, window.innerWidth - 28));
+    const panelHeight = 158;
+
+    return {
+      id: nextErrorId.current++,
+      message: messages[Math.floor(Math.random() * messages.length)],
+      x: Math.max(10, Math.random() * (window.innerWidth - panelWidth - 20)),
+      y: Math.max(10, Math.random() * (window.innerHeight - panelHeight - 20)),
+    };
+  };
+
+  const addFaultWindow = () => {
+    setErrorWindows((current) => {
+      if (current.length >= 14) return current;
+      return [...current, createErrorWindow(FAULT_MESSAGES)];
+    });
+  };
+
   const startDess = () => {
     if (typingTimer.current) clearInterval(typingTimer.current);
     if (errorTimer.current) clearInterval(errorTimer.current);
@@ -287,22 +418,13 @@ export default function Etho() {
 
     setTyping(false);
     setLiveOutput("");
+    setFaultMode(false);
     setDessMode(true);
     setErrorWindows([]);
 
     let errorCount = 0;
     errorTimer.current = setInterval(() => {
-      const panelWidth = Math.min(288, Math.max(230, window.innerWidth - 28));
-      const panelHeight = 158;
-      const newError: ErrorWindow = {
-        id: errorCount,
-        message:
-          ERROR_MESSAGES[Math.floor(Math.random() * ERROR_MESSAGES.length)],
-        x: Math.max(10, Math.random() * (window.innerWidth - panelWidth - 20)),
-        y: Math.max(10, Math.random() * (window.innerHeight - panelHeight - 20)),
-      };
-
-      setErrorWindows((current) => [...current, newError]);
+      setErrorWindows((current) => [...current, createErrorWindow(ERROR_MESSAGES)]);
       errorCount += 1;
 
       if (errorCount < 30) return;
@@ -319,6 +441,74 @@ export default function Etho() {
         );
       }, 850);
     }, 105);
+  };
+
+  const startFaultCrash = () => {
+    if (typingTimer.current) clearInterval(typingTimer.current);
+    if (errorTimer.current) clearInterval(errorTimer.current);
+    if (recoveryTimer.current) clearTimeout(recoveryTimer.current);
+
+    setTyping(false);
+    setLiveOutput("");
+    setFaultMode(true);
+    setDessMode(true);
+    setErrorWindows([]);
+
+    let spawned = 0;
+    errorTimer.current = setInterval(() => {
+      addFaultWindow();
+      spawned += 1;
+
+      if (spawned < 14) return;
+      if (errorTimer.current) clearInterval(errorTimer.current);
+      errorTimer.current = null;
+    }, 135);
+  };
+
+  const beginProceedFade = () => {
+    if (proceedFadeTimer.current) clearInterval(proceedFadeTimer.current);
+
+    proceedFadeTimer.current = setInterval(() => {
+      setWhiteoutLevel((current) => {
+        if (current > 1) return current - 1;
+        if (proceedFadeTimer.current) clearInterval(proceedFadeTimer.current);
+        proceedFadeTimer.current = null;
+        return 0;
+      });
+    }, 1100);
+  };
+
+  const handleProceed = () => {
+    if (proceedCount >= PROCEED_LINES.length) return;
+
+    const nextCount = proceedCount + 1;
+    setProceedCount(nextCount);
+    setWhiteoutLevel(nextCount);
+    playDistortedJingle(nextCount);
+    typeText(PROCEED_LINES[nextCount - 1]);
+
+    if (nextCount < PROCEED_LINES.length) {
+      beginProceedFade();
+      return;
+    }
+
+    if (proceedFadeTimer.current) clearInterval(proceedFadeTimer.current);
+    proceedFadeTimer.current = null;
+    faultStartTimer.current = setTimeout(() => {
+      stopAllAudio();
+      startFaultCrash();
+    }, 900);
+  };
+
+  const dismissError = (id: number) => {
+    setErrorWindows((current) => current.filter((window) => window.id !== id));
+    if (!faultMode) return;
+
+    const timer = setTimeout(() => {
+      addFaultWindow();
+    }, 180);
+
+    faultReappearTimers.current.push(timer);
   };
 
   const getHelpText = () => {
@@ -381,7 +571,13 @@ export default function Etho() {
 
     if (command === "/reset") {
       stopMusic();
+      if (proceedFadeTimer.current) clearInterval(proceedFadeTimer.current);
+      if (faultStartTimer.current) clearTimeout(faultStartTimer.current);
+      proceedFadeTimer.current = null;
+      faultStartTimer.current = null;
       setRouteStage(0);
+      setProceedCount(0);
+      setWhiteoutLevel(0);
       typeText("ROUTE STATE CLEARED.\n\nTHE TERMINAL REMEMBERS ANYWAY.\n\nNEXT INPUT: /GIRL");
       return;
     }
@@ -392,6 +588,12 @@ export default function Etho() {
           ? "THE LINE OPENS.\n\nYOU HEAR WATER MOVING THROUGH A PHONE THAT IS NOT CONNECTED.\n\nTHEN: \"DON'T MAKE HER DO IT AGAIN.\""
           : "YOUR CALLS WON'T BE ANSWERED.\nYOU WON'T BE HELPED.\nYOU WILL SUFFER.\n\nYOU CHOSE THIS PATH.";
       typeText(response);
+      return;
+    }
+
+    /* /proceed is deliberately omitted from /help. */
+    if (command === "/proceed") {
+      handleProceed();
       return;
     }
 
@@ -443,6 +645,10 @@ export default function Etho() {
             <div className={styles.scanlines} />
             <div className={styles.screenNoise} />
             <div className={styles.vignette} />
+            <div
+              className={styles.whiteout}
+              style={{ opacity: whiteoutLevel / PROCEED_LINES.length }}
+            />
 
             <div className={styles.content}>
               <div ref={terminalRef} className={styles.output} aria-live="polite">
@@ -486,22 +692,24 @@ export default function Etho() {
                 className={styles.errorWindow}
                 style={{ left: error.x, top: error.y }}
               >
-                <div className={styles.errorTitle}>LAKE.EXE - SYSTEM ERROR</div>
+                <div className={styles.errorTitle}>
+                  {faultMode ? "YOU.EXE - FATAL ERROR" : "LAKE.EXE - SYSTEM ERROR"}
+                </div>
                 <div className={styles.errorBody}>
                   <div className={styles.errorIcon}>!</div>
                   <div>
                     <strong>{error.message}</strong>
-                    <p>AN UNEXPECTED ERROR HAS OCCURRED.</p>
+                    <p>
+                      {faultMode
+                        ? "THIS WILL NOT GO AWAY."
+                        : "AN UNEXPECTED ERROR HAS OCCURRED."}
+                    </p>
                   </div>
                 </div>
                 <button
                   type="button"
                   className={styles.errorButton}
-                  onClick={() =>
-                    setErrorWindows((current) =>
-                      current.filter((window) => window.id !== error.id)
-                    )
-                  }
+                  onClick={() => dismissError(error.id)}
                 >
                   OK
                 </button>
