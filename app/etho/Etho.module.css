@@ -1,135 +1,66 @@
 .page {
   position: relative;
-
   width: 100vw;
-  height: 100vh;
-
+  min-height: 100dvh;
   overflow: hidden;
-
   margin: 0;
   padding: 0;
-
   background: #000;
-
-  color: #fff;
-
-  font-family:
-    "Courier New",
-    Courier,
-    monospace;
+  color: #f7f7f7;
+  font-family: "Courier New", Courier, monospace;
 }
-
-/* =========================================
-   CRT
-   ========================================= */
 
 .crt {
   position: relative;
-
   width: 100%;
-  height: 100%;
-
+  min-height: 100dvh;
   overflow: hidden;
-
   background: #050505;
-
   border-radius: 5% / 3%;
-
   box-shadow:
-    inset 0 0 80px rgba(0, 0, 0, 0.95),
-    inset 0 0 180px rgba(0, 0, 0, 0.7),
-    0 0 50px rgba(0, 0, 0, 0.9);
-
+    inset 0 0 80px rgb(0 0 0 / 95%),
+    inset 0 0 180px rgb(0 0 0 / 70%),
+    0 0 50px rgb(0 0 0 / 90%);
   transform: scale(0.985);
-
   animation: crtFlicker 0.12s infinite;
 }
 
-/* =========================================
-   CRT BULGE
-   ========================================= */
-
 .crt::before {
-  content: "";
-
   position: absolute;
-
-  inset: -8%;
-
-  pointer-events: none;
-
   z-index: 20;
-
-  border-radius: 8%;
-
-  box-shadow:
-    inset 0 0 100px rgba(0, 0, 0, 0.8),
-    inset 0 0 200px rgba(0, 0, 0, 0.55);
-
-  background:
-    radial-gradient(
-      ellipse at center,
-      transparent 45%,
-      rgba(0, 0, 0, 0.15) 70%,
-      rgba(0, 0, 0, 0.8) 100%
-    );
-
+  inset: -8%;
   pointer-events: none;
+  border-radius: 8%;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 45%,
+    rgb(0 0 0 / 15%) 70%,
+    rgb(0 0 0 / 80%) 100%
+  );
+  box-shadow:
+    inset 0 0 100px rgb(0 0 0 / 80%),
+    inset 0 0 200px rgb(0 0 0 / 55%);
+  content: "";
 }
-
-/* =========================================
-   CONTENT
-   ========================================= */
 
 .content {
   position: relative;
-
   z-index: 10;
-
   display: flex;
   flex-direction: column;
-
+  box-sizing: border-box;
   width: 100%;
-  height: 100%;
-
-  padding: 5vw;
-
-  transform:
-    perspective(1000px)
-    scale(1.015);
-
+  min-height: 100dvh;
+  padding: clamp(24px, 5vw, 76px);
+  transform: perspective(1000px) scale(1.015);
   transform-origin: center;
 }
 
-/* =========================================
-   OUTPUT
-   ========================================= */
-
 .output {
   flex: 1;
-
   width: 100%;
-
   overflow-y: auto;
-
   padding: 20px;
-
-  white-space: pre-wrap;
-
-  font-size: clamp(
-    15px,
-    1.6vw,
-    24px
-  );
-
-  line-height: 1.7;
-
-  letter-spacing: 1px;
-
-  text-shadow:
-    0 0 4px rgba(255, 255, 255, 0.7),
-    0 0 10px rgba(255, 255, 255, 0.25);
-
   scrollbar-width: none;
 }
 
@@ -137,203 +68,219 @@
   display: none;
 }
 
-/* =========================================
-   RED WORDS
-   ========================================= */
+.line {
+  margin: 0 0 1.15em;
+  white-space: pre-wrap;
+  font-size: clamp(15px, 1.6vw, 24px);
+  line-height: 1.7;
+  letter-spacing: 1px;
+  text-shadow:
+    0 0 4px rgb(255 255 255 / 70%),
+    0 0 10px rgb(255 255 255 / 25%);
+}
+
+.command {
+  color: #b9b9b9;
+}
+
+.response {
+  color: #fff;
+}
+
+.warning {
+  color: #a7ddff;
+  text-shadow:
+    0 0 4px rgb(117 205 255 / 80%),
+    0 0 12px rgb(117 205 255 / 30%);
+}
 
 .redText {
   color: #ff2020;
-
   text-shadow:
     0 0 3px #ff2020,
-    0 0 8px rgba(255, 32, 32, 0.7),
-    0 0 15px rgba(255, 32, 32, 0.3);
+    0 0 8px rgb(255 32 32 / 70%),
+    0 0 15px rgb(255 32 32 / 30%);
 }
-
-/* =========================================
-   CURSOR
-   ========================================= */
 
 .cursor {
   display: inline-block;
-
   margin-left: 2px;
-
-  animation:
-    cursorBlink 0.7s
-    steps(1)
-    infinite;
+  animation: cursorBlink 0.7s steps(1) infinite;
 }
-
-/* =========================================
-   INPUT
-   ========================================= */
 
 .inputArea {
   display: flex;
   align-items: center;
-
   width: 100%;
-
+  box-sizing: border-box;
   margin-top: 20px;
-
   padding: 15px 20px;
-
-  border-top: 1px solid
-    rgba(255, 255, 255, 0.2);
-
-  text-shadow:
-    0 0 5px
-    rgba(255, 255, 255, 0.5);
+  border-top: 1px solid rgb(255 255 255 / 20%);
+  text-shadow: 0 0 5px rgb(255 255 255 / 50%);
 }
 
 .prompt {
   margin-right: 12px;
-
   font-size: 20px;
-
   color: #fff;
 }
 
 .input {
   flex: 1;
-
   width: 100%;
-
+  min-width: 0;
+  border: 0;
+  outline: 0;
   background: transparent;
-
-  border: none;
-  outline: none;
-
   color: #fff;
-
-  font-family:
-    "Courier New",
-    Courier,
-    monospace;
-
-  font-size: clamp(
-    15px,
-    1.6vw,
-    22px
-  );
-
+  font: inherit;
+  font-size: clamp(15px, 1.6vw, 22px);
   letter-spacing: 1px;
-
-  text-shadow:
-    0 0 5px
-    rgba(255, 255, 255, 0.7);
+  text-shadow: 0 0 5px rgb(255 255 255 / 70%);
 }
 
 .input::placeholder {
-  color: rgba(
-    255,
-    255,
-    255,
-    0.3
-  );
+  color: rgb(255 255 255 / 30%);
 }
 
 .input:disabled {
   opacity: 0.5;
 }
 
-/* =========================================
-   SCANLINES
-   ========================================= */
-
 .scanlines {
   position: absolute;
-
-  inset: 0;
-
   z-index: 30;
-
+  inset: 0;
   pointer-events: none;
-
-  background:
-    repeating-linear-gradient(
-      to bottom,
-      rgba(255, 255, 255, 0.055)
-        0px,
-      rgba(255, 255, 255, 0.055)
-        1px,
-      transparent 1px,
-      transparent 4px
-    );
-
+  background: repeating-linear-gradient(
+    to bottom,
+    rgb(255 255 255 / 5.5%) 0,
+    rgb(255 255 255 / 5.5%) 1px,
+    transparent 1px,
+    transparent 4px
+  );
   mix-blend-mode: screen;
-
   opacity: 0.8;
 }
 
-/* =========================================
-   SCREEN NOISE
-   ========================================= */
-
 .screenNoise {
   position: absolute;
-
-  inset: -50%;
-
   z-index: 25;
-
+  inset: -50%;
   pointer-events: none;
-
   opacity: 0.045;
-
-  background-image:
-    url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.8'/%3E%3C/svg%3E");
-
-  animation:
-    noiseMove 0.15s
-    steps(2)
-    infinite;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.8'/%3E%3C/svg%3E");
+  animation: noiseMove 0.15s steps(2) infinite;
 }
-
-/* =========================================
-   VIGNETTE
-   ========================================= */
 
 .vignette {
   position: absolute;
-
-  inset: 0;
-
   z-index: 40;
-
+  inset: 0;
   pointer-events: none;
-
-  background:
-    radial-gradient(
-      ellipse at center,
-      transparent 45%,
-      rgba(0, 0, 0, 0.15) 65%,
-      rgba(0, 0, 0, 0.8) 100%
-    );
+  background: radial-gradient(
+    ellipse at center,
+    transparent 45%,
+    rgb(0 0 0 / 15%) 65%,
+    rgb(0 0 0 / 80%) 100%
+  );
 }
 
-/* =========================================
-   CRT FLICKER
-   ========================================= */
+.dessPage,
+.dessPage .crt {
+  background: #000;
+}
+
+.errorScreen {
+  position: absolute;
+  z-index: 50;
+  inset: 0;
+  overflow: hidden;
+  background: #000;
+}
+
+.errorWindow {
+  position: absolute;
+  width: min(280px, calc(100vw - 28px));
+  min-height: 135px;
+  box-sizing: border-box;
+  background: #c0c0c0;
+  color: #000;
+  border: 2px solid #fff;
+  border-right-color: #404040;
+  border-bottom-color: #404040;
+  box-shadow: 4px 4px 0 #000;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 13px;
+}
+
+.errorTitle {
+  padding: 5px 7px;
+  background: #000080;
+  color: #fff;
+  font-weight: 700;
+}
+
+.errorBody {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 14px 10px;
+}
+
+.errorIcon {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #f00;
+  color: #fff;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.errorBody strong {
+  font-size: 12px;
+}
+
+.errorBody p {
+  margin: 7px 0 0;
+  font-size: 11px;
+}
+
+.errorButton {
+  display: block;
+  min-width: 55px;
+  margin: 0 12px 10px auto;
+  padding: 3px 12px;
+  border: 2px solid #fff;
+  border-right-color: #404040;
+  border-bottom-color: #404040;
+  background: #c0c0c0;
+  color: #000;
+  cursor: pointer;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+.errorButton:active {
+  border: 2px solid #404040;
+  border-right-color: #fff;
+  border-bottom-color: #fff;
+}
 
 @keyframes crtFlicker {
-  0% {
+  0%,
+  100% {
     opacity: 1;
   }
 
   50% {
     opacity: 0.985;
   }
-
-  100% {
-    opacity: 1;
-  }
 }
-
-/* =========================================
-   CURSOR BLINK
-   ========================================= */
 
 @keyframes cursorBlink {
   0%,
@@ -347,226 +294,55 @@
   }
 }
 
-/* =========================================
-   NOISE MOVEMENT
-   ========================================= */
-
 @keyframes noiseMove {
   0% {
-    transform: translate(
-      0,
-      0
-    );
+    transform: translate(0, 0);
   }
 
   25% {
-    transform: translate(
-      2%,
-      -3%
-    );
+    transform: translate(2%, -3%);
   }
 
   50% {
-    transform: translate(
-      -3%,
-      2%
-    );
+    transform: translate(-3%, 2%);
   }
 
   75% {
-    transform: translate(
-      3%,
-      3%
-    );
+    transform: translate(3%, 3%);
   }
 
   100% {
-    transform: translate(
-      -2%,
-      -2%
-    );
+    transform: translate(-2%, -2%);
   }
 }
 
-/* =========================================
-   DESS
-   ========================================= */
-
-.dessPage {
-  background: #000;
-}
-
-.dessPage .crt {
-  background: #000;
-}
-
-.errorScreen {
-  position: absolute;
-
-  inset: 0;
-
-  z-index: 50;
-
-  overflow: hidden;
-
-  background: #000;
-}
-
-/* =========================================
-   FAKE ERROR WINDOWS
-   ========================================= */
-
-.errorWindow {
-  position: absolute;
-
-  width: 280px;
-  min-height: 135px;
-
-  background: #c0c0c0;
-
-  color: #000;
-
-  border: 2px solid #fff;
-
-  border-right-color: #404040;
-  border-bottom-color: #404040;
-
-  box-shadow:
-    4px 4px 0 #000;
-
-  font-family:
-    Arial,
-    Helvetica,
-    sans-serif;
-
-  font-size: 13px;
-}
-
-/* =========================================
-   ERROR TITLE
-   ========================================= */
-
-.errorTitle {
-  padding: 5px 7px;
-
-  background: #000080;
-
-  color: #fff;
-
-  font-weight: bold;
-}
-
-/* =========================================
-   ERROR CONTENT
-   ========================================= */
-
-.errorBody {
-  display: flex;
-  align-items: center;
-
-  gap: 12px;
-
-  padding: 18px 14px 10px;
-}
-
-.errorIcon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  width: 28px;
-  height: 28px;
-
-  flex-shrink: 0;
-
-  background: #ff0000;
-
-  color: #fff;
-
-  border-radius: 50%;
-
-  font-size: 20px;
-
-  font-weight: bold;
-}
-
-.errorBody strong {
-  font-size: 12px;
-}
-
-.errorBody p {
-  margin: 7px 0 0;
-
-  font-size: 11px;
-}
-
-/* =========================================
-   ERROR BUTTON
-   ========================================= */
-
-.errorButton {
-  display: block;
-
-  margin:
-    0
-    12px
-    10px
-    auto;
-
-  min-width: 55px;
-
-  padding: 3px 12px;
-
-  background: #c0c0c0;
-
-  color: #000;
-
-  border: 2px solid #fff;
-
-  border-right-color: #404040;
-  border-bottom-color: #404040;
-
-  cursor: pointer;
-
-  font-family:
-    Arial,
-    Helvetica,
-    sans-serif;
-}
-
-.errorButton:active {
-  border: 2px solid #404040;
-
-  border-right-color: #fff;
-  border-bottom-color: #fff;
-}
-
-/* =========================================
-   MOBILE
-   ========================================= */
-
 @media (max-width: 600px) {
   .content {
-    padding: 25px;
+    padding: 22px 16px;
   }
 
   .output {
     padding: 10px;
+  }
 
+  .line {
     font-size: 14px;
-
     line-height: 1.6;
   }
 
   .inputArea {
-    padding:
-      12px
-      10px;
+    padding: 12px 10px;
   }
 
   .errorWindow {
-    width: 230px;
-
     font-size: 11px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .crt,
+  .cursor,
+  .screenNoise {
+    animation: none;
   }
 }
