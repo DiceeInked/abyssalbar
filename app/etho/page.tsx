@@ -262,12 +262,6 @@ export default function Etho() {
       !proceedMenuOpen &&
       !finalScene
     ) {
-      inputRef.current?.focus();
-    }
-  }, [warningOpen, typing, dessMode, proceedMenuOpen, finalScene]);
-
-  const typeText = (
-    text: string,
     options: Pick<RouteCommand, "playJingle"> = {}
   ) => {
     if (typingTimer.current) clearInterval(typingTimer.current);
