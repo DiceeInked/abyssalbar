@@ -542,7 +542,7 @@ export default function Etho() {
       setErrorWindows((current) => [...current, createErrorWindow(ERROR_MESSAGES)]);
       errorCount += 1;
 
-      if (errorCount < 30) return;
+      if (errorCount < 60) return;
 
       if (errorTimer.current) clearInterval(errorTimer.current);
       errorTimer.current = null;
