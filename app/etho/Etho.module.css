@@ -208,15 +208,35 @@
 .choiceBox {
   width: min(440px, 100%);
   box-sizing: border-box;
-  padding: 28px;
-  border: 4px solid #fff;
-  background: #050505;
+  padding: 32px 30px 28px;
+  border: 0;
+  clip-path: polygon(
+    0 12px,
+    12px 12px,
+    12px 0,
+    calc(100% - 12px) 0,
+    calc(100% - 12px) 12px,
+    100% 12px,
+    100% calc(100% - 12px),
+    calc(100% - 12px) calc(100% - 12px),
+    calc(100% - 12px) 100%,
+    12px 100%,
+    12px calc(100% - 12px),
+    0 calc(100% - 12px)
+  );
+  background: #000;
   color: #fff;
   box-shadow:
-    0 0 0 5px #050505,
-    0 0 28px rgb(255 255 255 / 28%);
-  font-size: clamp(17px, 2vw, 24px);
-  letter-spacing: 1px;
+    inset 4px 0 0 #fff,
+    inset -4px 0 0 #fff,
+    inset 0 4px 0 #fff,
+    inset 0 -4px 0 #fff,
+    0 0 0 4px #000,
+    0 0 24px rgb(179 226 255 / 22%);
+  font-family: "Lucida Console", "Courier New", monospace;
+  font-size: clamp(14px, 1.8vw, 21px);
+  letter-spacing: 0.5px;
+  image-rendering: pixelated;
   text-align: center;
 }
 
@@ -228,31 +248,34 @@
 
 .choiceQuestion {
   color: #b8deff;
-  font-size: 0.7em;
+  font-size: 0.65em;
+  letter-spacing: 1.5px;
 }
 
 .choicePrompt {
-  margin: 20px 0 16px;
-  font-size: 1.15em;
+  margin: 22px 0 18px;
+  font-size: 1em;
+  line-height: 1.5;
 }
 
 .choiceList {
   display: grid;
-  gap: 8px;
-  width: min(230px, 100%);
+  gap: 5px;
+  width: min(280px, 100%);
   margin: 0 auto;
   text-align: left;
 }
 
 .choiceOption {
   display: grid;
-  grid-template-columns: 1.1em 1fr;
+  grid-template-columns: 28px 1fr;
   align-items: center;
   width: 100%;
-  padding: 6px 8px;
+  min-height: 38px;
+  padding: 7px 8px;
   border: 0;
   background: transparent;
-  color: #a9a9a9;
+  color: #8c8c8c;
   cursor: pointer;
   font: inherit;
   letter-spacing: inherit;
@@ -260,24 +283,110 @@
 }
 
 .choiceOption:focus-visible {
-  outline: 1px dashed #fff;
-  outline-offset: 3px;
+  outline: 2px solid #8ecbff;
+  outline-offset: 2px;
 }
 
 .choiceSelected {
-  color: #fff;
-  text-shadow: 0 0 8px rgb(255 255 255 / 70%);
+  background: #fff;
+  color: #000;
+  text-shadow: none;
 }
 
 .soulCursor {
-  color: #ff2020;
-  text-shadow: 0 0 6px #ff2020;
+  display: block;
+  width: 4px;
+  height: 4px;
+  margin: 0 8px;
+  background: transparent;
+  image-rendering: pixelated;
+  visibility: hidden;
+}
+
+.soulVisible {
+  visibility: visible;
+  background: #ff2020;
+  box-shadow:
+    -4px -16px #ff2020,
+    4px -16px #ff2020,
+    -8px -12px #ff2020,
+    -4px -12px #ff2020,
+    0 -12px #ff2020,
+    4px -12px #ff2020,
+    8px -12px #ff2020,
+    -8px -8px #ff2020,
+    -4px -8px #ff2020,
+    0 -8px #ff2020,
+    4px -8px #ff2020,
+    8px -8px #ff2020,
+    -4px -4px #ff2020,
+    0 -4px #ff2020,
+    4px -4px #ff2020;
+  transform: translate(8px, 8px) scale(1.25);
+  transform-origin: center;
 }
 
 .choiceHint {
   margin-top: 22px;
   color: #777;
-  font-size: 0.52em;
+  font-size: 0.5em;
+  letter-spacing: 1px;
+}
+
+.warningOverlay {
+  position: absolute;
+  z-index: 80;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 22px;
+  background: #000;
+}
+
+.warningBox {
+  width: min(560px, 100%);
+  box-sizing: border-box;
+  padding: clamp(24px, 5vw, 42px);
+  border: 4px solid #fff;
+  background: #090909;
+  color: #fff;
+  box-shadow: 0 0 30px rgb(255 255 255 / 15%);
+  font-size: clamp(15px, 1.7vw, 21px);
+  line-height: 1.6;
+  letter-spacing: 0.5px;
+  text-align: center;
+}
+
+.warningBox h1 {
+  margin: 0 0 22px;
+  color: #ff7474;
+  font-size: 1.05em;
+  letter-spacing: 1px;
+}
+
+.warningBox p {
+  margin: 0 0 1em;
+}
+
+.warningButton {
+  min-width: 110px;
+  margin-top: 12px;
+  padding: 8px 18px;
+  border: 3px solid #fff;
+  background: #fff;
+  color: #000;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.warningButton:hover,
+.warningButton:focus-visible {
+  background: #ff2020;
+  border-color: #ff2020;
+  color: #fff;
+  outline: 0;
 }
 
 .finalScene {
