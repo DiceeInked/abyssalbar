@@ -147,6 +147,10 @@
   opacity: 0.5;
 }
 
+/* =========================================================
+   ORIGINAL CRT EFFECTS
+   ========================================================= */
+
 .scanlines {
   position: absolute;
   z-index: 30;
@@ -195,6 +199,10 @@
   transition: opacity 0.7s ease-out;
 }
 
+/* =========================================================
+   PROCEED
+   ========================================================= */
+
 .choiceOverlay {
   position: absolute;
   z-index: 46;
@@ -209,7 +217,6 @@
   width: min(440px, 100%);
   box-sizing: border-box;
   padding: 32px 30px 28px;
-  border: 0;
   clip-path: polygon(
     0 12px,
     12px 12px,
@@ -233,7 +240,10 @@
     inset 0 -4px 0 #fff,
     0 0 0 4px #000,
     0 0 24px rgb(179 226 255 / 22%);
-  font-family: "Lucida Console", "Courier New", monospace;
+  font-family:
+    "Lucida Console",
+    "Courier New",
+    monospace;
   font-size: clamp(14px, 1.8vw, 21px);
   letter-spacing: 0.5px;
   image-rendering: pixelated;
@@ -333,6 +343,10 @@
   letter-spacing: 1px;
 }
 
+/* =========================================================
+   PHOTOSENSITIVITY WARNING
+   ========================================================= */
+
 .warningOverlay {
   position: absolute;
   z-index: 80;
@@ -389,6 +403,419 @@
   outline: 0;
 }
 
+/* =========================================================
+   BOOT SCREEN
+   ========================================================= */
+
+.bootPage {
+  position: fixed;
+  z-index: 9999;
+  inset: 0;
+  overflow: hidden;
+  background: #000;
+  color: #fff;
+  font-family:
+    "Courier New",
+    Courier,
+    monospace;
+}
+
+.bootCRT {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background:
+    radial-gradient(
+      ellipse at center,
+      #111 0%,
+      #030303 60%,
+      #000 100%
+    );
+  animation: bootFlicker 0.16s infinite;
+}
+
+.bootCRT::before {
+  position: absolute;
+  z-index: 10;
+  inset: -10%;
+  pointer-events: none;
+  content: "";
+  background: radial-gradient(
+    ellipse at center,
+    transparent 40%,
+    rgb(0 0 0 / 25%) 65%,
+    rgb(0 0 0 / 90%) 100%
+  );
+}
+
+.bootContent {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  padding: 8vh 20px 150px;
+  text-align: center;
+}
+
+.insertTitle {
+  margin: 0;
+  color: #fff;
+  font-size: clamp(28px, 6vw, 90px);
+  font-weight: 700;
+  letter-spacing: clamp(2px, 0.6vw, 10px);
+  line-height: 1;
+  text-shadow:
+    0 0 4px #fff,
+    0 0 12px rgb(255 255 255 / 55%),
+    0 0 28px rgb(160 220 255 / 25%);
+  animation:
+    insertTextFlicker 2.5s steps(2) infinite;
+}
+
+.insertSubtitle {
+  margin: 18px 0 0;
+  color: #777;
+  font-size: clamp(10px, 1.3vw, 17px);
+  letter-spacing: 4px;
+}
+
+.bootScanlines {
+  position: absolute;
+  z-index: 20;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgb(255 255 255 / 5%) 0,
+    rgb(255 255 255 / 5%) 1px,
+    transparent 1px,
+    transparent 4px
+  );
+  mix-blend-mode: screen;
+}
+
+.bootNoise {
+  position: absolute;
+  z-index: 15;
+  inset: -50%;
+  pointer-events: none;
+  opacity: 0.055;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.8'/%3E%3C/svg%3E");
+  animation: noiseMove 0.15s steps(2) infinite;
+}
+
+.bootVignette {
+  position: absolute;
+  z-index: 25;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 40%,
+    rgb(0 0 0 / 20%) 65%,
+    rgb(0 0 0 / 90%) 100%
+  );
+}
+
+/* =========================================================
+   DISC
+   ========================================================= */
+
+.diskArea {
+  position: relative;
+  width: min(420px, 65vw);
+  height: min(420px, 45vh);
+  margin-top: 35px;
+  perspective: 900px;
+}
+
+.disk {
+  position: absolute;
+  top: 5%;
+  left: 50%;
+  width: min(230px, 38vw);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  cursor: grab;
+  transform: translateX(-50%);
+  background:
+    radial-gradient(
+      circle at 50% 50%,
+      #111 0 8%,
+      #222 8.5% 10%,
+      #090909 10.5% 20%,
+      #171717 20.5% 21%,
+      #080808 21.5% 34%,
+      #181818 34.5% 35%,
+      #080808 35.5% 50%,
+      #171717 50.5% 51%,
+      #050505 51.5% 100%
+    );
+  border: 3px solid #555;
+  box-shadow:
+    0 0 0 2px #111,
+    0 15px 25px rgb(0 0 0 / 80%),
+    0 0 30px rgb(180 220 255 / 12%);
+  animation: diskGravity 2.8s ease-in-out infinite;
+  transition:
+    transform 0.5s ease,
+    opacity 0.4s ease;
+}
+
+.disk:active {
+  cursor: grabbing;
+}
+
+.disk::after {
+  position: absolute;
+  inset: 10%;
+  border-radius: 50%;
+  border: 1px solid rgb(255 255 255 / 15%);
+  content: "";
+}
+
+.diskOuterRing {
+  position: absolute;
+  inset: 4%;
+  border-radius: 50%;
+  border: 1px solid rgb(255 255 255 / 12%);
+}
+
+.diskInnerRing {
+  position: absolute;
+  inset: 23%;
+  border-radius: 50%;
+  border: 1px solid rgb(255 255 255 / 10%);
+}
+
+.diskLabel {
+  position: absolute;
+  inset: 31%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background:
+    radial-gradient(
+      circle,
+      #9c9c9c 0,
+      #555 35%,
+      #202020 100%
+    );
+  color: #050505;
+  box-shadow:
+    inset 0 0 10px rgb(0 0 0 / 70%);
+  font-size: clamp(8px, 1vw, 12px);
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-align: center;
+}
+
+.diskLabel strong {
+  margin: 5px 0;
+  font-size: 1.45em;
+}
+
+.diskLabel small {
+  font-size: 0.65em;
+  letter-spacing: 2px;
+}
+
+.diskHole {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 10%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #050505;
+  box-shadow:
+    inset 0 0 5px #000,
+    0 0 2px #aaa;
+  transform: translate(-50%, -50%);
+}
+
+.diskInserted .disk {
+  animation: none;
+  opacity: 0;
+  transform:
+    translateX(-50%)
+    translateY(250px)
+    scale(0.65);
+  pointer-events: none;
+}
+
+/* =========================================================
+   DVD SLOT
+   ========================================================= */
+
+.dvdSlot {
+  position: absolute;
+  bottom: 50px;
+  left: 50%;
+  width: min(620px, 82vw);
+  height: 120px;
+  transform: translateX(-50%);
+  border: 3px solid #333;
+  border-radius: 8px;
+  background:
+    linear-gradient(
+      to bottom,
+      #151515,
+      #050505
+    );
+  box-shadow:
+    inset 0 12px 20px rgb(255 255 255 / 4%),
+    inset 0 -12px 20px rgb(0 0 0 / 90%),
+    0 0 30px rgb(0 0 0 / 80%);
+}
+
+.dvdSlotOpening {
+  position: absolute;
+  top: 32px;
+  left: 50%;
+  width: 75%;
+  height: 16px;
+  transform: translateX(-50%);
+  border-radius: 10px;
+  background: #000;
+  border: 2px solid #222;
+  box-shadow:
+    inset 0 0 8px #000,
+    0 0 8px rgb(255 255 255 / 5%);
+}
+
+.dvdSlotLabel {
+  position: absolute;
+  bottom: 14px;
+  left: 22px;
+  color: #555;
+  font-size: 10px;
+  letter-spacing: 2px;
+}
+
+.dvdSlotStatus {
+  position: absolute;
+  right: 22px;
+  bottom: 14px;
+  color: #777;
+  font-size: 10px;
+  letter-spacing: 2px;
+  animation: statusBlink 1.2s steps(2) infinite;
+}
+
+.bootInstruction {
+  position: absolute;
+  bottom: 190px;
+  margin: 0;
+  color: #555;
+  font-size: 10px;
+  line-height: 1.8;
+  letter-spacing: 2px;
+}
+
+/* =========================================================
+   LOADING
+   ========================================================= */
+
+.loadingContent {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 100%;
+  padding: 30px;
+  text-align: center;
+}
+
+.loadingContent h1 {
+  margin: 28px 0 12px;
+  font-size: clamp(32px, 6vw, 80px);
+  letter-spacing: 8px;
+  text-shadow:
+    0 0 6px #fff,
+    0 0 20px rgb(255 255 255 / 45%);
+  animation: loadingFlicker 0.7s steps(2) infinite;
+}
+
+.loadingContent > p {
+  margin: 0 0 30px;
+  color: #777;
+  letter-spacing: 3px;
+}
+
+.loadingDisk {
+  position: relative;
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  background:
+    radial-gradient(
+      circle,
+      #777 0 8%,
+      #151515 8.5% 20%,
+      #333 20.5% 21%,
+      #111 21.5% 50%,
+      #444 50.5% 51%,
+      #080808 51.5% 100%
+    );
+  border: 2px solid #555;
+  animation: diskSpin 1.2s linear infinite;
+  box-shadow:
+    0 0 30px rgb(180 220 255 / 15%),
+    0 15px 30px rgb(0 0 0 / 80%);
+}
+
+.loadingDiskLabel {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  color: #aaa;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  transform: translate(-50%, -50%);
+}
+
+.loadingBar {
+  width: min(500px, 80vw);
+  height: 12px;
+  overflow: hidden;
+  border: 1px solid #444;
+  background: #050505;
+}
+
+.loadingBarFill {
+  width: 100%;
+  height: 100%;
+  transform-origin: left;
+  background: #fff;
+  box-shadow:
+    0 0 12px rgb(255 255 255 / 70%);
+  animation: loadingBar 3s linear infinite;
+}
+
+.loadingStatus {
+  margin-top: 16px !important;
+  color: #aaa !important;
+  font-size: 10px;
+}
+
+/* =========================================================
+   FINAL SCENE
+   ========================================================= */
+
 .finalScene {
   position: absolute;
   z-index: 50;
@@ -401,10 +828,19 @@
   padding: 30px;
   box-sizing: border-box;
   background:
-    radial-gradient(ellipse at 50% 120%, #d9f4ff 0%, #4d739b 9%, #071322 38%, #000 76%),
+    radial-gradient(
+      ellipse at 50% 120%,
+      #d9f4ff 0%,
+      #4d739b 9%,
+      #071322 38%,
+      #000 76%
+    ),
     #000;
   color: #e9f8ff;
-  font-family: "Courier New", Courier, monospace;
+  font-family:
+    "Courier New",
+    Courier,
+    monospace;
   text-align: center;
 }
 
@@ -460,7 +896,8 @@
   font-weight: 700;
   letter-spacing: 1px;
   line-height: 1.55;
-  text-shadow: 0 0 12px rgb(207 242 255 / 65%);
+  text-shadow:
+    0 0 12px rgb(207 242 255 / 65%);
   animation: finalFlicker 0.11s steps(2) infinite;
 }
 
@@ -470,7 +907,8 @@
 
 .finalMessage p:last-child {
   color: #ff6a6a;
-  text-shadow: 0 0 10px rgb(255 40 40 / 85%);
+  text-shadow:
+    0 0 10px rgb(255 40 40 / 85%);
 }
 
 .finalSoul {
@@ -478,7 +916,8 @@
   color: #ff2020;
   font-size: clamp(32px, 5vw, 64px);
   line-height: 1;
-  text-shadow: 0 0 9px #ff2020;
+  text-shadow:
+    0 0 9px #ff2020;
   animation: soulBeat 0.6s steps(2) infinite;
 }
 
@@ -488,6 +927,10 @@
   font-size: clamp(11px, 1.4vw, 16px);
   letter-spacing: 2px;
 }
+
+/* =========================================================
+   DESS / ERROR WINDOWS
+   ========================================================= */
 
 .dessPage,
 .dessPage .crt {
@@ -513,7 +956,10 @@
   border-right-color: #404040;
   border-bottom-color: #404040;
   box-shadow: 4px 4px 0 #000;
-  font-family: Arial, Helvetica, sans-serif;
+  font-family:
+    Arial,
+    Helvetica,
+    sans-serif;
   font-size: 13px;
 }
 
@@ -565,7 +1011,10 @@
   background: #c0c0c0;
   color: #000;
   cursor: pointer;
-  font-family: Arial, Helvetica, sans-serif;
+  font-family:
+    Arial,
+    Helvetica,
+    sans-serif;
 }
 
 .errorButton:active {
@@ -573,6 +1022,10 @@
   border-right-color: #fff;
   border-bottom-color: #fff;
 }
+
+/* =========================================================
+   ANIMATIONS
+   ========================================================= */
 
 @keyframes crtFlicker {
   0%,
@@ -621,11 +1074,15 @@
 
 @keyframes waterShift {
   from {
-    transform: translate(-2%, 0) scale(1);
+    transform:
+      translate(-2%, 0)
+      scale(1);
   }
 
   to {
-    transform: translate(3%, -4%) scale(1.08);
+    transform:
+      translate(3%, -4%)
+      scale(1.08);
   }
 }
 
@@ -655,6 +1112,134 @@
   }
 }
 
+/* Boot */
+
+@keyframes bootFlicker {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.985;
+  }
+}
+
+@keyframes insertTextFlicker {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  48% {
+    opacity: 1;
+  }
+
+  49% {
+    opacity: 0.45;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes diskGravity {
+  0% {
+    transform:
+      translateX(-50%)
+      translateY(-25px)
+      rotate(-4deg);
+  }
+
+  45% {
+    transform:
+      translateX(-50%)
+      translateY(120px)
+      rotate(8deg);
+  }
+
+  60% {
+    transform:
+      translateX(-50%)
+      translateY(85px)
+      rotate(-3deg);
+  }
+
+  76% {
+    transform:
+      translateX(-50%)
+      translateY(120px)
+      rotate(2deg);
+  }
+
+  100% {
+    transform:
+      translateX(-50%)
+      translateY(100px)
+      rotate(-1deg);
+  }
+}
+
+@keyframes statusBlink {
+  0%,
+  45% {
+    opacity: 1;
+  }
+
+  46%,
+  100% {
+    opacity: 0.25;
+  }
+}
+
+@keyframes diskSpin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes loadingFlicker {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@keyframes loadingBar {
+  0% {
+    transform: scaleX(0);
+  }
+
+  20% {
+    transform: scaleX(0.24);
+  }
+
+  45% {
+    transform: scaleX(0.52);
+  }
+
+  70% {
+    transform: scaleX(0.76);
+  }
+
+  100% {
+    transform: scaleX(1);
+  }
+}
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
 @media (max-width: 600px) {
   .content {
     padding: 22px 16px;
@@ -676,7 +1261,28 @@
   .errorWindow {
     font-size: 11px;
   }
+
+  .insertTitle {
+    font-size: clamp(26px, 8vw, 48px);
+  }
+
+  .diskArea {
+    height: 38vh;
+  }
+
+  .dvdSlot {
+    bottom: 35px;
+    height: 100px;
+  }
+
+  .bootInstruction {
+    bottom: 155px;
+  }
 }
+
+/* =========================================================
+   REDUCED MOTION
+   ========================================================= */
 
 @media (prefers-reduced-motion: reduce) {
   .crt,
@@ -685,7 +1291,14 @@
   .whiteout,
   .finalWater,
   .finalMessage,
-  .finalSoul {
+  .finalSoul,
+  .bootCRT,
+  .bootNoise,
+  .insertTitle,
+  .disk,
+  .dvdSlotStatus,
+  .loadingDisk,
+  .loadingContent h1 {
     animation: none;
   }
 
