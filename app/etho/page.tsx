@@ -26,6 +26,13 @@ type RouteCommand = {
 
 type ProceedChoice = "proceed" | "stop";
 
+type ProceedPrompt = {
+  heading: string;
+  question: string;
+  proceedLabel: string;
+  stopLabel: string;
+};
+
 const INTRO: TerminalLine = {
   id: 0,
   kind: "warning",
@@ -104,6 +111,39 @@ const PROCEED_LINES = [
   "GOODBYE.",
 ];
 
+const PROCEED_PROMPTS: ProceedPrompt[] = [
+  {
+    heading: "THE WATER WAITS.",
+    question: "PROCEED?",
+    proceedLabel: "PROCEED",
+    stopLabel: "STOP",
+  },
+  {
+    heading: "A VOICE SPEAKS UNDER THE ICE.",
+    question: "WHO TOLD HER TO DO IT?",
+    proceedLabel: "KEEP LISTENING",
+    stopLabel: "SAY NOTHING",
+  },
+  {
+    heading: "THE SWORD IS POINTING AT THE WATER.",
+    question: "DO YOU TAKE ITS HAND?",
+    proceedLabel: "TAKE ITS HAND",
+    stopLabel: "LOOK AWAY",
+  },
+  {
+    heading: "THE SCREEN ASKS FOR A NAME.",
+    question: "DO YOU ANSWER?",
+    proceedLabel: "TYPE THE NAME",
+    stopLabel: "REFUSE",
+  },
+  {
+    heading: "THE HEART IS STILL MOVING.",
+    question: "ONE MORE STEP?",
+    proceedLabel: "ONE MORE STEP",
+    stopLabel: "LET GO",
+  },
+];
+
 const FAULT_MESSAGES = [
   "IT'S YOUR FAULT.",
   "YOU DID THIS.",
@@ -131,6 +171,7 @@ const createDistortionCurve = (amount: number) => {
 
 export default function Etho() {
   const [input, setInput] = useState("");
+  const [warningOpen, setWarningOpen] = useState(true);
   const [history, setHistory] = useState<TerminalLine[]>([INTRO]);
   const [liveOutput, setLiveOutput] = useState("");
   const [typing, setTyping] = useState(false);
@@ -152,6 +193,7 @@ export default function Etho() {
   const typingTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const errorTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const recoveryTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const proceedGraceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const proceedFadeTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const faultStartTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const faultReappearTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -189,6 +231,7 @@ export default function Etho() {
       if (typingTimer.current) clearInterval(typingTimer.current);
       if (errorTimer.current) clearInterval(errorTimer.current);
       if (recoveryTimer.current) clearTimeout(recoveryTimer.current);
+      if (proceedGraceTimer.current) clearTimeout(proceedGraceTimer.current);
       if (proceedFadeTimer.current) clearInterval(proceedFadeTimer.current);
       if (faultStartTimer.current) clearTimeout(faultStartTimer.current);
       faultReappearTimers.current.forEach((timer) => clearTimeout(timer));
@@ -212,9 +255,17 @@ export default function Etho() {
 
   useEffect(() => {
     if (!typing && !dessMode && !proceedMenuOpen && !finalScene) {
+    if (
+      !warningOpen &&
+      !typing &&
+      !dessMode &&
+      !proceedMenuOpen &&
+      !finalScene
+    ) {
       inputRef.current?.focus();
     }
   }, [typing, dessMode, proceedMenuOpen, finalScene]);
+  }, [warningOpen, typing, dessMode, proceedMenuOpen, finalScene]);
 
   const typeText = (
     text: string,
@@ -513,8 +564,10 @@ export default function Etho() {
   };
 
   const endProceedRoute = (restoreMusic: boolean, announcement?: string) => {
+    if (proceedGraceTimer.current) clearTimeout(proceedGraceTimer.current);
     if (proceedFadeTimer.current) clearInterval(proceedFadeTimer.current);
     if (faultStartTimer.current) clearTimeout(faultStartTimer.current);
+    proceedGraceTimer.current = null;
     proceedFadeTimer.current = null;
     faultStartTimer.current = null;
 
@@ -532,8 +585,12 @@ export default function Etho() {
   };
 
   const beginProceedFade = () => {
+    if (proceedGraceTimer.current) clearTimeout(proceedGraceTimer.current);
     if (proceedFadeTimer.current) clearInterval(proceedFadeTimer.current);
 
+    /* Players get a real chance to enter the next /proceed first. */
+    proceedGraceTimer.current = setTimeout(() => {
+      proceedGraceTimer.current = null;
     proceedFadeTimer.current = setInterval(() => {
       if (whiteoutLevelRef.current <= 1) {
         endProceedRoute(
@@ -542,10 +599,22 @@ export default function Etho() {
         );
         return;
       }
+      proceedFadeTimer.current = setInterval(() => {
+        if (whiteoutLevelRef.current <= 1) {
+          endProceedRoute(
+            true,
+            "[ PROCEED ROUTE TERMINATED // CONNECTION NORMAL ]"
+          );
+          return;
+        }
 
       whiteoutLevelRef.current -= 1;
       setWhiteoutLevel(whiteoutLevelRef.current);
     }, 1100);
+        whiteoutLevelRef.current -= 1;
+        setWhiteoutLevel(whiteoutLevelRef.current);
+      }, 1500);
+    }, 7000);
   };
 
   const handleProceed = () => {
@@ -564,6 +633,8 @@ export default function Etho() {
     }
 
     if (proceedFadeTimer.current) clearInterval(proceedFadeTimer.current);
+    if (proceedGraceTimer.current) clearTimeout(proceedGraceTimer.current);
+    proceedGraceTimer.current = null;
     proceedFadeTimer.current = null;
     faultStartTimer.current = setTimeout(() => {
       stopAllAudio();
@@ -575,6 +646,11 @@ export default function Etho() {
   };
 
   const openProceedDialog = () => {
+    if (proceedGraceTimer.current) clearTimeout(proceedGraceTimer.current);
+    if (proceedFadeTimer.current) clearInterval(proceedFadeTimer.current);
+    proceedGraceTimer.current = null;
+    proceedFadeTimer.current = null;
+
     if (proceedCount === 0) {
       musicWasPlayingBeforeProceed.current = Boolean(
         music.current && !music.current.paused
@@ -678,6 +754,7 @@ export default function Etho() {
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (typing || dessMode || proceedMenuOpen || finalScene) return;
+    if (warningOpen || typing || dessMode || proceedMenuOpen || finalScene) return;
 
     const command = input.trim().toLowerCase();
     if (!command) return;
@@ -763,6 +840,9 @@ export default function Etho() {
     });
   };
 
+  const activeProceedPrompt =
+    PROCEED_PROMPTS[Math.min(proceedCount, PROCEED_PROMPTS.length - 1)];
+
   return (
     <main className={`${styles.page} ${dessMode ? styles.dessPage : ""}`}>
       <div className={styles.crt}>
@@ -804,6 +884,9 @@ export default function Etho() {
                   spellCheck={false}
                   aria-label="Echo terminal command input"
                   disabled={typing || dessMode || proceedMenuOpen || finalScene}
+                  disabled={
+                    warningOpen || typing || dessMode || proceedMenuOpen || finalScene
+                  }
                 />
               </form>
             </div>
@@ -818,6 +901,12 @@ export default function Etho() {
                 >
                   <p className={styles.choiceQuestion}>THE WATER WAITS.</p>
                   <p className={styles.choicePrompt}>PROCEED?</p>
+                  <p className={styles.choiceQuestion}>
+                    {activeProceedPrompt.heading}
+                  </p>
+                  <p className={styles.choicePrompt}>
+                    {activeProceedPrompt.question}
+                  </p>
                   <div className={styles.choiceList}>
                     <button
                       type="button"
@@ -832,6 +921,13 @@ export default function Etho() {
                         {proceedChoice === "proceed" ? "♥" : ""}
                       </span>
                       PROCEED
+                      <span
+                        className={`${styles.soulCursor} ${
+                          proceedChoice === "proceed" ? styles.soulVisible : ""
+                        }`}
+                        aria-hidden="true"
+                      />
+                      {activeProceedPrompt.proceedLabel}
                     </button>
                     <button
                       type="button"
@@ -846,6 +942,13 @@ export default function Etho() {
                         {proceedChoice === "stop" ? "♥" : ""}
                       </span>
                       STOP
+                      <span
+                        className={`${styles.soulCursor} ${
+                          proceedChoice === "stop" ? styles.soulVisible : ""
+                        }`}
+                        aria-hidden="true"
+                      />
+                      {activeProceedPrompt.stopLabel}
                     </button>
                   </div>
                   <p className={styles.choiceHint}>ARROW KEYS + ENTER</p>
@@ -905,6 +1008,32 @@ export default function Etho() {
                 </button>
               </div>
             ))}
+          </div>
+        )}
+
+        {warningOpen && (
+          <div className={styles.warningOverlay}>
+            <div
+              className={styles.warningBox}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="photosensitivity-warning"
+            >
+              <h1 id="photosensitivity-warning">PHOTOSENSITIVITY WARNING</h1>
+              <p>
+                THIS EXPERIENCE CONTAINS FLASHING LIGHTS, FLICKER, HIGH-CONTRAST
+                IMAGES, AND RAPIDLY APPEARING WINDOWS.
+              </p>
+              <p>PLEASE TAKE CARE OF YOURSELF BEFORE CONTINUING.</p>
+              <button
+                type="button"
+                className={styles.warningButton}
+                onClick={() => setWarningOpen(false)}
+                autoFocus
+              >
+                OK
+              </button>
+            </div>
           </div>
         )}
       </div>
