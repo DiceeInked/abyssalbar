@@ -1,22 +1,13 @@
 @import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&display=swap");
 
-:root {
-  --terminal-color: #00ffc8;
-  --background-color: #00140f;
-  --terminal-border: rgba(0, 255, 200, 0.3);
-  --terminal-glow: rgba(0, 255, 200, 0.15);
-  --terminal-inset-glow: rgba(0, 255, 200, 0.04);
-  --terminal-placeholder: rgba(0, 255, 200, 0.35);
-  --terminal-text-shadow: 0 0 5px rgba(0, 255, 200, 0.45);
-}
-
-* { box-sizing: border-box; }
-html, body { margin: 0; padding: 0; min-height: 100%; }
-body { background: var(--background-color); color: var(--terminal-color); font-family: "IBM Plex Mono", monospace; }
-button, input { font: inherit; }
-.terminal { position: relative; min-height: 100vh; padding: 30px; overflow: hidden; text-shadow: var(--terminal-text-shadow); }
-.scanlines { position: fixed; inset: 0; z-index: 100; pointer-events: none; background: repeating-linear-gradient(to bottom, rgba(0,255,200,.04) 0 2px, rgba(0,20,15,.02) 2px 4px); mix-blend-mode: screen; }
-.terminal-container { width:min(92vw,960px); height:min(78vh,720px); aspect-ratio:4/3; margin:max(20px,4vh) auto; display:flex; flex-direction:column; }
+:root { --terminal-color:#00ffc8; --background-color:#00140f; --terminal-border:rgba(0,255,200,.3); --terminal-glow:rgba(0,255,200,.15); --terminal-inset-glow:rgba(0,255,200,.04); --terminal-placeholder:rgba(0,255,200,.35); --terminal-text-shadow:0 0 5px rgba(0,255,200,.45); }
+* { box-sizing:border-box; }
+html,body { margin:0; padding:0; min-height:100%; }
+body { background:var(--background-color); color:var(--terminal-color); font-family:"IBM Plex Mono",monospace; }
+button,input { font:inherit; }
+.terminal { position:relative; min-height:100vh; padding:30px; overflow:hidden; text-shadow:var(--terminal-text-shadow); }
+.scanlines { position:fixed; inset:0; z-index:100; pointer-events:none; background:repeating-linear-gradient(to bottom,rgba(0,255,200,.04) 0 2px,rgba(0,20,15,.02) 2px 4px); mix-blend-mode:screen; }
+.terminal-container { width:auto; height:min(78vh,720px); max-width:92vw; aspect-ratio:4/3; margin:max(20px,4vh) auto; display:flex; flex-direction:column; }
 .navigation-terminal,.terminal-window { width:100%; height:100%; border:1px solid var(--terminal-color); background:rgba(0,20,15,.5); box-shadow:0 0 10px var(--terminal-glow),inset 0 0 20px var(--terminal-inset-glow); }
 .navigation-terminal { min-height:0; }
 .terminal-title { padding:10px 15px; border-bottom:1px solid var(--terminal-color); font-size:14px; font-weight:400; letter-spacing:2px; line-height:1.4; }
@@ -53,4 +44,4 @@ button, input { font: inherit; }
 @keyframes etho-noise { 0%{transform:translate(0,0);opacity:.15} 25%{transform:translate(-2%,3%);opacity:.35} 50%{transform:translate(3%,-1%);opacity:.2} 75%{transform:translate(-1%,-3%);opacity:.4} 100%{transform:translate(2%,1%);opacity:.18} }
 @keyframes etho-text-glitch { 0%{transform:translate(0);opacity:.8} 30%{transform:translate(-8px,3px) skewX(-8deg);opacity:1} 55%{transform:translate(10px,-2px) skewX(6deg);opacity:.55} 80%{transform:translate(-4px,1px);opacity:.9} 100%{transform:translate(5px,-3px) skewX(-3deg);opacity:.7} }
 @media (prefers-reduced-motion:reduce) { .etho-glitch-transition,.etho-glitch-layer,.etho-glitch-noise,.etho-glitch-text { animation-duration:500ms; animation-iteration-count:1; } }
-@media (max-width:600px) { .terminal{padding:15px}.terminal-container{width:min(94vw,720px);height:min(76vh,540px);margin:12vh auto}.terminal-input{margin:0 15px}.message-input,.gametonics-search input{font-size:14px}.terminal-input button,.game-button{padding:8px 10px;font-size:13px}.game-output{padding:15px}.gametonics-search{margin:15px 15px 0}.gametonics-footer{margin:0 15px} }
+@media (max-width:600px) { .terminal{padding:15px}.terminal-container{width:94vw;height:auto;max-width:94vw;margin:12vh auto}.terminal-input{margin:0 15px}.message-input,.gametonics-search input{font-size:14px}.terminal-input button,.game-button{padding:8px 10px;font-size:13px}.game-output{padding:15px}.gametonics-search{margin:15px 15px 0}.gametonics-footer{margin:0 15px} }
