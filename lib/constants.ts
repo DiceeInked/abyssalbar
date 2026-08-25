@@ -1,4 +1,4 @@
-export const SITE_VERSION = "2.24";
+export const SITE_VERSION = "2.25";
 
 export const SESSION_COOKIE = "abyssal_session";
 
