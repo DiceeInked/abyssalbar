@@ -203,6 +203,10 @@ export default function Etho() {
   const [warningOpen, setWarningOpen] = useState(true);
 
   const [history, setHistory] = useState<TerminalLine[]>([INTRO]);
+  const [dvdPosition, setDvdPosition] = use state({
+    x: 300,
+    y: 100,
+  });
   const [liveOutput, setLiveOutput] = useState("");
   const [typing, setTyping] = useState(false);
 
