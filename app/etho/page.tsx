@@ -580,13 +580,13 @@ export default function Etho() {
     if (routeStage >= 3) routeHint.push("/LAKE"); 
     if (routeStage >= 4) routeHint.push("/ECHO"); 
     if (routeStage >= 5) routeHint.push("/DESS"); 
-    return ["ECHO TERMINAL // AVAILABLE INPUTS", "", "/HELP     SHOW THIS LIST", "/CALLOUT  TEST THE CONNECTION", "/NEXT     REPEAT THE NEXT ROUTE INPUT", "/CLEAR    CLEAR TERMINAL HISTORY", "/RESET    RESET THE ROUTE", "", `ROUTE INPUTS: ${routeHint.join("  ")}`].join("\n"); 
+    return ["ECHO TERMINAL // AVAILABLE INPUTS", "", "/HELP     SHOW THIS LIST", "/CALLOUT  TEST THE CONNECTION", "/NEXT     REPEAT THE NEXT ROUTE INPUT", "/CLEAR    CLEAR TERMINAL HISTORY", "/RESET    RESET THE ROUTE", "", ROUTE INPUTS: ${routeHint.join("  ")}].join("\n"); 
   }; 
  
   const getNextText = () => { 
     const nextCommands = ["/SWORD", "/1225", "/LAKE", "/ECHO", "/DESS"]; 
     const nextCommand = nextCommands[routeStage]; 
-    return nextCommand ? `NEXT INPUT: ${nextCommand}` : "THERE IS NO NEXT STEP.\n\nTHERE IS ONLY /RESET."; 
+    return nextCommand ? NEXT INPUT: ${nextCommand} : "THERE IS NO NEXT STEP.\n\nTHERE IS ONLY /RESET."; 
   }; 
  
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => { 
@@ -596,7 +596,7 @@ export default function Etho() {
     if (!command) return; 
     setInput(""); 
     if (command === "/clear") { setHistory([]); setLiveOutput(""); return; } 
-    addLine("command", `> ${command.toUpperCase()}`); 
+    addLine("command", > ${command.toUpperCase()}); 
     if (command === "/help") { typeText(getHelpText()); return; } 
     if (command === "/next") { typeText(getNextText()); return; } 
     if (command === "/reset") { endProceedRoute(false); setRouteStage(0); typeText("ROUTE STATE CLEARED.\n\nTHE TERMINAL REMEMBERS ANYWAY.\n\nNEXT INPUT: /GIRL"); return; } 
@@ -612,7 +612,7 @@ export default function Etho() {
       return; 
     } 
     const routeCommand = ROUTE_COMMANDS[command]; 
-    if (!routeCommand) { typeText(`UNKNOWN COMMAND: ${command.toUpperCase()}`); return; } 
+    if (!routeCommand) { typeText(UNKNOWN COMMAND: ${command.toUpperCase()}); return; } 
     if (routeStage < routeCommand.minimumStage) { typeText("ACCESS DENIED.\n\nYOU ARE SKIPPING A MEMORY.\n\nTYPE /NEXT."); return; } 
     setRouteStage((current) => Math.max(current, routeCommand.nextStage)); 
     if (routeCommand.startMusic) startNormalMusic(); 
@@ -622,7 +622,7 @@ export default function Etho() {
   const renderText = (text: string) => text.split(/(\s+)/).map((word, index) => { 
     const cleanWord = word.replace(/[.,!?;:'"]/g, "").toLowerCase(); 
     const isRed = ["you", "your", "you're", "youre"].includes(cleanWord); 
-    return <span key={`${word}-${index}`} className={isRed ? styles.redText : undefined}>{word}</span>; 
+    return <span key={${word}-${index}} className={isRed ? styles.redText : undefined}>{word}</span>; 
   }); 
  
   if (bootState !== "terminal") { 
@@ -632,7 +632,7 @@ export default function Etho() {
   const activeProceedPrompt = PROCEED_PROMPTS[Math.min(proceedCount, PROCEED_PROMPTS.length - 1)]; 
  
   return ( 
-    <main className={`${styles.page} ${dessMode ? styles.dessPage : ""}`}> 
+    <main className={${styles.page} ${dessMode ? styles.dessPage : ""}}> 
       <div className={styles.crt}> 
         {!dessMode && !finalScene && ( 
           <> 
