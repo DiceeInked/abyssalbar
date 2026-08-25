@@ -21,7 +21,7 @@
     inset 0 0 80px rgb(0 0 0 / 95%),
     inset 0 0 180px rgb(0 0 0 / 70%),
     0 0 50px rgb(0 0 0 / 90%);
-  transform: scale(2.985);
+  transform: scale(1);
   animation: crtFlicker 0.6s infinite;
 }
 
