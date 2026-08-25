@@ -22,7 +22,7 @@
     inset 0 0 180px rgb(0 0 0 / 70%),
     0 0 50px rgb(0 0 0 / 90%);
   transform: scale(2.985);
-  animation: crtFlicker 0.12s infinite;
+  animation: crtFlicker 0.6s infinite;
 }
 
 .crt::before {
