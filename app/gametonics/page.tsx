@@ -5,8 +5,6 @@ import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabase";
 import { GAME_BUCKET } from "../../lib/constants";
 
-import "../globals.css";
-
 type Game = {
   name: string;
   path: string;
@@ -153,8 +151,6 @@ export default function GameTonics() {
               aria-label="Search games"
             />
           </div>
-
-          <div className="gametonics-footer">&gt; Select a game</div>
         </section>
       </div>
     </main>
