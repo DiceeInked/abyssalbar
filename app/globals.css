@@ -27,7 +27,7 @@ button, input { font: inherit; }
 .message-input::placeholder, .gametonics-search input::placeholder { color: var(--terminal-placeholder); }
 .terminal-input button { padding: 6px 10px; }
 .terminal-input button:disabled, .game-button:disabled { opacity: .45; cursor: not-allowed; }
-.gametonics-search { display: flex; align-items: center; gap: 8px; margin: 20px 20px 0; padding: 10px 0; border-bottom: 1px solid var(--terminal-border); }
+.gametonics-search { display: flex; align-items: center; gap: 8px; margin: 20px 20px 0; padding: 10px 0; border-bottom: none; }
 .gametonics-search span { flex: 0 0 auto; }
 .game-output { flex: 1; min-height: 0; padding: 20px; line-height: 1.6; overflow-y: auto; }
 .game-letter-section { margin-top: 24px; }
