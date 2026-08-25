@@ -1,361 +1,53 @@
-<script>const SUPABASE_URL = "";
-const SUPABASE_PUBLISHABLE_KEY = "";</script>
+<script>
+const SUPABASE_URL = "";
+const SUPABASE_PUBLISHABLE_KEY = "";
+</script>
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Abyssal Bar</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <style>
-    :root { color-scheme: dark; --teal:#00ffc8; }
-    * { box-sizing:border-box; }
-    html,body { margin:0; min-height:100%; background:#000; }
-    body { color:var(--teal); font-family:monospace; }
-    button,input { color:var(--teal); background:#000; border:1px solid var(--teal); font:inherit; }
-    button { cursor:pointer; padding:7px 10px; }
-    button:hover { background:var(--teal); color:#000; }
-    input { width:100%; padding:8px; outline:none; }
-    a { color:var(--teal); }
-    .terminal { min-height:100vh; padding:16px; position:relative; }
-    .scanlines { position:fixed; inset:0; pointer-events:none; z-index:100; opacity:.9; background:repeating-linear-gradient(to bottom,rgba(0,255,200,.09) 0 1px,transparent 1px 3px); }
-    .shell { position:relative; z-index:1; max-width:1200px; margin:auto; }
-    .window { border:1px solid var(--teal); box-shadow:0 0 18px rgba(0,255,200,.16); padding:14px; margin-bottom:14px; }
-    .title { border-bottom:1px solid var(--teal); padding-bottom:9px; margin-bottom:12px; }
-    .muted { opacity:.75; }
-    .output { min-height:55vh; max-height:70vh; overflow:auto; white-space:pre-wrap; overflow-wrap:anywhere; }
-    .input-row { display:flex; gap:8px; align-items:center; margin-top:12px; }
-    .input-row input { flex:1; }
-    .nav { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
-    .hidden { display:none !important; }
-    .game-list { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
-    .game-button { min-width:140px; text-align:left; }
-    .game-frame { width:100%; height:75vh; border:1px solid var(--teal); background:#000; }
-    .game-header { display:flex; gap:8px; align-items:center; justify-content:space-between; margin-bottom:10px; }
-    .auth-box { display:grid; gap:8px; max-width:500px; }
-    @media (max-width:700px) { .terminal { padding:8px; } .game-button { width:100%; } }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>Abyssal Bar</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{color-scheme:dark;--teal:#00ffc8}*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#000}body{color:var(--teal);font-family:monospace}.terminal{min-height:100vh;padding:16px;position:relative}.scanlines{position:fixed;inset:0;pointer-events:none;z-index:100;opacity:.9;background:repeating-linear-gradient(to bottom,rgba(0,255,200,.09) 0 1px,transparent 1px 3px)}.shell{position:relative;z-index:1;max-width:1200px;margin:auto}.view{border:1px solid var(--teal);box-shadow:0 0 18px rgba(0,255,200,.16);padding:14px}.hidden{display:none!important}.title{border-bottom:1px solid var(--teal);padding-bottom:9px;margin-bottom:12px}.muted{opacity:.75}.output{min-height:55vh;max-height:70vh;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere}.input-row{display:flex;gap:8px;align-items:center;margin-top:12px}.input-row input{flex:1;color:var(--teal);background:#000;border:0;outline:0;font:inherit}.game-list{margin-top:14px;white-space:pre-wrap}.game-item{cursor:pointer;margin:3px 0}.game-item:hover{text-decoration:underline}.game-frame{width:100%;height:75vh;border:1px solid var(--teal);background:#000}.search{color:var(--teal);background:#000;border:1px solid var(--teal);font:inherit;padding:8px;width:100%}
+</style>
 </head>
 <body>
-  <main class="terminal">
-    <div class="scanlines"></div>
-    <div class="shell">
-      <section class="window" id="homeView">
-        <div class="title">ABYSSAL BAR TERMINAL <span class="muted">v2.17</span></div>
-        <div class="nav">
-          <button data-view="home">Home</button>
-          <button data-view="games">GameTonics</button>
-          <button data-view="egg">Egg</button>
-          <button data-view="etho">Etho</button>
-          <button data-view="auth">Account</button>
-        </div>
-        <div id="terminalOutput" class="output"></div>
-        <form id="terminalForm" class="input-row">
-          <span>&gt;</span>
-          <input id="terminalInput" autocomplete="off" spellcheck="false" placeholder="Type /help or a message...">
-          <button type="submit">Enter</button>
-        </form>
-      </section>
-
-      <section class="window hidden" id="authView">
-        <div class="title">ACCOUNT</div>
-        <div class="auth-box">
-          <input id="usernameInput" placeholder="Username (3-30, no spaces)" autocomplete="username">
-          <input id="passwordInput" type="password" placeholder="Password (3-30, no spaces)" autocomplete="current-password">
-          <div class="nav">
-            <button id="signInButton">Sign In</button>
-            <button id="signUpButton">Sign Up</button>
-            <button id="signOutButton">Sign Out</button>
-            <button data-view="home">Back</button>
-          </div>
-          <div id="authStatus" class="muted"></div>
-        </div>
-      </section>
-
-      <section class="window hidden" id="gamesView">
-        <div class="title">GAMETONICS GAME LIBRARY</div>
-        <div class="nav"><button data-view="home">Back</button></div>
-        <input id="gameSearch" placeholder="Search games..." autocomplete="off">
-        <div id="gamesStatus" class="muted"></div>
-        <div id="gameList" class="game-list"></div>
-      </section>
-
-      <section class="window hidden" id="eggView">
-        <div class="title">EGG</div>
-        <div class="nav"><button data-view="home">Back</button><button id="eggZeroButton">Egg 0</button></div>
-        <div id="eggOutput" class="output"></div>
-      </section>
-
-      <section class="window hidden" id="ethoView">
-        <div class="title">ETHO</div>
-        <div class="nav"><button data-view="home">Back</button></div>
-        <div class="output">Etho page</div>
-      </section>
-
-      <section class="window hidden" id="playView">
-        <div class="game-header">
-          <span id="playingTitle">GAME</span>
-          <button data-view="games">Back to GameTonics</button>
-        </div>
-        <iframe id="gameFrame" class="game-frame" title="Game"></iframe>
-        <div id="gameStatus" class="muted"></div>
-      </section>
-    </div>
-  </main>
-
-  <script>
-    const GAME_BUCKET = "gametonics";
-    const MAX_MESSAGES = 12;
-    const USERNAME_MIN = 3;
-    const USERNAME_MAX = 30;
-    const PASSWORD_MIN = 3;
-    const PASSWORD_MAX = 30;
-
-    const $ = (id) => document.getElementById(id);
-    const output = $("terminalOutput");
-    const input = $("terminalInput");
-    let supabaseClient = null;
-    let account = null;
-    let games = [];
-    let eggInterval = null;
-
-    const write = (text) => {
-      const line = document.createElement("div");
-      line.textContent = text;
-      output.appendChild(line);
-      output.scrollTop = output.scrollHeight;
-    };
-
-    const validCredential = (value, min, max) => value.length >= min && value.length <= max && !/\s/.test(value);
-
-    const showView = (name) => {
-      ["home", "auth", "games", "egg", "etho", "play"].forEach((view) => {
-        $(view + "View").classList.toggle("hidden", view !== name);
-      });
-      if (name === "games") loadGames();
-      if (name === "egg") startEgg(false);
-      if (name !== "egg" && eggInterval) {
-        clearInterval(eggInterval);
-        eggInterval = null;
-      }
-    };
-
-    const getStoredToken = () => localStorage.getItem("abyssal_session") || "";
-    const setStoredToken = (token) => localStorage.setItem("abyssal_session", token);
-    const clearStoredToken = () => localStorage.removeItem("abyssal_session");
-
-    const updateAccountDisplay = () => {
-      $("authStatus").textContent = account ? `Signed in as ${account.username}.` : "Not signed in.";
-    };
-
-    const initializeSupabase = () => {
-      if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
-        write("Supabase is not configured. Put your URL on line 1 and publishable key on line 2.");
-        return false;
-      }
-      if (!window.supabase) {
-        write("Supabase library failed to load.");
-        return false;
-      }
-      supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
-      return true;
-    };
-
-    const loadAccount = async () => {
-      if (!supabaseClient) return;
-      const token = getStoredToken();
-      if (!token) return;
-      const { data, error } = await supabaseClient.rpc("get_session_account", { p_token: token });
-      if (error || !data) {
-        clearStoredToken();
-        account = null;
-        updateAccountDisplay();
-        return;
-      }
-      account = data;
-      updateAccountDisplay();
-    };
-
-    const authenticate = async (action) => {
-      if (!supabaseClient) return;
-      const username = $("usernameInput").value;
-      const password = $("passwordInput").value;
-      if (!validCredential(username, USERNAME_MIN, USERNAME_MAX)) {
-        $("authStatus").textContent = `Username must be ${USERNAME_MIN}-${USERNAME_MAX} characters with no spaces.`;
-        return;
-      }
-      if (!validCredential(password, PASSWORD_MIN, PASSWORD_MAX)) {
-        $("authStatus").textContent = `Password must be ${PASSWORD_MIN}-${PASSWORD_MAX} characters with no spaces.`;
-        return;
-      }
-      $("authStatus").textContent = "Working...";
-      if (action === "sign_up") {
-        const { error } = await supabaseClient.rpc("create_account", { p_username: username, p_password: password });
-        if (error) {
-          $("authStatus").textContent = error.message;
-          return;
-        }
-      }
-      const { data, error } = await supabaseClient.rpc("create_account_session", { p_username: username, p_password: password });
-      if (error || !data) {
-        $("authStatus").textContent = error?.message || "Sign in failed.";
-        return;
-      }
-      setStoredToken(data.token);
-      account = { id: data.id, username: data.username };
-      updateAccountDisplay();
-      write(`${action === "sign_up" ? "Account created" : "Signed in"}: ${account.username}`);
-    };
-
-    const signOut = async () => {
-      const token = getStoredToken();
-      if (supabaseClient && token) await supabaseClient.rpc("delete_account_session", { p_token: token });
-      clearStoredToken();
-      account = null;
-      updateAccountDisplay();
-      write("Signed out.");
-    };
-
-    const loadMessages = async () => {
-      if (!supabaseClient) return;
-      const { data, error } = await supabaseClient.from("messages").select("id, username, message, created_at").order("created_at", { ascending: false }).limit(MAX_MESSAGES);
-      if (error) {
-        write("Message load error: " + error.message);
-        return;
-      }
-      output.innerHTML = "";
-      (data || []).reverse().forEach((message) => write(`${message.username}: ${message.message}`));
-    };
-
-    const setupRealtime = () => {
-      if (!supabaseClient) return;
-      supabaseClient.channel("google-sites-chat").on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, loadMessages).subscribe();
-    };
-
-    const sendMessage = async (message) => {
-      const token = getStoredToken();
-      if (!supabaseClient || !token) {
-        write("Sign in required. Use /sign up <username> <password>.");
-        return;
-      }
-      const { error } = await supabaseClient.rpc("send_account_message", { p_token: token, p_message: message });
-      if (error) write("Message error: " + error.message);
-    };
-
-    const randomChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-/\\[]{}()<>:;,.=+*#@$%&?!|~^";
-    const makeEggLine = (length, spaced) => {
-      let result = "";
-      for (let i = 0; i < length; i++) {
-        if (i && spaced) result += " ";
-        result += randomChars[Math.floor(Math.random() * randomChars.length)];
-      }
-      return result;
-    };
-
-    const startEgg = (zeroMode) => {
-      const eggOutput = $("eggOutput");
-      if (eggInterval) clearInterval(eggInterval);
-      eggOutput.innerHTML = "";
-      const render = () => {
-        const lines = [];
-        for (let i = 0; i < 14; i++) {
-          const length = zeroMode ? 256 : Math.floor(Math.random() * 241) + 16;
-          lines.push(makeEggLine(length, zeroMode));
-        }
-        eggOutput.textContent = lines.join("\n");
-      };
-      render();
-      eggInterval = setInterval(render, 45);
-    };
-
-    const loadGames = async () => {
-      if (!supabaseClient) return;
-      $("gamesStatus").textContent = "Loading games...";
-      const { data, error } = await supabaseClient.storage.from(GAME_BUCKET).list("", { limit: 1000, sortBy: { column: "name", order: "asc" } });
-      if (error) {
-        $("gamesStatus").textContent = "Unable to load GameTonics: " + error.message;
-        return;
-      }
-      games = (data || []).filter((item) => item.name && !item.name.startsWith(".") && item.id === null).map((item) => ({ name: item.name, path: item.name }));
-      renderGames();
-    };
-
-    const renderGames = () => {
-      const term = $("gameSearch").value.trim().toLowerCase();
-      const list = $("gameList");
-      list.innerHTML = "";
-      const filtered = games.filter((game) => game.name.toLowerCase().includes(term));
-      $("gamesStatus").textContent = `${filtered.length} ${filtered.length === 1 ? "game" : "games"} found.`;
-      filtered.forEach((game) => {
-        const button = document.createElement("button");
-        button.className = "game-button";
-        button.textContent = game.name;
-        button.addEventListener("click", () => launchGame(game));
-        list.appendChild(button);
-      });
-    };
-
-    const launchGame = (game) => {
-      const path = game.path.split("/").map(encodeURIComponent).join("/");
-      const url = `${SUPABASE_URL.replace(/\/$/, "")}/storage/v1/object/public/${GAME_BUCKET}/${path}/index.html`;
-      $("playingTitle").textContent = game.name;
-      $("gameFrame").src = url;
-      $("gameStatus").textContent = "Loading game from GameTonics...";
-      showView("play");
-    };
-
-    const handleCommand = async (value) => {
-      const parts = value.trim().split(/\s+/);
-      const command = parts[0].toLowerCase();
-      if (command === "/help") {
-        write("Commands: /help, /sign up, /sign in, /sign out, /egg, /egg 0, /etho, /gametonics");
-        return;
-      }
-      if (command === "/egg") {
-        showView("egg");
-        if (parts[1] === "0") startEgg(true);
-        return;
-      }
-      if (command === "/etho") { showView("etho"); return; }
-      if (command === "/gametonics") { showView("games"); return; }
-      if (command === "/sign") {
-        if (parts[1] === "out") { await signOut(); return; }
-        if (parts[1] === "up" || parts[1] === "in") {
-          showView("auth");
-          $("usernameInput").value = parts[2] || "";
-          $("passwordInput").value = parts[3] || "";
-          if (parts.length === 4) await authenticate(parts[1] === "up" ? "sign_up" : "sign_in");
-          return;
-        }
-      }
-      write("Unknown command. Type /help.");
-    };
-
-    form.addEventListener("submit", async (event) => {
-      event.preventDefault();
-      const value = input.value.trim();
-      if (!value) return;
-      input.value = "";
-      if (value.startsWith("/")) await handleCommand(value);
-      else await sendMessage(value);
-    });
-
-    document.querySelectorAll("[data-view]").forEach((button) => button.addEventListener("click", () => showView(button.dataset.view)));
-    $("gameSearch").addEventListener("input", renderGames);
-    $("signInButton").addEventListener("click", () => authenticate("sign_in"));
-    $("signUpButton").addEventListener("click", () => authenticate("sign_up"));
-    $("signOutButton").addEventListener("click", signOut);
-    $("eggZeroButton").addEventListener("click", () => startEgg(true));
-
-    (async () => {
-      if (!initializeSupabase()) return;
-      await loadAccount();
-      updateAccountDisplay();
-      await loadMessages();
-      setupRealtime();
-      write("Google Sites edition ready.");
-      write("Type /help for commands.");
-    })();
-  </script>
+<main class="terminal"><div class="scanlines"></div><div class="shell">
+<section id="homeView" class="view"><div class="title">ABYSSAL BAR TERMINAL <span class="muted">v2.18</span></div><div id="terminalOutput" class="output"></div><form id="terminalForm" class="input-row"><span>&gt;</span><input id="terminalInput" autocomplete="off" spellcheck="false" placeholder="Type /help or a message..."></form></section>
+<section id="authView" class="view hidden"><div class="title">ACCOUNT</div><div id="authOutput" class="output"></div><div class="muted">Use /sign up &lt;username&gt; &lt;password&gt;, /sign in &lt;username&gt; &lt;password&gt;, or /sign out.</div></section>
+<section id="gamesView" class="view hidden"><div class="title">GAMETONICS GAME LIBRARY</div><input id="gameSearch" class="search" placeholder="Search games..." autocomplete="off"><div id="gamesStatus" class="muted"></div><div id="gameList" class="game-list"></div></section>
+<section id="eggView" class="view hidden"><div class="title">EGG</div><div id="eggOutput" class="output"></div></section>
+<section id="ethoView" class="view hidden"><div class="title">ETHO</div><div class="output">Etho page</div></section>
+<section id="playView" class="view hidden"><div class="title" id="playingTitle">GAME</div><iframe id="gameFrame" class="game-frame" title="Game"></iframe><div id="gameStatus" class="muted"></div></section>
+</div></main>
+<script>
+const GAME_BUCKET="gametonics",MAX_MESSAGES=12,USERNAME_MIN=3,USERNAME_MAX=30,PASSWORD_MIN=3,PASSWORD_MAX=30,MESSAGE_LINE_LENGTH=80;
+const $=id=>document.getElementById(id),output=$("terminalOutput"),input=$("terminalInput"),authOutput=$("authOutput");let supabaseClient=null,account=null,games=[],eggInterval=null;
+const wrapMessage=(text,max=MESSAGE_LINE_LENGTH)=>{const lines=[];for(let i=0;i<text.length;i+=max)lines.push(text.slice(i,i+max));return lines.join("\n")};
+const write=(text,target=output)=>{const line=document.createElement("div");line.textContent=text;target.appendChild(line);target.scrollTop=target.scrollHeight};
+const validCredential=(v,min,max)=>v.length>=min&&v.length<=max&&!/\s/.test(v);
+const showView=name=>{["home","auth","games","egg","etho","play"].forEach(v=>$(v+"View").classList.toggle("hidden",v!==name));if(name==="games")loadGames();if(name==="egg")startEgg(false);if(name!=="egg"&&eggInterval){clearInterval(eggInterval);eggInterval=null}if(name==="home")input.focus()};
+const getToken=()=>localStorage.getItem("abyssal_session")||"",setToken=t=>localStorage.setItem("abyssal_session",t),clearToken=()=>localStorage.removeItem("abyssal_session");
+const initializeSupabase=()=>{if(!SUPABASE_URL||!SUPABASE_PUBLISHABLE_KEY){write("Supabase is not configured. Put your URL on line 1 and publishable key on line 2.");return false}if(!window.supabase){write("Supabase library failed to load.");return false}supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);return true};
+const loadAccount=async()=>{if(!supabaseClient)return;const token=getToken();if(!token)return;const{data,error}=await supabaseClient.rpc("get_session_account",{p_token:token});if(error||!data){clearToken();account=null;return}account=data};
+const authenticate=async(action,username,password)=>{if(!supabaseClient)return;if(!validCredential(username,USERNAME_MIN,USERNAME_MAX)||!validCredential(password,PASSWORD_MIN,PASSWORD_MAX)){authOutput.textContent=`Username and password must each be ${USERNAME_MIN}-${USERNAME_MAX} characters with no spaces.`;return}authOutput.textContent="Working...";if(action==="sign_up"){const{error}=await supabaseClient.rpc("create_account",{p_username:username,p_password:password});if(error){authOutput.textContent=error.message;return}}const{data,error}=await supabaseClient.rpc("create_account_session",{p_username:username,p_password:password});if(error||!data){authOutput.textContent=error?.message||"Sign in failed.";return}setToken(data.token);account={id:data.id,username:data.username};showView("home");write(`${action==="sign_up"?"Account created":"Signed in"}: ${account.username}`)};
+const signOut=async()=>{const token=getToken();if(supabaseClient&&token)await supabaseClient.rpc("delete_account_session",{p_token:token});clearToken();account=null;write("Signed out.");showView("home")};
+const loadMessages=async()=>{if(!supabaseClient)return;const{data,error}=await supabaseClient.from("messages").select("id,username,message,created_at").order("created_at",{ascending:false}).limit(MAX_MESSAGES);if(error){write("Message load error: "+error.message);return}output.innerHTML="";(data||[]).reverse().forEach(m=>write(`${m.username}:\n${wrapMessage(m.message)}`))};
+const setupRealtime=()=>{if(supabaseClient)supabaseClient.channel("google-sites-chat").on("postgres_changes",{event:"INSERT",schema:"public",table:"messages"},loadMessages).subscribe()};
+const sendMessage=async message=>{const token=getToken();if(!supabaseClient||!token){write("Sign in required. Use /sign up <username> <password>.");return}const{error}=await supabaseClient.rpc("send_account_message",{p_token:token,p_message:message});if(error)write("Message error: "+error.message)};
+const chars="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-/\\[]{}()<>:;,.=+*#@$%&?!|~^";
+const makeEggLine=(length,spaced)=>{let s="";for(let i=0;i<length;i++){if(i&&spaced)s+=" ";s+=chars[Math.floor(Math.random()*chars.length)]}return s};
+const startEgg=zero=>{const e=$("eggOutput");if(eggInterval)clearInterval(eggInterval);const render=()=>{const lines=[];for(let i=0;i<14;i++)lines.push(makeEggLine(zero?256:Math.floor(Math.random()*241)+16,zero));e.textContent=lines.join("\n")};render();eggInterval=setInterval(render,45)};
+const loadGames=async()=>{if(!supabaseClient)return;$("gamesStatus").textContent="Loading games...";const{data,error}=await supabaseClient.storage.from(GAME_BUCKET).list("",{limit:1000,sortBy:{column:"name",order:"asc"}});if(error){$("gamesStatus").textContent="Unable to load GameTonics: "+error.message;return}games=(data||[]).filter(i=>i.name&&!i.name.startsWith(".")&&i.id===null).map(i=>({name:i.name,path:i.name}));renderGames()};
+const renderGames=()=>{const term=$("gameSearch").value.trim().toLowerCase(),list=$("gameList");list.innerHTML="";const filtered=games.filter(g=>g.name.toLowerCase().includes(term));$("gamesStatus").textContent=`${filtered.length} ${filtered.length===1?"game":"games"} found. Use /play <game name> to launch.`;filtered.forEach(g=>{const item=document.createElement("div");item.className="game-item";item.textContent=`> ${g.name}`;item.addEventListener("click",()=>launchGame(g));list.appendChild(item)})};
+const launchGame=game=>{const path=game.path.split("/").map(encodeURIComponent).join("/");const url=`${SUPABASE_URL.replace(/\/$/,"")}/storage/v1/object/public/${GAME_BUCKET}/${path}/index.html`;$("playingTitle").textContent=`GAMETONICS > ${game.name}`;$("gameFrame").src=url;$("gameStatus").textContent="Loading game from GameTonics...";showView("play")};
+const findGame=name=>games.find(g=>g.name.toLowerCase()===name.toLowerCase())||games.find(g=>g.name.toLowerCase().includes(name.toLowerCase()));
+const handleCommand=async value=>{const parts=value.trim().split(/\s+/),cmd=parts[0].toLowerCase();if(cmd==="/help"){write("Commands: /help, /sign up <username> <password>, /sign in <username> <password>, /sign out, /egg, /egg 0, /etho, /games, /play <game name>");return}if(cmd==="/games"||cmd==="/gametonics"){showView("games");return}if(cmd==="/play"){const name=value.slice(parts[0].length).trim();if(!name){write("Usage: /play <game name>");showView("games");return}if(games.length===0)await loadGames();const game=findGame(name);if(!game){write(`Game not found: ${name}`);showView("games");return}launchGame(game);return}if(cmd==="/egg"){showView("egg");startEgg(parts[1]==="0");return}if(cmd==="/etho"){showView("etho");return}if(cmd==="/sign"){if(parts[1]==="out"){await signOut();return}if(parts[1]==="up"||parts[1]==="in"){showView("auth");if(parts.length>=4)await authenticate(parts[1]==="up"?"sign_up":"sign_in",parts[2],parts.slice(3).join(" "));else authOutput.textContent=`Usage: /sign ${parts[1]} <username> <password>`;return}}write("Unknown command. Type /help.")};
+$("terminalForm").addEventListener("submit",async e=>{e.preventDefault();const v=input.value.trim();if(!v)return;write("> "+v);input.value="";if(v.startsWith("/"))await handleCommand(v);else await sendMessage(v)});
+$("gameSearch").addEventListener("input",renderGames);
+(async()=>{if(!initializeSupabase())return;await loadAccount();await loadMessages();setupRealtime();write("Google Sites edition ready.");write("Type /help for commands.");input.focus()})();
+</script>
 </body>
 </html>
