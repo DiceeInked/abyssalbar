@@ -23,6 +23,7 @@ export default function EthoBootScreen({ bootState, bootLoadingText, bootAudioEr
   const shadowScale = Math.max(0.55, Math.min(1, 1 - heightFromFloor / 900));
   const shadowBlur = Math.max(3, Math.min(25, 4 + heightFromFloor / 28));
   const rotation = Math.max(-16, Math.min(16, dvdVelocity.y * 0.08));
+  const cassetteInserting = bootState === "loading";
 
   return (
     <main className={styles.bootPage}>
@@ -32,21 +33,40 @@ export default function EthoBootScreen({ bootState, bootLoadingText, bootAudioEr
         <div className={styles.bootVignette} />
         <header className={styles.bootHeader}>
           <h1 className={styles.insertTitle}>INSERT CHAPTER 7 SIDE B</h1>
-          <p className={styles.insertSubtitle}>ECHO TERMINAL // DRIVE 07</p>
+          <p className={styles.insertSubtitle}>ECHO TERMINAL // CASSETTE DECK 07</p>
         </header>
-        <div className={styles.dvdShadow} style={{ left: dvdPosition.x + 75, transform: `translateX(-50%) scaleX(${shadowScale})`, filter: `blur(${shadowBlur}px)`, opacity: 0.25 + Math.min(0.45, heightFromFloor / 1200) }} />
-        <div className={styles.dvd} style={{ left: dvdPosition.x, top: dvdPosition.y, transform: `rotate(${rotation}deg)` }} onPointerDown={onPointerDown} onPointerMove={onPointerMove} onPointerUp={onPointerUp} role="button" tabIndex={0} aria-label="Chapter 7 Side B DVD">
-          <div className={styles.dvdGrooves} />
-          <div className={styles.dvdLabel}><span>CHAPTER 7</span><strong>SIDE B</strong><small>ECHO</small></div>
-          <div className={styles.dvdHub} />
+        {!cassetteInserting && <div className={styles.dvdShadow} style={{ left: dvdPosition.x + 75, transform: `translateX(-50%) scaleX(${shadowScale})`, filter: `blur(${shadowBlur}px)`, opacity: 0.25 + Math.min(0.45, heightFromFloor / 1200) }} />}
+        <div
+          className={`${styles.cassette} ${cassetteInserting ? styles.cassetteInserting : ""}`}
+          style={{ left: dvdPosition.x, top: dvdPosition.y, transform: `rotate(${rotation}deg)` }}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          role="button"
+          tabIndex={0}
+          aria-label="Chapter 7 Side B cassette tape"
+        >
+          <div className={styles.cassetteShell} />
+          <div className={styles.cassetteWindow}>
+            <span className={styles.cassetteReel cassetteReelLeft} />
+            <span className={styles.cassetteReel cassetteReelRight} />
+            <span className={styles.cassetteTape} />
+          </div>
+          <div className={styles.cassetteLabel}><span>CHAPTER 7</span><strong>SIDE B</strong><small>ECHO</small></div>
+          <div className={styles.cassetteScrew cassetteScrewOne} />
+          <div className={styles.cassetteScrew cassetteScrewTwo} />
+          <div className={styles.cassetteScrew cassetteScrewThree} />
+          <div className={styles.cassetteScrew cassetteScrewFour} />
         </div>
-        <div ref={dvdSlotRef} className={styles.dvdDrive}>
+        <div ref={dvdSlotRef} className={`${styles.dvdDrive} ${cassetteInserting ? styles.dvdDriveLoading : ""}`}>
           <div className={styles.dvdDriveTrim} />
-          <div className={styles.dvdDriveSlot} />
-          <span className={styles.dvdDriveLabel}>DVD DRIVE</span>
+          <div className={styles.cassetteDeckSlot}>
+            <div className={styles.cassetteDoor} />
+          </div>
+          <span className={styles.dvdDriveLabel}>CASSETTE DECK</span>
           <span className={styles.dvdDriveStatus}>{bootState === "boot" ? "WAITING" : bootLoadingText}</span>
         </div>
-        {bootState === "boot" && <p className={styles.bootInstruction}>DRAG THE DISC INTO THE DRIVE<br /><span>RELEASE IT ABOVE THE SLOT</span></p>}
+        {bootState === "boot" && <p className={styles.bootInstruction}>DRAG THE TAPE INTO THE DECK<br /><span>RELEASE IT ABOVE THE SLOT</span></p>}
         {bootState === "loading" && (
           <div className={styles.loadingPanel}>
             <div className={styles.loadingSpinner} />
