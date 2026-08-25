@@ -2,7 +2,20 @@
 
 import { useEffect, useState } from "react";
 
-const CHARACTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-/\\[]{}()<>:;,.=+*#@$%&?!|~^";
+const IDENTIFIERS = [
+  "boot", "cache", "node", "frame", "packet", "buffer", "socket", "drive",
+  "render", "memory", "kernel", "thread", "signal", "index", "stream", "input",
+  "output", "system", "process", "module", "sector", "cursor", "route", "state",
+  "token", "offset", "channel", "layer", "source", "target", "config", "session",
+];
+const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+const DIGITS = "0123456789";
+const HEX = "0123456789ABCDEF";
+const OPERATORS = ["=", "==", "!=", "+=", "-=", "*=", "/=", "+", "-", "*", "/", "%", "&&", "||", "=>", "<", ">", "<=", ">=", "??"];
+const CONTAINERS = [["(", ")"], ["[", "]"], ["{", "}"], ["<", ">"]] as const;
+const KEYWORDS = ["const", "let", "var", "if", "else", "for", "while", "return", "await", "async", "true", "false", "null", "new", "class", "function"];
+const PUNCTUATION = [";", ",", ".", ":", "?", "!", "&", "|", "#"];
+
 const MIN_LINE_LENGTH = 16;
 const MAX_LINE_LENGTH = 256;
 const ZERO_MODE_LINE_LENGTH = 256;
@@ -10,11 +23,41 @@ const VISIBLE_LINES = 180;
 const BATCH_SIZE = 12;
 const REFRESH_INTERVAL_MS = 45;
 
-const makeLine = (length: number, spaced: boolean) => {
+const pick = <T,>(items: readonly T[]) => items[Math.floor(Math.random() * items.length)];
+const randomInt = (minimum: number, maximum: number) => Math.floor(Math.random() * (maximum - minimum + 1)) + minimum;
+const identifier = () => `${pick(IDENTIFIERS)}${Math.random() > 0.45 ? `_${randomInt(1, 999)}` : ""}`;
+const numberValue = () => (Math.random() > 0.35 ? String(randomInt(0, 65535)) : `0x${Array.from({ length: randomInt(2, 6) }, () => pick(HEX)).join("")}`);
+const quotedValue = () => `${pick(["\"", "'", "`"])}${pick(IDENTIFIERS)}_${randomInt(1, 99)}${pick(["\"", "'", "`"])}`;
+
+const makeExpression = (depth = 0): string => {
+  const atom = pick([identifier(), numberValue(), quotedValue(), pick(KEYWORDS)]);
+  if (depth > 1 || Math.random() < 0.45) return atom;
+  const [open, close] = pick(CONTAINERS);
+  const pieces = Array.from({ length: randomInt(1, 3) }, () => makeExpression(depth + 1));
+  return `${open}${pieces.join(` ${pick(OPERATORS)} `)}${close}`;
+};
+
+const makeCodeLine = (targetLength: number, spaced: boolean) => {
+  const templates = [
+    () => `${pick(KEYWORDS)} ${identifier()} ${pick(OPERATORS)} ${makeExpression()};`,
+    () => `${identifier()}${pick([".", "?."])}${identifier()}(${makeExpression()}, ${makeExpression()});`,
+    () => `if (${identifier()} ${pick(OPERATORS)} ${numberValue()}) { ${identifier()}(); }`,
+    () => `for (let ${pick(["i", "j", "n"])} = 0; ${pick(["i", "j", "n"])} < ${numberValue()}; ${pick(["i", "j", "n"])}++) { ${identifier()} += ${numberValue()}; }`,
+    () => `${identifier()} = ${pick(["Math", "System", "Buffer", "Memory", "Kernel"])}.${identifier()}(${numberValue()});`,
+    () => `return ${makeExpression()} ${pick(PUNCTUATION)} ${makeExpression()};`,
+    () => `${pick(KEYWORDS)} ${identifier()}(${identifier()}, ${identifier()}) { ${identifier()} ${pick(OPERATORS)} ${makeExpression()}; }`,
+    () => `// ${pick(["loading", "sync", "cache", "sector", "frame", "packet"])} ${numberValue()} ${pick(PUNCTUATION)} ${identifier()}`,
+  ];
+
   let line = "";
-  for (let index = 0; index < length; index += 1) {
-    if (index > 0 && spaced) line += " ";
-    line += CHARACTERS[Math.floor(Math.random() * CHARACTERS.length)];
+  while (line.length < targetLength) {
+    const next = templates[randomInt(0, templates.length - 1)]();
+    line += line ? ` ${next}` : next;
+  }
+
+  line = line.slice(0, targetLength);
+  if (spaced) {
+    return line.split("").join(" ");
   }
   return line;
 };
@@ -29,28 +72,37 @@ export default function Egg() {
   }, []);
 
   useEffect(() => {
-    const getLineLength = () => zeroMode ? ZERO_MODE_LINE_LENGTH : Math.floor(Math.random() * (MAX_LINE_LENGTH - MIN_LINE_LENGTH + 1)) + MIN_LINE_LENGTH;
-    const initialLines = Array.from({ length: VISIBLE_LINES }, () => makeLine(getLineLength(), zeroMode));
+    const getLineLength = () =>
+      zeroMode
+        ? ZERO_MODE_LINE_LENGTH
+        : randomInt(MIN_LINE_LENGTH, MAX_LINE_LENGTH);
+
+    const initialLines = Array.from({ length: VISIBLE_LINES }, () =>
+      makeCodeLine(getLineLength(), zeroMode)
+    );
     setLines(initialLines);
+
     const interval = window.setInterval(() => {
       setLines((current) => {
-        const newLines = Array.from({ length: BATCH_SIZE }, () => makeLine(getLineLength(), zeroMode));
+        const newLines = Array.from({ length: BATCH_SIZE }, () =>
+          makeCodeLine(getLineLength(), zeroMode)
+        );
         return [...current.slice(BATCH_SIZE), ...newLines];
       });
     }, REFRESH_INTERVAL_MS);
+
     return () => window.clearInterval(interval);
   }, [zeroMode]);
 
   return (
-    <main className="terminal">
+    <main className="egg-terminal">
       <div className="scanlines" />
-      <div className="terminal-container">
-        <section className="terminal-window">
-          <div className="terminal-title">Egg</div>
-          <div className="terminal-output" style={{ fontSize: "8px", lineHeight: "1.05", whiteSpace: "pre" }}>
-            {lines.map((line, index) => <div key={`${index}-${line}`}>{line}</div>)}
+      <div className="egg-output" aria-label="Rapidly scrolling generated code">
+        {lines.map((line, index) => (
+          <div key={`${index}-${line}`} className="egg-line">
+            {line}
           </div>
-        </section>
+        ))}
       </div>
     </main>
   );
