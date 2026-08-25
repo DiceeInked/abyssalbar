@@ -1,0 +1,48 @@
+<script>
+const SUPABASE_PUBLISHABLE_KEY = "";
+const SUPABASE_URL = "";
+</script>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>GameTonics</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{color-scheme:dark;--teal:#00ffc8;--background:#00140f;--border:rgba(0,255,200,.3);--glow:rgba(0,255,200,.15);--placeholder:rgba(0,255,200,.35)}*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:var(--background)}body{color:var(--teal);font-family:monospace}.terminal{min-height:100vh;padding:30px;overflow:hidden;text-shadow:0 0 5px rgba(0,255,200,.45)}.scanlines{position:fixed;inset:0;z-index:100;pointer-events:none;background:repeating-linear-gradient(to bottom,rgba(0,255,200,.04) 0 2px,rgba(0,20,15,.02) 2px 4px);mix-blend-mode:screen}.terminal-container{width:min(92vw,960px);height:min(78vh,720px);aspect-ratio:4/3;margin:max(20px,4vh) auto;display:flex;flex-direction:column}.terminal-window{width:100%;height:100%;min-height:0;border:1px solid var(--teal);background:rgba(0,20,15,.5);box-shadow:0 0 10px var(--glow),inset 0 0 20px rgba(0,255,200,.04);display:flex;flex-direction:column;overflow:hidden}.terminal-title{padding:10px 15px;border-bottom:1px solid var(--teal);font-size:14px;font-weight:400;letter-spacing:2px;line-height:1.4}.game-output{flex:1;min-height:0;padding:20px;line-height:1.6;overflow-y:auto}.game-output p{margin:0}.game-letter-section{margin-top:24px}.letter-heading{margin:0 0 10px;opacity:.8}.game-list{display:flex;flex-direction:column;align-items:flex-start;gap:8px}.game-button{padding:10px 14px;color:var(--teal);background:transparent;border:1px solid var(--teal);font:inherit;font-size:15px;text-align:left;cursor:pointer;transition:.15s}.game-button:hover{background:var(--teal);color:var(--background);text-shadow:none}.game-button:active{transform:translateY(2px)}.gametonics-search{display:flex;align-items:center;gap:8px;margin:0 20px;padding:12px 0 14px}.gametonics-search span{flex:0 0 auto}.gametonics-search input{flex:1;min-width:0;background:transparent;border:0;outline:0;color:var(--teal);font:inherit;font-size:16px}.gametonics-search input::placeholder{color:var(--placeholder)}.game-player{display:none;flex:1;min-height:0;flex-direction:column}.game-player.active{display:flex}.game-frame{width:100%;height:100%;min-height:0;border:0;background:#000;flex:1}.game-player-bar{display:flex;align-items:center;gap:10px;padding:10px 0}.back-button{color:var(--teal);background:transparent;border:1px solid var(--teal);padding:7px 10px;font:inherit;cursor:pointer}.back-button:hover{background:var(--teal);color:var(--background)}.status{opacity:.75}.empty{opacity:.85}@media(max-width:600px){.terminal{padding:15px}.terminal-container{width:94vw;height:78vh;max-width:94vw;margin:12vh auto}.game-output{padding:15px}.gametonics-search{margin:0 15px}.game-button{padding:8px 10px;font-size:13px}}
+</style>
+</head>
+<body>
+<main class="terminal"><div class="scanlines"></div><div class="terminal-container"><section class="terminal-window"><div class="terminal-title" id="terminalTitle">GameTonics</div><div id="libraryView"><div id="gameOutput" class="game-output"><p>Loading GameTonics...</p></div><div class="gametonics-search"><span aria-hidden="true">&gt;</span><input id="gameSearch" type="text" placeholder="Search games..." autocomplete="off" spellcheck="false" aria-label="Search games"></div></div><div id="playerView" class="game-player"><iframe id="gameFrame" class="game-frame" title="Game"></iframe><div class="game-player-bar"><button id="backButton" class="back-button" type="button">&lt; GameTonics</button><span id="gameStatus" class="status"></span></div></div></section></div></main>
+<script>
+const GAME_BUCKET="gametonics";
+const GAME_LIST_LIMIT=1000;
+const ALPHABET="ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+const $=id=>document.getElementById(id);
+const output=$("gameOutput");
+const searchInput=$("gameSearch");
+const libraryView=$("libraryView");
+const playerView=$("playerView");
+const gameFrame=$("gameFrame");
+const terminalTitle=$("terminalTitle");
+const gameStatus=$("gameStatus");
+let supabaseClient=null;
+let games=[];
+
+const initializeSupabase=()=>{
+  if(!SUPABASE_URL||!SUPABASE_PUBLISHABLE_KEY){output.innerHTML="<p>Supabase is not configured. Add your URL and publishable key at the top of this file.</p>";return false}
+  if(!window.supabase){output.innerHTML="<p>Supabase failed to load.</p>";return false}
+  supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);return true;
+};
+const groupGamesByLetter=gameList=>{const sections=Object.fromEntries(ALPHABET.map(letter=>[letter,[]]));gameList.forEach(game=>{const letter=game.name.trim().charAt(0).toUpperCase();if(sections[letter])sections[letter].push(game)});return sections};
+const renderGames=()=>{const term=searchInput.value.trim().toLowerCase();const filtered=term?games.filter(game=>game.name.toLowerCase().includes(term)):games;output.innerHTML="";const count=document.createElement("p");count.textContent=`${filtered.length} ${filtered.length===1?"game":"games"} found.`;output.appendChild(count);if(filtered.length===0){const empty=document.createElement("p");empty.className="empty";empty.textContent="No matching games found.";output.appendChild(empty);return}const sections=groupGamesByLetter(filtered);ALPHABET.forEach(letter=>{const letterGames=sections[letter];if(letterGames.length===0)return;const section=document.createElement("section");section.className="game-letter-section";const heading=document.createElement("p");heading.className="letter-heading";heading.textContent=`[${letter}]`;section.appendChild(heading);const list=document.createElement("div");list.className="game-list";letterGames.forEach(game=>{const button=document.createElement("button");button.type="button";button.className="game-button";button.textContent=game.name;button.addEventListener("click",()=>launchGame(game));list.appendChild(button)});section.appendChild(list);output.appendChild(section)})};
+const loadGames=async()=>{if(!supabaseClient)return;const{data,error}=await supabaseClient.storage.from(GAME_BUCKET).list("",{limit:GAME_LIST_LIMIT,sortBy:{column:"name",order:"asc"}});if(error){console.error("Error loading GameTonics:",error);output.innerHTML="<p>Unable to load the GameTonics library.</p>";return}games=(data||[]).filter(item=>Boolean(item.name)&&!item.name.startsWith(".")&&item.id===null).map(folder=>({name:folder.name,path:folder.name})).sort((a,b)=>a.name.localeCompare(b.name,undefined,{sensitivity:"base"}));renderGames()};
+const launchGame=game=>{const path=game.path.split("/").map(segment=>encodeURIComponent(segment)).join("/");const url=`${SUPABASE_URL.replace(/\/$/,"")}/storage/v1/object/public/${GAME_BUCKET}/${path}/index.html`;gameFrame.src=url;terminalTitle.textContent=`GameTonics > ${game.name}`;gameStatus.textContent="Loading game...";libraryView.style.display="none";playerView.classList.add("active")};
+const returnToLibrary=()=>{gameFrame.src="about:blank";terminalTitle.textContent="GameTonics";gameStatus.textContent="";playerView.classList.remove("active");libraryView.style.display="block"};
+searchInput.addEventListener("input",renderGames);
+$("backButton").addEventListener("click",returnToLibrary);
+(async()=>{if(!initializeSupabase())return;await loadGames()})();
+</script>
+</body>
+</html>
