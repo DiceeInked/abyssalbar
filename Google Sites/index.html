@@ -1,53 +1,118 @@
 <script>
-const SUPABASE_URL = "";
 const SUPABASE_PUBLISHABLE_KEY = "";
+const SUPABASE_URL = "";
 </script>
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>Abyssal Bar</title>
+<title>GameTonics</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-:root{color-scheme:dark;--teal:#00ffc8}*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:#000}body{color:var(--teal);font-family:monospace}.terminal{min-height:100vh;padding:16px;position:relative}.scanlines{position:fixed;inset:0;pointer-events:none;z-index:100;opacity:.9;background:repeating-linear-gradient(to bottom,rgba(0,255,200,.09) 0 1px,transparent 1px 3px)}.shell{position:relative;z-index:1;max-width:1200px;margin:auto}.view{border:1px solid var(--teal);box-shadow:0 0 18px rgba(0,255,200,.16);padding:14px}.hidden{display:none!important}.title{border-bottom:1px solid var(--teal);padding-bottom:9px;margin-bottom:12px}.muted{opacity:.75}.output{min-height:55vh;max-height:70vh;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere}.input-row{display:flex;gap:8px;align-items:center;margin-top:12px}.input-row input{flex:1;color:var(--teal);background:#000;border:0;outline:0;font:inherit}.game-list{margin-top:14px;white-space:pre-wrap}.game-item{cursor:pointer;margin:3px 0}.game-item:hover{text-decoration:underline}.game-frame{width:100%;height:75vh;border:1px solid var(--teal);background:#000}.search{color:var(--teal);background:#000;border:1px solid var(--teal);font:inherit;padding:8px;width:100%}
+:root{color-scheme:dark;--teal:#00ffc8;--background:#00140f;--border:rgba(0,255,200,.3);--glow:rgba(0,255,200,.15);--placeholder:rgba(0,255,200,.35)}*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:var(--background)}body{color:var(--teal);font-family:monospace}.terminal{min-height:100vh;padding:30px;overflow:hidden;text-shadow:0 0 5px rgba(0,255,200,.45)}.scanlines{position:fixed;inset:0;z-index:100;pointer-events:none;background:repeating-linear-gradient(to bottom,rgba(0,255,200,.04) 0 2px,rgba(0,20,15,.02) 2px 4px);mix-blend-mode:screen}.terminal-container{width:min(92vw,960px);height:min(78vh,720px);aspect-ratio:4/3;margin:max(20px,4vh) auto;display:flex;flex-direction:column}.terminal-window{width:100%;height:100%;min-height:0;border:1px solid var(--teal);background:rgba(0,20,15,.5);box-shadow:0 0 10px var(--glow),inset 0 0 20px rgba(0,255,200,.04);display:flex;flex-direction:column;overflow:hidden}.terminal-title{padding:10px 15px;border-bottom:1px solid var(--teal);font-size:14px;font-weight:400;letter-spacing:2px;line-height:1.4}.game-output{flex:1;min-height:0;padding:20px;line-height:1.6;overflow-y:auto}.game-output p{margin:0}.game-letter-section{margin-top:24px}.letter-heading{margin:0 0 10px;opacity:.8}.game-list{display:flex;flex-direction:column;align-items:flex-start;gap:8px}.game-button{padding:10px 14px;color:var(--teal);background:transparent;border:1px solid var(--teal);font:inherit;font-size:15px;text-align:left;cursor:pointer;transition:.15s}.game-button:hover{background:var(--teal);color:var(--background);text-shadow:none}.game-button:active{transform:translateY(2px)}.gametonics-search{display:flex;align-items:center;gap:8px;margin:0 20px;padding:12px 0 14px}.gametonics-search span{flex:0 0 auto}.gametonics-search input{flex:1;min-width:0;background:transparent;border:0;outline:0;color:var(--teal);font:inherit;font-size:16px}.gametonics-search input::placeholder{color:var(--placeholder)}.status{opacity:.75}.empty{opacity:.85}@media(max-width:600px){.terminal{padding:15px}.terminal-container{width:94vw;height:78vh;max-width:94vw;margin:12vh auto}.game-output{padding:15px}.gametonics-search{margin:0 15px}.game-button{padding:8px 10px;font-size:13px}}
 </style>
 </head>
 <body>
-<main class="terminal"><div class="scanlines"></div><div class="shell">
-<section id="homeView" class="view"><div class="title">ABYSSAL BAR TERMINAL <span class="muted">v2.18</span></div><div id="terminalOutput" class="output"></div><form id="terminalForm" class="input-row"><span>&gt;</span><input id="terminalInput" autocomplete="off" spellcheck="false" placeholder="Type /help or a message..."></form></section>
-<section id="authView" class="view hidden"><div class="title">ACCOUNT</div><div id="authOutput" class="output"></div><div class="muted">Use /sign up &lt;username&gt; &lt;password&gt;, /sign in &lt;username&gt; &lt;password&gt;, or /sign out.</div></section>
-<section id="gamesView" class="view hidden"><div class="title">GAMETONICS GAME LIBRARY</div><input id="gameSearch" class="search" placeholder="Search games..." autocomplete="off"><div id="gamesStatus" class="muted"></div><div id="gameList" class="game-list"></div></section>
-<section id="eggView" class="view hidden"><div class="title">EGG</div><div id="eggOutput" class="output"></div></section>
-<section id="ethoView" class="view hidden"><div class="title">ETHO</div><div class="output">Etho page</div></section>
-<section id="playView" class="view hidden"><div class="title" id="playingTitle">GAME</div><iframe id="gameFrame" class="game-frame" title="Game"></iframe><div id="gameStatus" class="muted"></div></section>
-</div></main>
+<main class="terminal"><div class="scanlines"></div><div class="terminal-container"><section class="terminal-window"><div class="terminal-title">GameTonics</div><div id="gameOutput" class="game-output"><p>Loading GameTonics...</p></div><div class="gametonics-search"><span aria-hidden="true">&gt;</span><input id="gameSearch" type="text" placeholder="Search games..." autocomplete="off" spellcheck="false" aria-label="Search games"></div></section></div></main>
 <script>
-const GAME_BUCKET="gametonics",MAX_MESSAGES=12,USERNAME_MIN=3,USERNAME_MAX=30,PASSWORD_MIN=3,PASSWORD_MAX=30,MESSAGE_LINE_LENGTH=80;
-const $=id=>document.getElementById(id),output=$("terminalOutput"),input=$("terminalInput"),authOutput=$("authOutput");let supabaseClient=null,account=null,games=[],eggInterval=null;
-const wrapMessage=(text,max=MESSAGE_LINE_LENGTH)=>{const lines=[];for(let i=0;i<text.length;i+=max)lines.push(text.slice(i,i+max));return lines.join("\n")};
-const write=(text,target=output)=>{const line=document.createElement("div");line.textContent=text;target.appendChild(line);target.scrollTop=target.scrollHeight};
-const validCredential=(v,min,max)=>v.length>=min&&v.length<=max&&!/\s/.test(v);
-const showView=name=>{["home","auth","games","egg","etho","play"].forEach(v=>$(v+"View").classList.toggle("hidden",v!==name));if(name==="games")loadGames();if(name==="egg")startEgg(false);if(name!=="egg"&&eggInterval){clearInterval(eggInterval);eggInterval=null}if(name==="home")input.focus()};
-const getToken=()=>localStorage.getItem("abyssal_session")||"",setToken=t=>localStorage.setItem("abyssal_session",t),clearToken=()=>localStorage.removeItem("abyssal_session");
-const initializeSupabase=()=>{if(!SUPABASE_URL||!SUPABASE_PUBLISHABLE_KEY){write("Supabase is not configured. Put your URL on line 1 and publishable key on line 2.");return false}if(!window.supabase){write("Supabase library failed to load.");return false}supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);return true};
-const loadAccount=async()=>{if(!supabaseClient)return;const token=getToken();if(!token)return;const{data,error}=await supabaseClient.rpc("get_session_account",{p_token:token});if(error||!data){clearToken();account=null;return}account=data};
-const authenticate=async(action,username,password)=>{if(!supabaseClient)return;if(!validCredential(username,USERNAME_MIN,USERNAME_MAX)||!validCredential(password,PASSWORD_MIN,PASSWORD_MAX)){authOutput.textContent=`Username and password must each be ${USERNAME_MIN}-${USERNAME_MAX} characters with no spaces.`;return}authOutput.textContent="Working...";if(action==="sign_up"){const{error}=await supabaseClient.rpc("create_account",{p_username:username,p_password:password});if(error){authOutput.textContent=error.message;return}}const{data,error}=await supabaseClient.rpc("create_account_session",{p_username:username,p_password:password});if(error||!data){authOutput.textContent=error?.message||"Sign in failed.";return}setToken(data.token);account={id:data.id,username:data.username};showView("home");write(`${action==="sign_up"?"Account created":"Signed in"}: ${account.username}`)};
-const signOut=async()=>{const token=getToken();if(supabaseClient&&token)await supabaseClient.rpc("delete_account_session",{p_token:token});clearToken();account=null;write("Signed out.");showView("home")};
-const loadMessages=async()=>{if(!supabaseClient)return;const{data,error}=await supabaseClient.from("messages").select("id,username,message,created_at").order("created_at",{ascending:false}).limit(MAX_MESSAGES);if(error){write("Message load error: "+error.message);return}output.innerHTML="";(data||[]).reverse().forEach(m=>write(`${m.username}:\n${wrapMessage(m.message)}`))};
-const setupRealtime=()=>{if(supabaseClient)supabaseClient.channel("google-sites-chat").on("postgres_changes",{event:"INSERT",schema:"public",table:"messages"},loadMessages).subscribe()};
-const sendMessage=async message=>{const token=getToken();if(!supabaseClient||!token){write("Sign in required. Use /sign up <username> <password>.");return}const{error}=await supabaseClient.rpc("send_account_message",{p_token:token,p_message:message});if(error)write("Message error: "+error.message)};
-const chars="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-/\\[]{}()<>:;,.=+*#@$%&?!|~^";
-const makeEggLine=(length,spaced)=>{let s="";for(let i=0;i<length;i++){if(i&&spaced)s+=" ";s+=chars[Math.floor(Math.random()*chars.length)]}return s};
-const startEgg=zero=>{const e=$("eggOutput");if(eggInterval)clearInterval(eggInterval);const render=()=>{const lines=[];for(let i=0;i<14;i++)lines.push(makeEggLine(zero?256:Math.floor(Math.random()*241)+16,zero));e.textContent=lines.join("\n")};render();eggInterval=setInterval(render,45)};
-const loadGames=async()=>{if(!supabaseClient)return;$("gamesStatus").textContent="Loading games...";const{data,error}=await supabaseClient.storage.from(GAME_BUCKET).list("",{limit:1000,sortBy:{column:"name",order:"asc"}});if(error){$("gamesStatus").textContent="Unable to load GameTonics: "+error.message;return}games=(data||[]).filter(i=>i.name&&!i.name.startsWith(".")&&i.id===null).map(i=>({name:i.name,path:i.name}));renderGames()};
-const renderGames=()=>{const term=$("gameSearch").value.trim().toLowerCase(),list=$("gameList");list.innerHTML="";const filtered=games.filter(g=>g.name.toLowerCase().includes(term));$("gamesStatus").textContent=`${filtered.length} ${filtered.length===1?"game":"games"} found. Use /play <game name> to launch.`;filtered.forEach(g=>{const item=document.createElement("div");item.className="game-item";item.textContent=`> ${g.name}`;item.addEventListener("click",()=>launchGame(g));list.appendChild(item)})};
-const launchGame=game=>{const path=game.path.split("/").map(encodeURIComponent).join("/");const url=`${SUPABASE_URL.replace(/\/$/,"")}/storage/v1/object/public/${GAME_BUCKET}/${path}/index.html`;$("playingTitle").textContent=`GAMETONICS > ${game.name}`;$("gameFrame").src=url;$("gameStatus").textContent="Loading game from GameTonics...";showView("play")};
-const findGame=name=>games.find(g=>g.name.toLowerCase()===name.toLowerCase())||games.find(g=>g.name.toLowerCase().includes(name.toLowerCase()));
-const handleCommand=async value=>{const parts=value.trim().split(/\s+/),cmd=parts[0].toLowerCase();if(cmd==="/help"){write("Commands: /help, /sign up <username> <password>, /sign in <username> <password>, /sign out, /egg, /egg 0, /etho, /games, /play <game name>");return}if(cmd==="/games"||cmd==="/gametonics"){showView("games");return}if(cmd==="/play"){const name=value.slice(parts[0].length).trim();if(!name){write("Usage: /play <game name>");showView("games");return}if(games.length===0)await loadGames();const game=findGame(name);if(!game){write(`Game not found: ${name}`);showView("games");return}launchGame(game);return}if(cmd==="/egg"){showView("egg");startEgg(parts[1]==="0");return}if(cmd==="/etho"){showView("etho");return}if(cmd==="/sign"){if(parts[1]==="out"){await signOut();return}if(parts[1]==="up"||parts[1]==="in"){showView("auth");if(parts.length>=4)await authenticate(parts[1]==="up"?"sign_up":"sign_in",parts[2],parts.slice(3).join(" "));else authOutput.textContent=`Usage: /sign ${parts[1]} <username> <password>`;return}}write("Unknown command. Type /help.")};
-$("terminalForm").addEventListener("submit",async e=>{e.preventDefault();const v=input.value.trim();if(!v)return;write("> "+v);input.value="";if(v.startsWith("/"))await handleCommand(v);else await sendMessage(v)});
-$("gameSearch").addEventListener("input",renderGames);
-(async()=>{if(!initializeSupabase())return;await loadAccount();await loadMessages();setupRealtime();write("Google Sites edition ready.");write("Type /help for commands.");input.focus()})();
+const GAME_BUCKET="gametonics";
+const GAME_LIST_LIMIT=1000;
+const ALPHABET="ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+const $=id=>document.getElementById(id);
+const output=$("gameOutput");
+const searchInput=$("gameSearch");
+let supabaseClient=null;
+let games=[];
+
+const initializeSupabase=()=>{
+  if(!SUPABASE_URL||!SUPABASE_PUBLISHABLE_KEY){
+    output.innerHTML="<p>Supabase is not configured. Add your URL and publishable key at the top of this file.</p>";
+    return false;
+  }
+  if(!window.supabase){
+    output.innerHTML="<p>Supabase failed to load.</p>";
+    return false;
+  }
+  supabaseClient=window.supabase.createClient(SUPABASE_URL,SUPABASE_PUBLISHABLE_KEY);
+  return true;
+};
+
+const groupGamesByLetter=gameList=>{
+  const sections=Object.fromEntries(ALPHABET.map(letter=>[letter,[]]));
+  gameList.forEach(game=>{
+    const letter=game.name.trim().charAt(0).toUpperCase();
+    if(sections[letter])sections[letter].push(game);
+  });
+  return sections;
+};
+
+const renderGames=()=>{
+  const term=searchInput.value.trim().toLowerCase();
+  const filtered=term?games.filter(game=>game.name.toLowerCase().includes(term)):games;
+  output.innerHTML="";
+  const count=document.createElement("p");
+  count.textContent=`${filtered.length} ${filtered.length===1?"game":"games"} found.`;
+  output.appendChild(count);
+  if(filtered.length===0){
+    const empty=document.createElement("p");
+    empty.className="empty";
+    empty.textContent="No matching games found.";
+    output.appendChild(empty);
+    return;
+  }
+  const sections=groupGamesByLetter(filtered);
+  ALPHABET.forEach(letter=>{
+    const letterGames=sections[letter];
+    if(letterGames.length===0)return;
+    const section=document.createElement("section");
+    section.className="game-letter-section";
+    const heading=document.createElement("p");
+    heading.className="letter-heading";
+    heading.textContent=`[${letter}]`;
+    section.appendChild(heading);
+    const list=document.createElement("div");
+    list.className="game-list";
+    letterGames.forEach(game=>{
+      const button=document.createElement("button");
+      button.type="button";
+      button.className="game-button";
+      button.textContent=game.name;
+      button.addEventListener("click",()=>launchGame(game));
+      list.appendChild(button);
+    });
+    section.appendChild(list);
+    output.appendChild(section);
+  });
+};
+
+const loadGames=async()=>{
+  if(!supabaseClient)return;
+  const{data,error}=await supabaseClient.storage.from(GAME_BUCKET).list("",{limit:GAME_LIST_LIMIT,sortBy:{column:"name",order:"asc"}});
+  if(error){
+    console.error("Error loading GameTonics:",error);
+    output.innerHTML="<p>Unable to load the GameTonics library.</p>";
+    return;
+  }
+  games=(data||[])
+    .filter(item=>Boolean(item.name)&&!item.name.startsWith(".")&&item.id===null)
+    .map(folder=>({name:folder.name,path:folder.name}))
+    .sort((a,b)=>a.name.localeCompare(b.name,undefined,{sensitivity:"base"}));
+  renderGames();
+};
+
+const launchGame=game=>{
+  const path=game.path.split("/").map(segment=>encodeURIComponent(segment)).join("/");
+  const url=`${SUPABASE_URL.replace(/\/$/,"")}/storage/v1/object/public/${GAME_BUCKET}/${path}/index.html`;
+  window.open(url,"_blank","noopener,noreferrer");
+};
+
+searchInput.addEventListener("input",renderGames);
+
+(async()=>{
+  if(!initializeSupabase())return;
+  await loadGames();
+})();
 </script>
 </body>
 </html>
