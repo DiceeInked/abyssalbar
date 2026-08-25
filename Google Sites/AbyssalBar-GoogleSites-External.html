@@ -1,11 +1,30 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Abyssal Bar</title><style>:root{--fg:#00ffc8;--line:rgba(0,255,200,.24)}*{box-sizing:border-box}html,body{margin:0;height:100%;background:#000;color:var(--fg);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;overflow:hidden}.app{position:fixed;inset:0;display:grid;place-items:center;padding:14px}.window{width:min(900px,94vw);height:min(720px,92vh);border:1px solid var(--line);background:#020806;display:flex;flex-direction:column}.title{padding:10px 14px;border-bottom:1px solid var(--line)}.out{flex:1;overflow:auto;padding:14px;line-height:1.5}.input{display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--line)}input{flex:1;min-width:0;background:none;border:0;outline:0;color:var(--fg);font:inherit}button{background:none;color:var(--fg);border:1px solid var(--line);padding:6px 10px;font:inherit;cursor:pointer}.scan{position:fixed;inset:0;pointer-events:none;background:repeating-linear-gradient(to bottom,rgba(255,255,255,.025) 0,rgba(255,255,255,.025) 1px,transparent 1px,transparent 4px)}</style></head><body><main class="app"><section class="window"><div class="title">Abyssal Bar Terminal <span>v2.27</span></div><div class="out" id="out"><p>--------------------------------</p><p>GOOGLE SITES EXTERNAL MODE</p><p>Commands open the corresponding Abyssal Bar page.</p><p>--------------------------------</p><p>/help</p></div><form class="input" id="form"><span>&gt;</span><input id="cmd" autocomplete="off" spellcheck="false" placeholder="Type /command..."><button>Enter</button></form></section></main><div class="scan"></div><script>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Abyssal Bar</title>
+<style>
+:root{--fg:#00ffc8;--dim:#087c69;--line:rgba(0,255,200,.24)}*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000;color:var(--fg);font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}.app{position:fixed;inset:0;display:grid;place-items:center;padding:12px}.window{width:min(900px,96vw);height:min(720px,94vh);border:1px solid var(--line);background:#020806;display:flex;flex-direction:column;overflow:hidden}.title{flex:none;padding:10px 14px;border-bottom:1px solid var(--line);font-weight:600}.version{opacity:.6}.out{flex:1;min-height:0;overflow:auto;padding:14px;line-height:1.45;white-space:pre-wrap;word-break:break-word}.out p{margin:0 0 8px}.input{flex:none;display:flex;gap:9px;align-items:center;padding:10px 12px;border-top:1px solid var(--line)}input{flex:1;min-width:0;background:none;border:0;outline:0;color:var(--fg);font:inherit}button{background:none;color:var(--fg);border:1px solid var(--line);padding:6px 10px;font:inherit;cursor:pointer}button:hover{background:rgba(0,255,200,.08)}.scan{position:fixed;inset:0;pointer-events:none;z-index:20;background:repeating-linear-gradient(to bottom,rgba(255,255,255,.018) 0,rgba(255,255,255,.018) 1px,transparent 1px,transparent 4px)}.note{opacity:.65}
+</style>
+</head>
+<body>
+<main class="app"><section class="window"><div class="title">Abyssal Bar Terminal <span class="version">v2.28</span></div><div class="out" id="out"><p>--------------------------------</p><p>EXTERNAL WINDOW MODE</p><p>Commands open their destination outside this HTML document.</p><p>Games open their direct Supabase game URL in a new window.</p><p>--------------------------------</p><p>/help</p></div><form class="input" id="form"><span>&gt;</span><input id="cmd" autocomplete="off" spellcheck="false" placeholder="Type /command..."><button type="submit">Enter</button></form></section></main><div class="scan"></div>
+<script>
+/* Change these constants when moving this file to another host. */
 const SUPABASE_URL="PASTE_YOUR_SUPABASE_URL_HERE";
 const SUPABASE_KEY="PASTE_YOUR_SUPABASE_PUBLISHABLE_KEY_HERE";
-const SITE_VERSION="2.27";
-const EXTERNAL_SITE_URL="https://abyssalbar.vercel.app";
+const SITE_VERSION="2.28";
+const GAME_BUCKET="gametonics";
+/* This is intentionally configurable. It is NOT required to be the main Abyssal Bar site. */
+const EXTERNAL_BASE_URL="https://abyssalbar.vercel.app";
 const routes={"/home":"/","/egg":"/egg","/egg 0":"/egg?mode=0","/etho":"/etho","/games":"/gametonics","/tetris":"/tetris"};
-const out=document.getElementById("out");
-function go(path){window.location.href=EXTERNAL_SITE_URL+path}
-document.getElementById("form").onsubmit=e=>{e.preventDefault();const raw=document.getElementById("cmd").value.trim().toLowerCase();document.getElementById("cmd").value="";if(!raw)return;if(raw==="/help"){out.innerHTML+="<p>/home<br>/egg<br>/egg 0<br>/etho<br>/games<br>/tetris</p>";out.scrollTop=out.scrollHeight;return}if(routes[raw]){out.innerHTML+=`<p>&gt; ${raw}<br>OPENING ${routes[raw]}</p>`;out.scrollTop=out.scrollHeight;go(routes[raw]);return}out.innerHTML+=`<p>UNKNOWN COMMAND: ${raw.toUpperCase()}</p>`;out.scrollTop=out.scrollHeight};document.getElementById("cmd").focus();
-</script></body></html>
+const out=document.getElementById("out"),form=document.getElementById("form"),input=document.getElementById("cmd");
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+function add(text){const p=document.createElement("p");p.innerHTML=esc(text);out.appendChild(p);out.scrollTop=out.scrollHeight}
+function openExternal(path){const base=EXTERNAL_BASE_URL.replace(/\/$/,"");const url=base+path;const win=window.open(url,"_blank","noopener,noreferrer");if(!win)add("POPUP BLOCKED. Allow pop-ups for this site, then try again.");else add("OPENED: "+url)}
+function openGame(name){if(!SUPABASE_URL||SUPABASE_URL.startsWith("PASTE_")){add("Supabase URL is not configured.");return}const url=`${SUPABASE_URL.replace(/\/$/,"")}/storage/v1/object/public/${GAME_BUCKET}/${String(name).split("/").map(encodeURIComponent).join("/")}/index.html`;const win=window.open(url,"_blank","noopener,noreferrer");if(!win)add("POPUP BLOCKED. Allow pop-ups for this site, then try again.");else add("OPENED GAME: "+name)}
+form.onsubmit=async e=>{e.preventDefault();const raw=input.value.trim();input.value="";if(!raw)return;add("> "+raw.toUpperCase());const parts=raw.toLowerCase().split(/\s+/);const command=parts[0],arg=parts.slice(1).join(" ");if(command==="/help"){add("/home\n/egg\n/egg 0\n/etho\n/games\n/tetris");add("Game buttons can be added here to open their direct Supabase URL in a new window.");return}const routeKey=arg?command+" "+arg:command;if(routes[routeKey]){openExternal(routes[routeKey]);return}if(command==="/game"){if(!arg){add("Usage: /game <folder name>");return}openGame(arg);return}add("UNKNOWN COMMAND: "+raw.toUpperCase())};input.focus();
+</script>
+</body>
+</html>
