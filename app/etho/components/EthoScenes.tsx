@@ -13,14 +13,14 @@ export function FinalScene({ finalScene }: FinalSceneProps) {
       <div className={styles.finalWater} />
       <p className={styles.finalHeader}>REMOTE VIEW // FINAL FRAME</p>
       <div className={styles.finalMessage}>
-        <p>THE LAKE IS INSIDE THE SCREEN.</p>
-        <p>KRIS IS STILL WALKING.</p>
-        <p>NOELLE IS STILL FOLLOWING.</p>
-        <p>YOU ARE STILL PRESSING ENTER.</p>
-        <p>THEY ARE STILL DROWNING IN THE LAKE BECAUSE OF YOU.</p>
+        <p>YOU HAVE REACHED THE OTHER SIDE.</p>
+        <p>KRIS HAS ADBANDON YOU.</p>
+        <p>NOELLE IS WELLCOMIG YOUR CONTROL.</p>
+        <p>YOU HAVE GONE TO FAR TO RESET.</p>
+        <p>THE ROARING STILL HAPPENED BECAUSE OF YOU.</p>
       </div>
       <span className={styles.finalSoul} aria-hidden="true">♥</span>
-      <p className={styles.finalWhisper}>YOU WERE NEVER HOLDING THE CONTROLLER.</p>
+      <p className={styles.finalWhisper}>YOU COULD OF STOPED THIS.</p>
     </div>
   );
 }
@@ -44,7 +44,7 @@ export function ErrorScene({ dessMode, faultMode, errorWindows, onDismiss }: Err
             <div className={styles.errorIcon}>!</div>
             <div>
               <strong>{error.message}</strong>
-              <p>{faultMode ? "THIS WILL NOT GO AWAY." : "AN UNEXPECTED ERROR HAS OCCURRED."}</p>
+              <p>{faultMode ? "YOU CANT AVOID THIS ANYMORE." : "AN UNEXPECTED ERROR HAS OCCURRED."}</p>
             </div>
           </div>
           <button type="button" className={styles.errorButton} onClick={() => onDismiss(error.id)}>
@@ -73,7 +73,7 @@ export function PhotosensitivityWarning({ open, onClose }: WarningProps) {
         <p>THIS EXPERIENCE CONTAINS FLASHING LIGHTS, FLICKER, HIGH-CONTRAST IMAGES, AND RAPIDLY APPEARING WINDOWS.</p>
         <p>PLEASE TAKE CARE OF YOURSELF BEFORE CONTINUING.</p>
         <button type="button" className={styles.warningButton} onClick={onClose} autoFocus>
-          OK
+          PROCEED
         </button>
       </div>
     </div>
