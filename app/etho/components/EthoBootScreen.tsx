@@ -3,6 +3,7 @@
 import type { PointerEvent as ReactPointerEvent, RefObject } from "react";
 import type { BootState, DvdPosition } from "../ethoTypes";
 import styles from "../Etho.module.css";
+import cassetteStyles from "../CassetteBoot.module.css";
 
 type Props = {
   bootState: BootState;
@@ -37,7 +38,7 @@ export default function EthoBootScreen({ bootState, bootLoadingText, bootAudioEr
         </header>
         {!cassetteInserting && <div className={styles.dvdShadow} style={{ left: dvdPosition.x + 75, transform: `translateX(-50%) scaleX(${shadowScale})`, filter: `blur(${shadowBlur}px)`, opacity: 0.25 + Math.min(0.45, heightFromFloor / 1200) }} />}
         <div
-          className={`${styles.cassette} ${cassetteInserting ? styles.cassetteInserting : ""}`}
+          className={`${cassetteStyles.cassette} ${cassetteInserting ? cassetteStyles.cassetteInserting : ""}`}
           style={{ left: dvdPosition.x, top: dvdPosition.y, transform: `rotate(${rotation}deg)` }}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
@@ -46,22 +47,22 @@ export default function EthoBootScreen({ bootState, bootLoadingText, bootAudioEr
           tabIndex={0}
           aria-label="Chapter 7 Side B cassette tape"
         >
-          <div className={styles.cassetteShell} />
-          <div className={styles.cassetteWindow}>
-            <span className={styles.cassetteReel cassetteReelLeft} />
-            <span className={styles.cassetteReel cassetteReelRight} />
-            <span className={styles.cassetteTape} />
+          <div className={cassetteStyles.cassetteShell} />
+          <div className={cassetteStyles.cassetteWindow}>
+            <span className={`${cassetteStyles.cassetteReel} ${cassetteStyles.cassetteReelLeft}`} />
+            <span className={`${cassetteStyles.cassetteReel} ${cassetteStyles.cassetteReelRight}`} />
+            <span className={cassetteStyles.cassetteTape} />
           </div>
-          <div className={styles.cassetteLabel}><span>CHAPTER 7</span><strong>SIDE B</strong><small>ECHO</small></div>
-          <div className={styles.cassetteScrew cassetteScrewOne} />
-          <div className={styles.cassetteScrew cassetteScrewTwo} />
-          <div className={styles.cassetteScrew cassetteScrewThree} />
-          <div className={styles.cassetteScrew cassetteScrewFour} />
+          <div className={cassetteStyles.cassetteLabel}><span>CHAPTER 7</span><strong>SIDE B</strong><small>ECHO</small></div>
+          <div className={`${cassetteStyles.cassetteScrew} ${cassetteStyles.cassetteScrewOne}`} />
+          <div className={`${cassetteStyles.cassetteScrew} ${cassetteStyles.cassetteScrewTwo}`} />
+          <div className={`${cassetteStyles.cassetteScrew} ${cassetteStyles.cassetteScrewThree}`} />
+          <div className={`${cassetteStyles.cassetteScrew} ${cassetteStyles.cassetteScrewFour}`} />
         </div>
-        <div ref={dvdSlotRef} className={`${styles.dvdDrive} ${cassetteInserting ? styles.dvdDriveLoading : ""}`}>
+        <div ref={dvdSlotRef} className={`${styles.dvdDrive} ${cassetteInserting ? cassetteStyles.dvdDriveLoading : ""}`}>
           <div className={styles.dvdDriveTrim} />
-          <div className={styles.cassetteDeckSlot}>
-            <div className={styles.cassetteDoor} />
+          <div className={cassetteStyles.cassetteDeckSlot}>
+            <div className={cassetteStyles.cassetteDoor} />
           </div>
           <span className={styles.dvdDriveLabel}>CASSETTE DECK</span>
           <span className={styles.dvdDriveStatus}>{bootState === "boot" ? "WAITING" : bootLoadingText}</span>
