@@ -6,4 +6,4 @@ export const PASSWORD_MIN = 3;
 export const PASSWORD_MAX = 30;
 
 export const GAME_BUCKET = "gametonics";
-export const MAX_MESSAGES = 12;
+export const MAX_MESSAGES = 64;
