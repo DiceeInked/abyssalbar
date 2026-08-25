@@ -30,10 +30,7 @@ export default function GameTonics() {
         .from(GAME_BUCKET)
         .list("", {
           limit: GAME_LIST_LIMIT,
-          sortBy: {
-            column: "name",
-            order: "asc",
-          },
+          sortBy: { column: "name", order: "asc" },
         });
 
       if (!mounted) return;
@@ -52,14 +49,9 @@ export default function GameTonics() {
             !item.name.startsWith(".") &&
             item.id === null
         )
-        .map((folder) => ({
-          name: folder.name,
-          path: folder.name,
-        }))
+        .map((folder) => ({ name: folder.name, path: folder.name }))
         .sort((a, b) =>
-          a.name.localeCompare(b.name, undefined, {
-            sensitivity: "base",
-          })
+          a.name.localeCompare(b.name, undefined, { sensitivity: "base" })
         );
 
       setGames(detectedGames);
@@ -67,7 +59,6 @@ export default function GameTonics() {
     };
 
     void loadGames();
-
     return () => {
       mounted = false;
     };
@@ -110,19 +101,6 @@ export default function GameTonics() {
         <section className="terminal-window">
           <div className="terminal-title">GameTonics</div>
 
-          <div className="gametonics-search">
-            <span aria-hidden="true">&gt;</span>
-            <input
-              type="text"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search games..."
-              autoComplete="off"
-              spellCheck={false}
-              aria-label="Search games"
-            />
-          </div>
-
           <div className="game-output">
             {loading && <p>Loading GameTonics...</p>}
             {!loading && error && <p>{error}</p>}
@@ -144,7 +122,6 @@ export default function GameTonics() {
                   return (
                     <section key={letter} className="game-letter-section">
                       <p className="letter-heading">[{letter}]</p>
-
                       <div className="game-list">
                         {letterGames.map((game) => (
                           <button
@@ -162,6 +139,19 @@ export default function GameTonics() {
                 })}
               </>
             )}
+          </div>
+
+          <div className="gametonics-search">
+            <span aria-hidden="true">&gt;</span>
+            <input
+              type="text"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search games..."
+              autoComplete="off"
+              spellCheck={false}
+              aria-label="Search games"
+            />
           </div>
 
           <div className="gametonics-footer">&gt; Select a game</div>
