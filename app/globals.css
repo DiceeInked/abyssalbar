@@ -39,7 +39,7 @@ button, input { font: inherit; }
 .game-button:active { transform: translateY(2px); }
 .gametonics-footer { margin: 0 20px; padding: 12px 0 14px; border: none; }
 
-/* Egg is a raw fullscreen 64-line stream of generated characters, not a terminal window. */
+/* Egg is a raw fullscreen 64-line stream. It uses one DOM text node and instant line replacement. */
 .egg-terminal {
   position: fixed;
   inset: 0;
@@ -60,27 +60,16 @@ button, input { font: inherit; }
   inset: 0;
   width: 100%;
   height: 100%;
-  overflow: hidden;
+  margin: 0;
   padding: 0;
+  overflow: hidden;
+  white-space: pre;
+  user-select: none;
   font-size: var(--egg-font-size, 10px);
   line-height: calc(100dvh / 64);
   letter-spacing: 0;
-  user-select: none;
-}
-.egg-line {
-  display: block;
-  width: max-content;
-  height: calc(100dvh / 64);
-  min-height: calc(100dvh / 64);
-  white-space: pre;
   font-family: "IBM Plex Mono", monospace;
   font-weight: 400;
-  overflow: hidden;
-  animation: egg-line-in 28ms linear;
-}
-@keyframes egg-line-in {
-  from { opacity: 0.25; transform: translateY(3px); }
-  to { opacity: 1; transform: translateY(0); }
 }
 
 .etho-glitch-transition { position: fixed; inset: 0; z-index: 1000; overflow: hidden; background: #000; pointer-events: all; animation: etho-screen-shake 90ms steps(2,end) infinite; }
@@ -95,4 +84,4 @@ button, input { font: inherit; }
 @keyframes etho-noise { 0%{transform:translate(0,0);opacity:.15}25%{transform:translate(-2%,3%);opacity:.35}50%{transform:translate(3%,-1%);opacity:.2}75%{transform:translate(-1%,-3%);opacity:.4}100%{transform:translate(2%,1%);opacity:.18} }
 @keyframes etho-text-glitch { 0%{transform:translate(0);opacity:.8}30%{transform:translate(-8px,3px) skewX(-8deg);opacity:1}55%{transform:translate(10px,-2px) skewX(6deg);opacity:.55}80%{transform:translate(-4px,1px);opacity:.9}100%{transform:translate(5px,-3px) skewX(-3deg);opacity:.7} }
 @media (prefers-reduced-motion:reduce){.etho-glitch-transition,.etho-glitch-layer,.etho-glitch-noise,.etho-glitch-text{animation-duration:500ms;animation-iteration-count:1}}
-@media (max-width:600px){.terminal{padding:15px}.terminal-container{width:94vw;height:auto;max-width:94vw;margin:12vh auto}.terminal-input{margin:0 15px}.message-input,.gametonics-search input{font-size:14px}.terminal-input button,.game-button{padding:8px 10px;font-size:13px}.game-output{padding:15px}.gametonics-search{margin:0 15px}.gametonics-footer{margin:0 15px}.egg-output{padding:0;font-size:7px}}
+@media (max-width:600px){.terminal{padding:15px}.terminal-container{width:94vw;height:auto;max-width:94vw;margin:12vh auto}.terminal-input{margin:0 15px}.message-input,.gametonics-search input{font-size:14px}.terminal-input button,.game-button{padding:8px 10px;font-size:13px}.game-output{padding:15px}.gametonics-search{margin:0 15px}.gametonics-footer{margin:0 15px}.egg-output{font-size:7px}}
