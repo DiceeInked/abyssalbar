@@ -39,7 +39,7 @@ button, input { font: inherit; }
 .game-button:active { transform: translateY(2px); }
 .gametonics-footer { margin: 0 20px; padding: 12px 0 14px; border: none; }
 
-/* Egg is intentionally a raw fullscreen stream of generated code, not a terminal window. */
+/* Egg is a raw fullscreen 64-line stream of generated characters, not a terminal window. */
 .egg-terminal {
   position: fixed;
   inset: 0;
@@ -62,31 +62,25 @@ button, input { font: inherit; }
   height: 100%;
   overflow: hidden;
   padding: 0;
-  font-size: var(--egg-font-size, 8px);
-  line-height: 1.12;
+  font-size: var(--egg-font-size, 10px);
+  line-height: calc(100dvh / 64);
   letter-spacing: 0;
   user-select: none;
 }
-.egg-track {
-  display: flex;
-  flex-direction: column;
-  width: max-content;
-  min-height: 200%;
-  animation: egg-scroll var(--egg-scroll-duration, 3.2s) linear infinite;
-  will-change: transform;
-}
-.egg-copy { display: flex; flex-direction: column; flex: 0 0 auto; }
 .egg-line {
   display: block;
   width: max-content;
-  min-height: 1.12em;
+  height: calc(100dvh / 64);
+  min-height: calc(100dvh / 64);
   white-space: pre;
   font-family: "IBM Plex Mono", monospace;
   font-weight: 400;
+  overflow: hidden;
+  animation: egg-line-in 28ms linear;
 }
-@keyframes egg-scroll {
-  from { transform: translateY(0); }
-  to { transform: translateY(-50%); }
+@keyframes egg-line-in {
+  from { opacity: 0.25; transform: translateY(3px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .etho-glitch-transition { position: fixed; inset: 0; z-index: 1000; overflow: hidden; background: #000; pointer-events: all; animation: etho-screen-shake 90ms steps(2,end) infinite; }
