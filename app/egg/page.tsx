@@ -8,7 +8,7 @@ const IDENTIFIERS = [
   "output", "system", "process", "module", "sector", "cursor", "route", "state",
   "token", "offset", "channel", "layer", "source", "target", "config", "session",
 ];
-const HEX = "0123456789ABCDEF";
+const HEX = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "A", "B", "C", "D", "E", "F"] as const;
 const OPERATORS = ["=", "==", "!=", "+=", "-=", "*=", "/=", "+", "-", "*", "/", "%", "&&", "||", "=>", "<", ">", "<=", ">=", "??"];
 const CONTAINERS = [["(", ")"], ["[", "]"], ["{", "}"], ["<", ">"]] as const;
 const KEYWORDS = ["const", "let", "var", "if", "else", "for", "while", "return", "await", "async", "true", "false", "null", "new", "class", "function"];
