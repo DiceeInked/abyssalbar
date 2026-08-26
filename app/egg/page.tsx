@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 
 const IDENTIFIERS = [
   "boot", "cache", "node", "frame", "packet", "buffer", "socket", "drive",
@@ -8,8 +8,6 @@ const IDENTIFIERS = [
   "output", "system", "process", "module", "sector", "cursor", "route", "state",
   "token", "offset", "channel", "layer", "source", "target", "config", "session",
 ];
-const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-const DIGITS = "0123456789";
 const HEX = "0123456789ABCDEF";
 const OPERATORS = ["=", "==", "!=", "+=", "-=", "*=", "/=", "+", "-", "*", "/", "%", "&&", "||", "=>", "<", ">", "<=", ">=", "??"];
 const CONTAINERS = [["(", ")"], ["[", "]"], ["{", "}"], ["<", ">"]] as const;
@@ -87,14 +85,13 @@ export default function Egg() {
     return () => window.clearInterval(interval);
   }, [zeroMode]);
 
+  const eggStyle = {
+    "--egg-font-size": `${FONT_SIZE_PX}px`,
+    "--egg-scroll-duration": `${SCROLL_DURATION_SECONDS}s`,
+  } as CSSProperties;
+
   return (
-    <main
-      className="egg-terminal"
-      style={{
-        "--egg-font-size": `${FONT_SIZE_PX}px`,
-        "--egg-scroll-duration": `${SCROLL_DURATION_SECONDS}s`,
-      } as React.CSSProperties}
-    >
+    <main className="egg-terminal" style={eggStyle}>
       <div className="scanlines" />
       <div className="egg-output" aria-label="Rapidly scrolling generated code">
         <div className="egg-track">
