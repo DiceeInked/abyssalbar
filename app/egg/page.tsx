@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useRef, type CSSProperties } from "react";
 
 const RANDOM_CHARACTERS =
   "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=[]{}|;:',.<>/?`~\\\"";
@@ -9,7 +9,7 @@ const VISIBLE_LINES = 64;
 const MIN_LINE_LENGTH = 8;
 const MAX_LINE_LENGTH = 128;
 const FIXED_LINE_LENGTH = 64;
-const UPDATE_INTERVAL_MS = 28;
+const UPDATE_INTERVAL_MS = 16;
 const FONT_SIZE_PX = 10;
 
 const randomInt = (minimum: number, maximum: number) =>
@@ -19,36 +19,54 @@ const randomCharacter = () =>
   RANDOM_CHARACTERS[randomInt(0, RANDOM_CHARACTERS.length - 1)];
 
 const makeRandomLine = (length: number, spaced: boolean) => {
-  if (!spaced) {
-    return Array.from({ length }, randomCharacter).join("");
+  const characters = new Array<string>(length);
+
+  for (let index = 0; index < length; index += 1) {
+    characters[index] = randomCharacter();
   }
 
-  return Array.from({ length }, randomCharacter).join(" ");
+  return spaced ? characters.join(" ") : characters.join("");
+};
+
+const makeLine = (zeroMode: boolean) =>
+  zeroMode
+    ? makeRandomLine(FIXED_LINE_LENGTH, true)
+    : makeRandomLine(randomInt(MIN_LINE_LENGTH, MAX_LINE_LENGTH), false);
+
+const makeInitialLines = (zeroMode: boolean) => {
+  const initialLines = new Array<string>(VISIBLE_LINES);
+
+  for (let index = 0; index < VISIBLE_LINES; index += 1) {
+    initialLines[index] = makeLine(zeroMode);
+  }
+
+  return initialLines;
 };
 
 export default function Egg() {
-  const [zeroMode, setZeroMode] = useState(false);
-  const [lines, setLines] = useState<string[]>([]);
+  const outputRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    const mode = new URLSearchParams(window.location.search).get("mode");
-    setZeroMode(mode === "0");
-  }, []);
+    const zeroMode = new URLSearchParams(window.location.search).get("mode") === "0";
+    const output = outputRef.current;
 
-  useEffect(() => {
-    const makeLine = () =>
-      zeroMode
-        ? makeRandomLine(FIXED_LINE_LENGTH, true)
-        : makeRandomLine(randomInt(MIN_LINE_LENGTH, MAX_LINE_LENGTH), false);
+    if (!output) return;
 
-    setLines(Array.from({ length: VISIBLE_LINES }, makeLine));
+    const lines = makeInitialLines(zeroMode);
+    output.textContent = lines.join("\n");
 
-    const interval = window.setInterval(() => {
-      setLines((current) => [...current, makeLine()].slice(-VISIBLE_LINES));
-    }, UPDATE_INTERVAL_MS);
+    // Deliberately update one text node instead of re-rendering 64 React elements.
+    // The array acts as a fixed-size ring: one new line enters, one old line leaves.
+    const update = () => {
+      lines.shift();
+      lines.push(makeLine(zeroMode));
+      output.textContent = lines.join("\n");
+    };
+
+    const interval = window.setInterval(update, UPDATE_INTERVAL_MS);
 
     return () => window.clearInterval(interval);
-  }, [zeroMode]);
+  }, []);
 
   const eggStyle = {
     "--egg-font-size": `${FONT_SIZE_PX}px`,
@@ -56,14 +74,12 @@ export default function Egg() {
 
   return (
     <main className="egg-terminal" style={eggStyle}>
-      <div className="scanlines" />
-      <div className="egg-output" aria-label="Rapidly generated random characters">
-        {lines.map((line, index) => (
-          <div key={`${index}-${line}`} className="egg-line">
-            {line}
-          </div>
-        ))}
-      </div>
+      <div className="scanlines" aria-hidden="true" />
+      <div
+        ref={outputRef}
+        className="egg-output"
+        aria-label="Rapidly generated random characters"
+      />
     </main>
   );
 }
