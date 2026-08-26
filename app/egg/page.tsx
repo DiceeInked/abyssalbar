@@ -16,12 +16,15 @@ const CONTAINERS = [["(", ")"], ["[", "]"], ["{", "}"], ["<", ">"]] as const;
 const KEYWORDS = ["const", "let", "var", "if", "else", "for", "while", "return", "await", "async", "true", "false", "null", "new", "class", "function"];
 const PUNCTUATION = [";", ",", ".", ":", "?", "!", "&", "|", "#"];
 
+// Easy-to-adjust Egg settings.
 const MIN_LINE_LENGTH = 16;
 const MAX_LINE_LENGTH = 256;
 const ZERO_MODE_LINE_LENGTH = 256;
-const VISIBLE_LINES = 180;
-const BATCH_SIZE = 12;
-const REFRESH_INTERVAL_MS = 45;
+const VISIBLE_LINES = 220;
+const BATCH_SIZE = 16;
+const REFRESH_INTERVAL_MS = 70;
+const SCROLL_DURATION_SECONDS = 3.2;
+const FONT_SIZE_PX = 8;
 
 const pick = <T,>(items: readonly T[]) => items[Math.floor(Math.random() * items.length)];
 const randomInt = (minimum: number, maximum: number) => Math.floor(Math.random() * (maximum - minimum + 1)) + minimum;
@@ -56,10 +59,7 @@ const makeCodeLine = (targetLength: number, spaced: boolean) => {
   }
 
   line = line.slice(0, targetLength);
-  if (spaced) {
-    return line.split("").join(" ");
-  }
-  return line;
+  return spaced ? line.split("").join(" ") : line;
 };
 
 export default function Egg() {
@@ -73,20 +73,13 @@ export default function Egg() {
 
   useEffect(() => {
     const getLineLength = () =>
-      zeroMode
-        ? ZERO_MODE_LINE_LENGTH
-        : randomInt(MIN_LINE_LENGTH, MAX_LINE_LENGTH);
+      zeroMode ? ZERO_MODE_LINE_LENGTH : randomInt(MIN_LINE_LENGTH, MAX_LINE_LENGTH);
 
-    const initialLines = Array.from({ length: VISIBLE_LINES }, () =>
-      makeCodeLine(getLineLength(), zeroMode)
-    );
-    setLines(initialLines);
+    setLines(Array.from({ length: VISIBLE_LINES }, () => makeCodeLine(getLineLength(), zeroMode)));
 
     const interval = window.setInterval(() => {
       setLines((current) => {
-        const newLines = Array.from({ length: BATCH_SIZE }, () =>
-          makeCodeLine(getLineLength(), zeroMode)
-        );
+        const newLines = Array.from({ length: BATCH_SIZE }, () => makeCodeLine(getLineLength(), zeroMode));
         return [...current.slice(BATCH_SIZE), ...newLines];
       });
     }, REFRESH_INTERVAL_MS);
@@ -95,14 +88,26 @@ export default function Egg() {
   }, [zeroMode]);
 
   return (
-    <main className="egg-terminal">
+    <main
+      className="egg-terminal"
+      style={{
+        "--egg-font-size": `${FONT_SIZE_PX}px`,
+        "--egg-scroll-duration": `${SCROLL_DURATION_SECONDS}s`,
+      } as React.CSSProperties}
+    >
       <div className="scanlines" />
       <div className="egg-output" aria-label="Rapidly scrolling generated code">
-        {lines.map((line, index) => (
-          <div key={`${index}-${line}`} className="egg-line">
-            {line}
-          </div>
-        ))}
+        <div className="egg-track">
+          {[0, 1].map((copy) => (
+            <div className="egg-copy" aria-hidden={copy === 1} key={copy}>
+              {lines.map((line, index) => (
+                <div key={`${copy}-${index}-${line}`} className="egg-line">
+                  {line}
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
       </div>
     </main>
   );
