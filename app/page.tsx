@@ -29,7 +29,7 @@ type Account = {
   created_at?: string;
 };
 
-const TERMINAL_VERSION = "1.3";
+const TERMINAL_VERSION = "1.4";
 const COMMAND_OUTPUT_LINES = 8;
 
 const isValidCredential = (value: string, minimum: number, maximum: number) =>
@@ -87,9 +87,7 @@ export default function Home() {
 
   const writeCommand = (text: string) => {
     const newLines = text.split("\n").map((line) => line || " ");
-    setCommandOutput((current) =>
-      [...current, ...newLines].slice(-COMMAND_OUTPUT_LINES),
-    );
+    setCommandOutput(newLines.slice(-COMMAND_OUTPUT_LINES));
   };
 
   const loadAccount = async () => {
