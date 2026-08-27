@@ -1,6 +1,6 @@
 "use client";
 
-import { type FormEvent, useEffect, useRef, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../lib/supabase";
 import {
@@ -11,6 +11,8 @@ import {
   PASSWORD_MAX,
   PASSWORD_MIN,
   SITE_VERSION,
+  TERMINAL_DISPLAY_LINES,
+  TERMINAL_PAGE_STEP,
   USERNAME_MAX,
   USERNAME_MIN,
 } from "../lib/constants";
@@ -88,6 +90,7 @@ export default function Home() {
   const [account, setAccount] = useState<Account | null>(null);
   const [busy, setBusy] = useState(false);
   const [ethoTransition, setEthoTransition] = useState(false);
+  const [pageStart, setPageStart] = useState(0);
   const nextTerminalEntryId = useRef(0);
 
   const writeTerminalLine = (text: string) => {
@@ -396,6 +399,73 @@ export default function Home() {
     await handler(parts.slice(1));
   };
 
+  const terminalLines = useMemo(() => {
+    const lines: string[] = [];
+
+    terminalEntries.forEach((entry) => {
+      const entryLines = entry.text.split("\n");
+      entryLines.forEach((line, index) => {
+        lines.push(index === 0 ? `> ${line}` : `  ${line}`);
+      });
+    });
+
+    messages.forEach((message) => {
+      const messageLines = wrapText(
+        `${message.username}: ${message.message}`,
+        MESSAGE_LINE_LENGTH,
+      );
+      messageLines.forEach((line) => lines.push(line));
+    });
+
+    return lines;
+  }, [messages, terminalEntries]);
+
+  const maxPageStart = Math.max(
+    0,
+    terminalLines.length - TERMINAL_DISPLAY_LINES,
+  );
+  const visibleLines = terminalLines.slice(
+    pageStart,
+    pageStart + TERMINAL_DISPLAY_LINES,
+  );
+  const canPageUp = pageStart > 0;
+  const canPageDown = pageStart < maxPageStart;
+
+  const pageUp = () => {
+    setPageStart((current) =>
+      Math.max(0, Math.min(maxPageStart, current - TERMINAL_PAGE_STEP)),
+    );
+  };
+
+  const pageDown = () => {
+    setPageStart((current) =>
+      Math.max(0, Math.min(maxPageStart, current + TERMINAL_PAGE_STEP)),
+    );
+  };
+
+  useEffect(() => {
+    setPageStart(maxPageStart);
+  }, [maxPageStart]);
+
+  useEffect(() => {
+    const handleTerminalNavigation = (event: KeyboardEvent) => {
+      if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
+
+      const target = event.target as HTMLElement | null;
+      const tagName = target?.tagName;
+      if (tagName === "INPUT" || tagName === "TEXTAREA" || tagName === "SELECT") {
+        return;
+      }
+
+      event.preventDefault();
+      if (event.key === "ArrowUp") pageUp();
+      else pageDown();
+    };
+
+    window.addEventListener("keydown", handleTerminalNavigation);
+    return () => window.removeEventListener("keydown", handleTerminalNavigation);
+  }, [maxPageStart]);
+
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
 
@@ -406,6 +476,7 @@ export default function Home() {
 
     if (trimmedInput === "/clear") {
       setTerminalEntries([]);
+      setPageStart(0);
       return;
     }
 
@@ -467,46 +538,56 @@ export default function Home() {
             Abyssal Bar Terminal v{SITE_VERSION}
           </div>
 
-          <div className="terminal-output">
-            <p>--------------------------------</p>
-            <p>Account: {account ? account.username : "Not signed in"}</p>
-            <p>
+          <div className="terminal-meta">
+            <span>Account: {account ? account.username : "Not signed in"}</span>
+            <span>
               Connection status: {connected ? "Online" : "Connecting..."}
-            </p>
-            <p>--------------------------------</p>
+            </span>
+          </div>
 
-            {!account && terminalEntries.length === 0 && (
-              <p>Type /sign up &lt;username&gt; &lt;password&gt; to create an account.</p>
+          <div className="terminal-output" aria-live="polite">
+            {!account && terminalLines.length === 0 && (
+              <div className="terminal-line">
+                Type /sign up &lt;username&gt; &lt;password&gt; to create an account.
+              </div>
             )}
 
-            {terminalEntries.map((entry) => (
-              <p key={entry.id}>
-                &gt; {entry.text.split("\n").map((line, index, lines) => (
-                  <span key={`${entry.id}-${index}`}>
-                    {line || "\u00a0"}
-                    {index < lines.length - 1 && <br />}
-                  </span>
-                ))}
-              </p>
+            {visibleLines.map((line, index) => (
+              <div className="terminal-line" key={`${pageStart}-${index}-${line}`}>
+                {line || "\u00a0"}
+              </div>
             ))}
+          </div>
 
-            {messages.map((message) => {
-              const lines = wrapText(
-                `${message.username}: ${message.message}`,
-                MESSAGE_LINE_LENGTH,
-              );
-
-              return (
-                <p key={message.id}>
-                  {lines.map((line, index) => (
-                    <span key={`${message.id}-${index}`}>
-                      {line}
-                      {index < lines.length - 1 && <br />}
-                    </span>
-                  ))}
-                </p>
-              );
-            })}
+          <div className="terminal-pager" aria-label="Terminal history navigation">
+            <button
+              type="button"
+              className="terminal-page-button"
+              onClick={pageUp}
+              disabled={!canPageUp}
+              aria-label="Older terminal messages"
+              title="Older messages"
+            >
+              ▲
+            </button>
+            <span className="terminal-page-status">
+              {terminalLines.length === 0
+                ? "0 / 0"
+                : `${Math.min(pageStart + 1, terminalLines.length)}-${Math.min(
+                    pageStart + TERMINAL_DISPLAY_LINES,
+                    terminalLines.length,
+                  )} / ${terminalLines.length}`}
+            </span>
+            <button
+              type="button"
+              className="terminal-page-button"
+              onClick={pageDown}
+              disabled={!canPageDown}
+              aria-label="Newer terminal messages"
+              title="Newer messages"
+            >
+              ▼
+            </button>
           </div>
 
           <form onSubmit={handleSubmit} className="terminal-input">
