@@ -3,6 +3,7 @@
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../lib/supabase";
+import { COMMAND_HELP, PLAY_USAGE, parsePlayCommand } from "../lib/commands";
 import {
   GAME_LIBRARY_ROUTE,
   MAX_MESSAGES,
@@ -29,7 +30,7 @@ type Account = {
   created_at?: string;
 };
 
-const TERMINAL_VERSION = "1.4";
+const TERMINAL_VERSION = "1.5";
 const COMMAND_OUTPUT_LINES = 8;
 
 const isValidCredential = (value: string, minimum: number, maximum: number) =>
@@ -119,7 +120,6 @@ export default function Home() {
 
   useEffect(() => {
     let mounted = true;
-
     void Promise.all([loadAccount(), loadMessages()]);
 
     const channel = supabase
@@ -157,7 +157,6 @@ export default function Home() {
       writeCommand(`username error: use ${USERNAME_MIN}-${USERNAME_MAX} characters with no spaces.`);
       return;
     }
-
     if (!isValidCredential(password, PASSWORD_MIN, PASSWORD_MAX)) {
       writeCommand(`password error: use ${PASSWORD_MIN}-${PASSWORD_MAX} characters with no spaces.`);
       return;
@@ -171,12 +170,10 @@ export default function Home() {
         body: JSON.stringify({ action, username, password }),
       });
       const result = await response.json();
-
       if (!response.ok) {
         writeCommand(`${action === "sign_up" ? "sign up" : "sign in"} error: ${result.error}`);
         return;
       }
-
       setAccount(result.account);
       writeCommand(
         action === "sign_up"
@@ -200,12 +197,10 @@ export default function Home() {
         body: JSON.stringify({ action: "sign_out" }),
       });
       const result = await response.json();
-
       if (!response.ok) {
         writeCommand(`sign out error: ${result.error}`);
         return;
       }
-
       setAccount(null);
       writeCommand("signed out.");
     } catch (error) {
@@ -223,20 +218,13 @@ export default function Home() {
 
     switch (command) {
       case "/help":
-        writeCommand(
-          "commands:\n/help\n/home\n/sign up <username> <password>\n/sign in <username> <password>\n/sign out\n/egg\n/egg 0\n/etho\n/games\n/tetris\n/clear",
-        );
+        writeCommand(COMMAND_HELP);
         return;
-
       case "/home":
-        if (args.length) {
-          writeCommand("usage: /home");
-          return;
-        }
+        if (args.length) return void writeCommand("usage: /home");
         writeCommand("opening home...");
         router.push("/");
         return;
-
       case "/egg":
         if (args.length === 0) {
           writeCommand("opening egg...");
@@ -250,34 +238,31 @@ export default function Home() {
         }
         writeCommand("usage: /egg or /egg 0");
         return;
-
       case "/etho":
-        if (args.length) {
-          writeCommand("usage: /etho");
-          return;
-        }
+        if (args.length) return void writeCommand("usage: /etho");
         writeCommand("opening etho...");
         router.push("/etho");
         return;
-
       case "/games":
-        if (args.length) {
-          writeCommand("usage: /games");
-          return;
-        }
+        if (args.length) return void writeCommand("usage: /games");
         writeCommand("opening games...");
         router.push(GAME_LIBRARY_ROUTE);
         return;
-
       case "/tetris":
-        if (args.length) {
-          writeCommand("usage: /tetris");
-          return;
-        }
+        if (args.length) return void writeCommand("usage: /tetris");
         writeCommand("opening tetris...");
         router.push("/tetris");
         return;
-
+      case "/play": {
+        const gameName = parsePlayCommand(value);
+        if (!gameName) {
+          writeCommand(PLAY_USAGE);
+          return;
+        }
+        writeCommand(`opening ${gameName}...`);
+        router.push(`/play/${encodeURIComponent(gameName)}`);
+        return;
+      }
       case "/sign": {
         const action = args[0]?.toLowerCase();
         if (action === "up" && args.length === 3) {
@@ -292,12 +277,9 @@ export default function Home() {
           await signOut();
           return;
         }
-        writeCommand(
-          "usage: /sign up <username> <password>, /sign in <username> <password>, or /sign out",
-        );
+        writeCommand("usage: /sign up <username> <password>, /sign in <username> <password>, or /sign out");
         return;
       }
-
       default:
         writeCommand("unknown command. type /help.");
     }
@@ -307,25 +289,21 @@ export default function Home() {
     event.preventDefault();
     const value = input.trim();
     if (!value || busy) return;
-
     setInput("");
 
     if (value.toLowerCase() === "/clear") {
       setCommandOutput([]);
       return;
     }
-
     if (value.startsWith("/")) {
       writeCommand(`> ${value}`);
       await runCommand(value);
       return;
     }
-
     if (!account) {
       writeCommand("sign in required. use /sign up or /sign in first.");
       return;
     }
-
     if (!connected) {
       writeCommand("message error: chat is still connecting.");
       return;
@@ -358,46 +336,22 @@ export default function Home() {
       <div className={styles.siteVersion} aria-label="Site version">
         site v{SITE_VERSION}
       </div>
-
       <section className={styles.terminal} aria-label="Guest Terminal">
         <header className={styles.header}>
           <span>guest terminal</span>
           <span>v{TERMINAL_VERSION}</span>
         </header>
-
         <div ref={chatRef} className={styles.chatOutput} aria-live="polite">
-          {visibleLines.length ? (
-            visibleLines.map((line, index) => (
-              <div className={styles.line} key={`${index}-${line}`}>
-                {line || "\u00a0"}
-              </div>
-            ))
-          ) : (
-            <div className={styles.emptyLine}>waiting for messages...</div>
-          )}
+          {visibleLines.length ? visibleLines.map((line, index) => (
+            <div className={styles.line} key={`${index}-${line}`}>{line || "\u00a0"}</div>
+          )) : <div className={styles.emptyLine}>waiting for messages...</div>}
         </div>
-
         <form className={styles.inputBar} onSubmit={handleSubmit}>
           <span className={styles.prompt} aria-hidden="true">&gt;</span>
-          <input
-            className={styles.input}
-            type="text"
-            value={input}
-            onChange={(event) => setInput(event.target.value)}
-            placeholder="message or /help"
-            autoComplete="off"
-            spellCheck={false}
-            aria-label="Terminal input"
-            disabled={busy}
-          />
+          <input className={styles.input} type="text" value={input} onChange={(event) => setInput(event.target.value)} placeholder="message or /help" autoComplete="off" spellCheck={false} aria-label="Terminal input" disabled={busy} />
         </form>
-
         <div ref={commandRef} className={styles.commandOutput} aria-label="Command output">
-          {commandOutput.map((line, index) => (
-            <div className={styles.commandLine} key={`${index}-${line}`}>
-              {line || "\u00a0"}
-            </div>
-          ))}
+          {commandOutput.map((line, index) => <div className={styles.commandLine} key={`${index}-${line}`}>{line || "\u00a0"}</div>)}
         </div>
       </section>
     </main>
