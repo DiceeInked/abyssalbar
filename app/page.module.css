@@ -1,0 +1,134 @@
+.page {
+  --terminal-color: #00FFC8;
+  --background: #000;
+  min-height: 100vh;
+  min-height: 100dvh;
+  margin: 0;
+  padding: 24px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: var(--background);
+  color: var(--terminal-color);
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+}
+
+.terminal {
+  width: min(900px, 92vw);
+  height: min(680px, 88vh);
+  height: min(680px, 88dvh);
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border: 2px solid #00FFC8;
+  background: #000;
+  box-shadow: 0 0 18px rgba(0, 255, 200, 0.14), inset 0 0 18px rgba(0, 255, 200, 0.035);
+  overflow: hidden;
+}
+
+.header {
+  flex: 0 0 auto;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 16px;
+  border-bottom: 2px solid #00FFC8;
+  font-size: 15px;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.output {
+  flex: 0 0 auto;
+  height: calc(1.5em * 16 + 24px);
+  min-height: calc(1.5em * 16 + 24px);
+  max-height: calc(1.5em * 16 + 24px);
+  padding: 12px 16px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-color: #00FFC8 #000;
+  scrollbar-width: thin;
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.line {
+  min-height: 1.5em;
+  margin: 0;
+  padding: 0;
+}
+
+.inputBar {
+  flex: 1 1 auto;
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: auto;
+  padding: 0 16px;
+  border-top: 2px solid #00FFC8;
+}
+
+.prompt {
+  flex: 0 0 auto;
+  font-size: 16px;
+}
+
+.input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  padding: 0;
+  background: transparent;
+  color: #00FFC8;
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  caret-color: #00FFC8;
+}
+
+.input::placeholder {
+  color: rgba(0, 255, 200, 0.35);
+}
+
+.input:disabled {
+  opacity: 0.5;
+}
+
+@media (max-width: 600px) {
+  .page {
+    padding: 10px;
+  }
+
+  .terminal {
+    width: 96vw;
+    height: 94vh;
+    height: 94dvh;
+  }
+
+  .header {
+    min-height: 44px;
+    padding: 0 12px;
+    font-size: 13px;
+  }
+
+  .output {
+    padding: 10px 12px;
+    font-size: 12px;
+  }
+
+  .inputBar {
+    min-height: 48px;
+    padding: 0 12px;
+  }
+
+  .input {
+    font-size: 12px;
+  }
+}
