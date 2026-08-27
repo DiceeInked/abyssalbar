@@ -3,51 +3,48 @@
   --background: #000;
   min-height: 100vh;
   min-height: 100dvh;
-  margin: 0;
-  padding: 24px;
   display: grid;
   place-items: center;
+  margin: 0;
+  padding: 18px;
   overflow: hidden;
   background: var(--background);
   color: var(--terminal-color);
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
 .terminal {
-  width: min(900px, 92vw);
-  height: min(680px, 88vh);
-  height: min(680px, 88dvh);
+  width: min(900px, 94vw);
+  height: min(720px, 92dvh);
   min-height: 0;
   display: flex;
   flex-direction: column;
-  border: 2px solid #00FFC8;
+  overflow: hidden;
+  border: 2px solid var(--terminal-color);
   background: #000;
   box-shadow: 0 0 18px rgba(0, 255, 200, 0.14), inset 0 0 18px rgba(0, 255, 200, 0.035);
-  overflow: hidden;
 }
 
 .header {
-  flex: 0 0 auto;
-  min-height: 48px;
+  flex: 0 0 44px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  padding: 0 16px;
-  border-bottom: 2px solid #00FFC8;
-  font-size: 15px;
-  line-height: 1;
+  padding: 0 14px;
+  border-bottom: 2px solid var(--terminal-color);
+  font-size: 14px;
   letter-spacing: 0.04em;
-  white-space: nowrap;
+  text-transform: lowercase;
 }
 
-.output {
-  flex: 1 1 auto;
-  min-height: 0;
-  padding: 12px 16px;
+.chatOutput {
+  flex: 0 0 auto;
+  height: calc(1.5em * 16 + 24px);
+  min-height: calc(1.5em * 16 + 24px);
+  padding: 12px 14px;
   overflow-y: auto;
   overflow-x: hidden;
-  scrollbar-color: #00FFC8 #000;
+  scrollbar-color: var(--terminal-color) #000;
   scrollbar-width: thin;
   font-size: 14px;
   line-height: 1.5;
@@ -55,35 +52,32 @@
   overflow-wrap: anywhere;
 }
 
-.line {
-  min-height: 1.5em;
+.line,
+.emptyLine {
+  height: 1.5em;
   margin: 0;
   padding: 0;
+  overflow: hidden;
+  white-space: pre;
 }
 
-.inputBar,
-.hintBar {
-  flex: 0 0 auto;
-  min-height: 42px;
+.emptyLine {
+  opacity: 0.5;
+}
+
+.inputBar {
+  flex: 0 0 46px;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 0 16px;
-  border-top: 2px solid #00FFC8;
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-.hintBar {
-  color: rgba(0, 255, 200, 0.72);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  gap: 9px;
+  margin: 0 14px;
+  border-top: 2px solid var(--terminal-color);
+  border-bottom: 2px solid var(--terminal-color);
 }
 
 .prompt {
   flex: 0 0 auto;
-  font-size: 16px;
+  font-size: 15px;
 }
 
 .input {
@@ -93,11 +87,11 @@
   outline: 0;
   padding: 0;
   background: transparent;
-  color: #00FFC8;
+  color: var(--terminal-color);
   font: inherit;
   font-size: 14px;
   line-height: 1.5;
-  caret-color: #00FFC8;
+  caret-color: var(--terminal-color);
 }
 
 .input::placeholder {
@@ -105,39 +99,82 @@
 }
 
 .input:disabled {
-  opacity: 0.5;
+  opacity: 0.45;
+}
+
+.commandOutput {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: 12px 14px 0;
+  padding: 9px 10px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  border: 1px solid rgba(0, 255, 200, 0.7);
+  scrollbar-color: var(--terminal-color) #000;
+  scrollbar-width: thin;
+  font-size: 12px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.commandLine {
+  min-height: 1.45em;
+}
+
+.hintBar {
+  flex: 0 0 38px;
+  display: flex;
+  align-items: center;
+  margin-top: 10px;
+  padding: 0 14px;
+  border-top: 1px solid rgba(0, 255, 200, 0.45);
+  color: rgba(0, 255, 200, 0.72);
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 @media (max-width: 600px) {
   .page {
-    padding: 10px;
+    padding: 8px;
   }
 
   .terminal {
-    width: 96vw;
-    height: 94vh;
-    height: 94dvh;
+    width: 98vw;
+    height: 96dvh;
   }
 
   .header {
-    min-height: 44px;
-    padding: 0 12px;
-    font-size: 13px;
-  }
-
-  .output {
-    padding: 10px 12px;
+    flex-basis: 40px;
+    padding: 0 10px;
     font-size: 12px;
   }
 
-  .inputBar,
-  .hintBar {
-    min-height: 40px;
-    padding: 0 12px;
+  .chatOutput {
+    height: calc(1.5em * 16 + 20px);
+    min-height: calc(1.5em * 16 + 20px);
+    padding: 10px;
     font-size: 12px;
+  }
+
+  .inputBar {
+    flex-basis: 42px;
+    margin: 0 10px;
   }
 
   .input {
     font-size: 12px;
+  }
+
+  .commandOutput {
+    margin: 10px 10px 0;
+    font-size: 11px;
+  }
+
+  .hintBar {
+    padding: 0 10px;
+    font-size: 10px;
   }
 }
