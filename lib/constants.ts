@@ -1,4 +1,4 @@
-export const SITE_VERSION = "2.36";
+export const SITE_VERSION = "2.37";
 
 export const SESSION_COOKIE = "abyssal_session";
 
@@ -14,3 +14,6 @@ export const MAX_MESSAGES = 64;
 export const MESSAGE_LINE_LENGTH = 80;
 
 export const ETHO_TRANSITION_MS = 900;
+
+export const TERMINAL_DISPLAY_LINES = 16;
+export const TERMINAL_PAGE_STEP = 12;
