@@ -74,7 +74,6 @@ const sortMessages = (messages: Message[]) =>
 export default function Home() {
   const router = useRouter();
   const outputRef = useRef<HTMLDivElement | null>(null);
-  const nextEntryId = useRef(0);
 
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
@@ -85,7 +84,9 @@ export default function Home() {
 
   const write = (text: string) => {
     const newLines = text.split("\n").map((line) => line || " ");
-    setTerminalLines((current) => [...current, ...newLines].slice(-MAX_MESSAGES));
+    setTerminalLines((current) =>
+      [...current, ...newLines].slice(-MAX_MESSAGES),
+    );
   };
 
   const loadAccount = async () => {
@@ -116,10 +117,7 @@ export default function Home() {
   useEffect(() => {
     let mounted = true;
 
-    const start = async () => {
-      await Promise.all([loadAccount(), loadMessages()]);
-    };
-    void start();
+    void Promise.all([loadAccount(), loadMessages()]);
 
     const channel = supabase
       .channel("guest-terminal-chat")
