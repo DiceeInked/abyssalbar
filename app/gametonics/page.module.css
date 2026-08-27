@@ -79,15 +79,14 @@
   background: transparent;
   color: #FF0066;
   font: inherit;
-  text-decoration: underline;
+  text-decoration: none;
   cursor: pointer;
 }
 
 .gameLink:hover,
 .gameLink:focus-visible {
   color: #FF0066;
-  outline: 1px dotted #FF0066;
-  outline-offset: 2px;
+  text-decoration: underline;
 }
 
 .inputBar {
