@@ -9,6 +9,7 @@ import {
   MESSAGE_LINE_LENGTH,
   PASSWORD_MAX,
   PASSWORD_MIN,
+  SITE_VERSION,
   TERMINAL_DISPLAY_LINES,
   USERNAME_MAX,
   USERNAME_MIN,
@@ -356,6 +357,10 @@ export default function Home() {
 
   return (
     <main className={styles.page}>
+      <div className={styles.siteVersion} aria-label="Site version">
+        site v{SITE_VERSION}
+      </div>
+
       <section className={styles.terminal} aria-label="Guest Terminal">
         <header className={styles.header}>
           <span>guest terminal</span>
