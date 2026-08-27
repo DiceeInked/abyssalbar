@@ -9,6 +9,7 @@ import {
   MESSAGE_LINE_LENGTH,
   PASSWORD_MAX,
   PASSWORD_MIN,
+  TERMINAL_DISPLAY_LINES,
   USERNAME_MAX,
   USERNAME_MIN,
 } from "../lib/constants";
@@ -27,8 +28,8 @@ type Account = {
   created_at?: string;
 };
 
-const TERMINAL_VERSION = "1.2";
-const DISPLAY_LINES = 16;
+const TERMINAL_VERSION = "1.3";
+const COMMAND_OUTPUT_LINES = 8;
 
 const isValidCredential = (value: string, minimum: number, maximum: number) =>
   value.length >= minimum && value.length <= maximum && !/\s/.test(value);
@@ -41,10 +42,8 @@ const wrapMessage = (text: string, maximum: number) => {
 
   for (const word of text.split(/\s+/)) {
     if (word.length > maximum) {
-      if (current) {
-        lines.push(current);
-        current = "";
-      }
+      if (current) lines.push(current);
+      current = "";
       for (let index = 0; index < word.length; index += maximum) {
         lines.push(word.slice(index, index + maximum));
       }
@@ -53,7 +52,7 @@ const wrapMessage = (text: string, maximum: number) => {
 
     const candidate = current ? `${current} ${word}` : word;
     if (candidate.length > maximum) {
-      lines.push(current);
+      if (current) lines.push(current);
       current = word;
     } else {
       current = candidate;
@@ -67,25 +66,28 @@ const wrapMessage = (text: string, maximum: number) => {
 const sortMessages = (messages: Message[]) =>
   [...messages].sort(
     (first, second) =>
-      new Date(first.created_at).getTime() -
-      new Date(second.created_at).getTime(),
+      new Date(first.created_at).getTime() - new Date(second.created_at).getTime(),
   );
 
 export default function Home() {
   const router = useRouter();
-  const outputRef = useRef<HTMLDivElement | null>(null);
+  const chatRef = useRef<HTMLDivElement | null>(null);
+  const commandRef = useRef<HTMLDivElement | null>(null);
 
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
-  const [terminalLines, setTerminalLines] = useState<string[]>([]);
+  const [commandOutput, setCommandOutput] = useState<string[]>([
+    "guest terminal ready.",
+    "type /help for commands.",
+  ]);
   const [account, setAccount] = useState<Account | null>(null);
   const [connected, setConnected] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  const write = (text: string) => {
+  const writeCommand = (text: string) => {
     const newLines = text.split("\n").map((line) => line || " ");
-    setTerminalLines((current) =>
-      [...current, ...newLines].slice(-MAX_MESSAGES),
+    setCommandOutput((current) =>
+      [...current, ...newLines].slice(-COMMAND_OUTPUT_LINES),
     );
   };
 
@@ -96,6 +98,7 @@ export default function Home() {
       setAccount(result.account ?? null);
     } catch (error) {
       console.error("Error loading account session:", error);
+      writeCommand("authentication error: unable to load session.");
     }
   };
 
@@ -108,6 +111,7 @@ export default function Home() {
 
     if (error) {
       console.error("Error loading messages:", error);
+      writeCommand("message error: unable to load chat.");
       return;
     }
 
@@ -141,9 +145,9 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    const output = outputRef.current;
-    if (output) output.scrollTop = output.scrollHeight;
-  }, [terminalLines, messages]);
+    if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight;
+    if (commandRef.current) commandRef.current.scrollTop = commandRef.current.scrollHeight;
+  }, [messages, commandOutput]);
 
   const authenticate = async (
     action: "sign_up" | "sign_in",
@@ -151,16 +155,12 @@ export default function Home() {
     password: string,
   ) => {
     if (!isValidCredential(username, USERNAME_MIN, USERNAME_MAX)) {
-      write(
-        `username error: use ${USERNAME_MIN}-${USERNAME_MAX} characters with no spaces.`,
-      );
+      writeCommand(`username error: use ${USERNAME_MIN}-${USERNAME_MAX} characters with no spaces.`);
       return;
     }
 
     if (!isValidCredential(password, PASSWORD_MIN, PASSWORD_MAX)) {
-      write(
-        `password error: use ${PASSWORD_MIN}-${PASSWORD_MAX} characters with no spaces.`,
-      );
+      writeCommand(`password error: use ${PASSWORD_MIN}-${PASSWORD_MAX} characters with no spaces.`);
       return;
     }
 
@@ -174,19 +174,19 @@ export default function Home() {
       const result = await response.json();
 
       if (!response.ok) {
-        write(`${action === "sign_up" ? "sign up" : "sign in"} error: ${result.error}`);
+        writeCommand(`${action === "sign_up" ? "sign up" : "sign in"} error: ${result.error}`);
         return;
       }
 
       setAccount(result.account);
-      write(
+      writeCommand(
         action === "sign_up"
           ? `account created. welcome, ${result.account.username}!`
           : `signed in. welcome back, ${result.account.username}!`,
       );
     } catch (error) {
       console.error("Authentication error:", error);
-      write("authentication error: unable to contact the server.");
+      writeCommand("authentication error: unable to contact the server.");
     } finally {
       setBusy(false);
     }
@@ -203,15 +203,15 @@ export default function Home() {
       const result = await response.json();
 
       if (!response.ok) {
-        write(`sign out error: ${result.error}`);
+        writeCommand(`sign out error: ${result.error}`);
         return;
       }
 
       setAccount(null);
-      write("signed out.");
+      writeCommand("signed out.");
     } catch (error) {
       console.error("Sign out error:", error);
-      write("sign out error: unable to contact the server.");
+      writeCommand("sign out error: unable to contact the server.");
     } finally {
       setBusy(false);
     }
@@ -224,58 +224,58 @@ export default function Home() {
 
     switch (command) {
       case "/help":
-        write(
+        writeCommand(
           "commands:\n/help\n/home\n/sign up <username> <password>\n/sign in <username> <password>\n/sign out\n/egg\n/egg 0\n/etho\n/games\n/tetris\n/clear",
         );
         return;
 
       case "/home":
         if (args.length) {
-          write("usage: /home");
+          writeCommand("usage: /home");
           return;
         }
-        write("opening home...");
+        writeCommand("opening home...");
         router.push("/");
         return;
 
       case "/egg":
         if (args.length === 0) {
-          write("opening egg...");
+          writeCommand("opening egg...");
           router.push("/egg");
           return;
         }
         if (args.length === 1 && args[0] === "0") {
-          write("opening egg 0...");
+          writeCommand("opening egg 0...");
           router.push("/egg?mode=0");
           return;
         }
-        write("usage: /egg or /egg 0");
+        writeCommand("usage: /egg or /egg 0");
         return;
 
       case "/etho":
         if (args.length) {
-          write("usage: /etho");
+          writeCommand("usage: /etho");
           return;
         }
-        write("opening etho...");
+        writeCommand("opening etho...");
         router.push("/etho");
         return;
 
       case "/games":
         if (args.length) {
-          write("usage: /games");
+          writeCommand("usage: /games");
           return;
         }
-        write("opening games...");
+        writeCommand("opening games...");
         router.push(GAME_LIBRARY_ROUTE);
         return;
 
       case "/tetris":
         if (args.length) {
-          write("usage: /tetris");
+          writeCommand("usage: /tetris");
           return;
         }
-        write("opening tetris...");
+        writeCommand("opening tetris...");
         router.push("/tetris");
         return;
 
@@ -293,14 +293,14 @@ export default function Home() {
           await signOut();
           return;
         }
-        write(
+        writeCommand(
           "usage: /sign up <username> <password>, /sign in <username> <password>, or /sign out",
         );
         return;
       }
 
       default:
-        write("unknown command. type /help.");
+        writeCommand("unknown command. type /help.");
     }
   };
 
@@ -312,23 +312,23 @@ export default function Home() {
     setInput("");
 
     if (value.toLowerCase() === "/clear") {
-      setTerminalLines([]);
+      setCommandOutput([]);
       return;
     }
 
     if (value.startsWith("/")) {
-      write(`> ${value}`);
+      writeCommand(`> ${value}`);
       await runCommand(value);
       return;
     }
 
     if (!account) {
-      write("sign in required. use /sign up or /sign in first.");
+      writeCommand("sign in required. use /sign up or /sign in first.");
       return;
     }
 
     if (!connected) {
-      write("message error: chat is still connecting.");
+      writeCommand("message error: chat is still connecting.");
       return;
     }
 
@@ -340,43 +340,38 @@ export default function Home() {
         body: JSON.stringify({ message: value }),
       });
       const result = await response.json();
-      if (!response.ok) write(`message error: ${result.error}`);
+      if (!response.ok) writeCommand(`message error: ${result.error}`);
     } catch (error) {
       console.error("Error sending message:", error);
-      write("message error: unable to contact the server.");
+      writeCommand("message error: unable to contact the server.");
     } finally {
       setBusy(false);
     }
   };
 
-  const displayLines: string[] = [];
-
-  for (const line of terminalLines) displayLines.push(line);
-  for (const message of messages) {
-    for (const line of wrapMessage(
-      `${message.username}: ${message.message}`,
-      MESSAGE_LINE_LENGTH,
-    )) {
-      displayLines.push(line);
-    }
-  }
-
-  const visibleLines = displayLines.slice(-DISPLAY_LINES);
+  const displayLines = messages.flatMap((message) =>
+    wrapMessage(`${message.username}: ${message.message}`, MESSAGE_LINE_LENGTH),
+  );
+  const visibleLines = displayLines.slice(-TERMINAL_DISPLAY_LINES);
 
   return (
     <main className={styles.page}>
       <section className={styles.terminal} aria-label="Guest Terminal">
         <header className={styles.header}>
-          <span>Guest Terminal</span>
+          <span>guest terminal</span>
           <span>v{TERMINAL_VERSION}</span>
         </header>
 
-        <div ref={outputRef} className={styles.output} aria-live="polite">
-          {visibleLines.map((line, index) => (
-            <div className={styles.line} key={`${index}-${line}`}>
-              {line || "\u00a0"}
-            </div>
-          ))}
+        <div ref={chatRef} className={styles.chatOutput} aria-live="polite">
+          {visibleLines.length ? (
+            visibleLines.map((line, index) => (
+              <div className={styles.line} key={`${index}-${line}`}>
+                {line || "\u00a0"}
+              </div>
+            ))
+          ) : (
+            <div className={styles.emptyLine}>waiting for messages...</div>
+          )}
         </div>
 
         <form className={styles.inputBar} onSubmit={handleSubmit}>
@@ -393,6 +388,14 @@ export default function Home() {
             disabled={busy}
           />
         </form>
+
+        <div ref={commandRef} className={styles.commandOutput} aria-label="Command output">
+          {commandOutput.map((line, index) => (
+            <div className={styles.commandLine} key={`${index}-${line}`}>
+              {line || "\u00a0"}
+            </div>
+          ))}
+        </div>
 
         <div className={styles.hintBar} aria-label="Terminal command hint">
           type /help or /sign up &lt;username&gt; &lt;password&gt;
