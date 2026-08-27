@@ -27,7 +27,7 @@ type Account = {
   created_at?: string;
 };
 
-const TERMINAL_VERSION = "1.0";
+const TERMINAL_VERSION = "1.1";
 const DISPLAY_LINES = 16;
 
 const isValidCredential = (value: string, minimum: number, maximum: number) =>
@@ -389,9 +389,7 @@ export default function Home() {
         </form>
 
         <div className={styles.hintBar} aria-label="Terminal command hint">
-          {account
-            ? "Type /Help if you're signed in."
-            : "Type /Sign Up <username> <password> if you're not signed in."}
+          Type /Help or /Sign Up &lt;username&gt; &lt;password&gt;
         </div>
       </section>
     </main>
