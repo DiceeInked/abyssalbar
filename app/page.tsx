@@ -27,7 +27,7 @@ type Account = {
   created_at?: string;
 };
 
-const TERMINAL_VERSION = "1.1";
+const TERMINAL_VERSION = "1.2";
 const DISPLAY_LINES = 16;
 
 const isValidCredential = (value: string, minimum: number, maximum: number) =>
@@ -152,14 +152,14 @@ export default function Home() {
   ) => {
     if (!isValidCredential(username, USERNAME_MIN, USERNAME_MAX)) {
       write(
-        `Username error: use ${USERNAME_MIN}-${USERNAME_MAX} characters with no spaces.`,
+        `username error: use ${USERNAME_MIN}-${USERNAME_MAX} characters with no spaces.`,
       );
       return;
     }
 
     if (!isValidCredential(password, PASSWORD_MIN, PASSWORD_MAX)) {
       write(
-        `Password error: use ${PASSWORD_MIN}-${PASSWORD_MAX} characters with no spaces.`,
+        `password error: use ${PASSWORD_MIN}-${PASSWORD_MAX} characters with no spaces.`,
       );
       return;
     }
@@ -174,19 +174,19 @@ export default function Home() {
       const result = await response.json();
 
       if (!response.ok) {
-        write(`${action === "sign_up" ? "Sign up" : "Sign in"} error: ${result.error}`);
+        write(`${action === "sign_up" ? "sign up" : "sign in"} error: ${result.error}`);
         return;
       }
 
       setAccount(result.account);
       write(
         action === "sign_up"
-          ? `Account created. Welcome, ${result.account.username}!`
-          : `Signed in. Welcome back, ${result.account.username}!`,
+          ? `account created. welcome, ${result.account.username}!`
+          : `signed in. welcome back, ${result.account.username}!`,
       );
     } catch (error) {
       console.error("Authentication error:", error);
-      write("Authentication error: unable to contact the server.");
+      write("authentication error: unable to contact the server.");
     } finally {
       setBusy(false);
     }
@@ -203,15 +203,15 @@ export default function Home() {
       const result = await response.json();
 
       if (!response.ok) {
-        write(`Sign out error: ${result.error}`);
+        write(`sign out error: ${result.error}`);
         return;
       }
 
       setAccount(null);
-      write("Signed out.");
+      write("signed out.");
     } catch (error) {
       console.error("Sign out error:", error);
-      write("Sign out error: unable to contact the server.");
+      write("sign out error: unable to contact the server.");
     } finally {
       setBusy(false);
     }
@@ -225,51 +225,57 @@ export default function Home() {
     switch (command) {
       case "/help":
         write(
-          "Commands:\n/help\n/home\n/sign up <username> <password>\n/sign in <username> <password>\n/sign out\n/egg\n/egg 0\n/etho\n/games\n/tetris\n/clear",
+          "commands:\n/help\n/home\n/sign up <username> <password>\n/sign in <username> <password>\n/sign out\n/egg\n/egg 0\n/etho\n/games\n/tetris\n/clear",
         );
         return;
 
       case "/home":
         if (args.length) {
-          write("Usage: /home");
+          write("usage: /home");
           return;
         }
+        write("opening home...");
         router.push("/");
         return;
 
       case "/egg":
         if (args.length === 0) {
+          write("opening egg...");
           router.push("/egg");
           return;
         }
         if (args.length === 1 && args[0] === "0") {
+          write("opening egg 0...");
           router.push("/egg?mode=0");
           return;
         }
-        write("Usage: /egg or /egg 0");
+        write("usage: /egg or /egg 0");
         return;
 
       case "/etho":
         if (args.length) {
-          write("Usage: /etho");
+          write("usage: /etho");
           return;
         }
+        write("opening etho...");
         router.push("/etho");
         return;
 
       case "/games":
         if (args.length) {
-          write("Usage: /games");
+          write("usage: /games");
           return;
         }
+        write("opening games...");
         router.push(GAME_LIBRARY_ROUTE);
         return;
 
       case "/tetris":
         if (args.length) {
-          write("Usage: /tetris");
+          write("usage: /tetris");
           return;
         }
+        write("opening tetris...");
         router.push("/tetris");
         return;
 
@@ -288,13 +294,13 @@ export default function Home() {
           return;
         }
         write(
-          "Usage: /sign up <username> <password>, /sign in <username> <password>, or /sign out",
+          "usage: /sign up <username> <password>, /sign in <username> <password>, or /sign out",
         );
         return;
       }
 
       default:
-        write("Unknown command. Type /help.");
+        write("unknown command. type /help.");
     }
   };
 
@@ -317,12 +323,12 @@ export default function Home() {
     }
 
     if (!account) {
-      write("Sign in required. Use /sign up or /sign in first.");
+      write("sign in required. use /sign up or /sign in first.");
       return;
     }
 
     if (!connected) {
-      write("Message error: chat is still connecting.");
+      write("message error: chat is still connecting.");
       return;
     }
 
@@ -334,10 +340,10 @@ export default function Home() {
         body: JSON.stringify({ message: value }),
       });
       const result = await response.json();
-      if (!response.ok) write(`Message error: ${result.error}`);
+      if (!response.ok) write(`message error: ${result.error}`);
     } catch (error) {
       console.error("Error sending message:", error);
-      write("Message error: unable to contact the server.");
+      write("message error: unable to contact the server.");
     } finally {
       setBusy(false);
     }
@@ -380,7 +386,7 @@ export default function Home() {
             type="text"
             value={input}
             onChange={(event) => setInput(event.target.value)}
-            placeholder="Message or /Help"
+            placeholder="message or /help"
             autoComplete="off"
             spellCheck={false}
             aria-label="Terminal input"
@@ -389,7 +395,7 @@ export default function Home() {
         </form>
 
         <div className={styles.hintBar} aria-label="Terminal command hint">
-          Type /Help or /Sign Up &lt;username&gt; &lt;password&gt;
+          type /help or /sign up &lt;username&gt; &lt;password&gt;
         </div>
       </section>
     </main>
