@@ -380,13 +380,19 @@ export default function Home() {
             type="text"
             value={input}
             onChange={(event) => setInput(event.target.value)}
-            placeholder={account ? "message or /command" : "/sign up or /help"}
+            placeholder="Message or /Help"
             autoComplete="off"
             spellCheck={false}
             aria-label="Terminal input"
             disabled={busy}
           />
         </form>
+
+        <div className={styles.hintBar} aria-label="Terminal command hint">
+          {account
+            ? "Type /Help if you're signed in."
+            : "Type /Sign Up <username> <password> if you're not signed in."}
+        </div>
       </section>
     </main>
   );
