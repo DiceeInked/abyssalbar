@@ -396,10 +396,6 @@ export default function Home() {
             </div>
           ))}
         </div>
-
-        <div className={styles.hintBar} aria-label="Terminal command hint">
-          type /help or /sign up &lt;username&gt; &lt;password&gt;
-        </div>
       </section>
     </main>
   );
