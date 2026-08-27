@@ -1,6 +1,7 @@
 .page {
   --terminal-color: #00FFC8;
   --background: #000;
+  position: relative;
   min-height: 100vh;
   min-height: 100dvh;
   display: grid;
@@ -11,6 +12,19 @@
   background: var(--background);
   color: var(--terminal-color);
   font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.siteVersion {
+  position: fixed;
+  top: 12px;
+  right: 16px;
+  z-index: 10;
+  color: var(--terminal-color);
+  font-size: 12px;
+  line-height: 1.5;
+  letter-spacing: 0.04em;
+  text-transform: lowercase;
+  pointer-events: none;
 }
 
 .terminal {
@@ -103,23 +117,24 @@
 }
 
 .commandOutput {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   min-height: 0;
-  margin: 12px 14px 0;
+  max-height: 45%;
+  margin: 12px 14px 14px;
   padding: 9px 10px;
   overflow-y: auto;
   overflow-x: hidden;
   border: 1px solid rgba(0, 255, 200, 0.7);
   scrollbar-color: var(--terminal-color) #000;
   scrollbar-width: thin;
-  font-size: 12px;
-  line-height: 1.45;
+  font-size: 14px;
+  line-height: 1.5;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
 
 .commandLine {
-  min-height: 1.45em;
+  min-height: 1.5em;
 }
 
 .hintBar {
@@ -139,6 +154,12 @@
 @media (max-width: 600px) {
   .page {
     padding: 8px;
+  }
+
+  .siteVersion {
+    top: 8px;
+    right: 10px;
+    font-size: 10px;
   }
 
   .terminal {
@@ -169,8 +190,12 @@
   }
 
   .commandOutput {
-    margin: 10px 10px 0;
-    font-size: 11px;
+    margin: 10px 10px 10px;
+    font-size: 12px;
+  }
+
+  .commandLine {
+    min-height: 1.5em;
   }
 
   .hintBar {
