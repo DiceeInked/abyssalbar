@@ -4,44 +4,63 @@ import { useEffect, useState } from "react";
 
 const CHARACTERS =
   "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-/\\[]{}()<>:;,.=+*#@$%&?!|~^";
+
 const MIN_LINE_LENGTH = 16;
 const MAX_LINE_LENGTH = 256;
+const ZERO_MODE_LINE_LENGTH = 256;
 const VISIBLE_LINES = 180;
 const BATCH_SIZE = 12;
+const REFRESH_INTERVAL_MS = 45;
 
-const makeLine = () => {
-  const length =
-    Math.floor(
-      Math.random() * (MAX_LINE_LENGTH - MIN_LINE_LENGTH + 1)
-    ) + MIN_LINE_LENGTH;
-
+const makeLine = (length: number, spaced: boolean) => {
   let line = "";
 
   for (let index = 0; index < length; index += 1) {
+    if (index > 0 && spaced) {
+      line += " ";
+    }
+
     line += CHARACTERS[Math.floor(Math.random() * CHARACTERS.length)];
   }
 
   return line;
 };
 
-const makeLines = (count: number) =>
-  Array.from({ length: count }, makeLine);
-
 export default function Egg() {
-  const [lines, setLines] = useState<string[]>(() =>
-    makeLines(VISIBLE_LINES)
-  );
+  const [zeroMode, setZeroMode] = useState(false);
+  const [lines, setLines] = useState<string[]>([]);
 
   useEffect(() => {
+    const mode = new URLSearchParams(window.location.search).get("mode");
+    setZeroMode(mode === "0");
+  }, []);
+
+  useEffect(() => {
+    const getLineLength = () =>
+      zeroMode
+        ? ZERO_MODE_LINE_LENGTH
+        : Math.floor(
+            Math.random() * (MAX_LINE_LENGTH - MIN_LINE_LENGTH + 1)
+          ) + MIN_LINE_LENGTH;
+
+    const initialLines = Array.from({ length: VISIBLE_LINES }, () =>
+      makeLine(getLineLength(), zeroMode)
+    );
+
+    setLines(initialLines);
+
     const interval = window.setInterval(() => {
-      setLines((current) => [
-        ...current.slice(BATCH_SIZE),
-        ...makeLines(BATCH_SIZE),
-      ]);
-    }, 45);
+      setLines((current) => {
+        const newLines = Array.from({ length: BATCH_SIZE }, () =>
+          makeLine(getLineLength(), zeroMode)
+        );
+
+        return [...current.slice(BATCH_SIZE), ...newLines];
+      });
+    }, REFRESH_INTERVAL_MS);
 
     return () => window.clearInterval(interval);
-  }, []);
+  }, [zeroMode]);
 
   return (
     <main
