@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import styles from "../page.module.css";
 import { COMMAND_HELP } from "../../lib/commands";
@@ -14,19 +14,23 @@ type GameState = { board: Board; piece: Piece; score: number; lines: number; gam
 
 const BOARD_WIDTH = 32;
 const BOARD_HEIGHT = 16;
-const MOBILE_WIDTH = 16;
-const MOBILE_HEIGHT = 32;
 const PLAYER_WIDTH = 16;
 const PLAYER_HEIGHT = 16;
 const TERMINAL_VERSION = "1.6";
 const COMMAND_OUTPUT_LINES = 8;
-const TETRIS_CONTROLS = (twoPlayer: boolean, mobile: boolean) => [
-  mobile ? "tap: rotate clockwise · drag: move · swipe down: drop" : twoPlayer ? "p1: wasd · p2: arrow keys" : "arrows / wasd: move · ↑ / w: rotate · ↓ / s: drop",
+const TETRIS_CONTROLS = (twoPlayer: boolean) => [
+  twoPlayer ? "p1: wasd · p2: arrow keys" : "arrows / wasd: move · ↑ / w: rotate · ↓ / s: drop",
   "> restart",
 ];
 
 const PIECES: Record<string, Shape> = {
-  I: [[1, 1, 1, 1]], O: [[1, 1], [1, 1]], T: [[0, 1, 0], [1, 1, 1]], S: [[0, 1, 1], [1, 1, 0]], Z: [[1, 1, 0], [0, 1, 1]], J: [[1, 0, 0], [1, 1, 1]], L: [[0, 0, 1], [1, 1, 1]],
+  I: [[1, 1, 1, 1]],
+  O: [[1, 1], [1, 1]],
+  T: [[0, 1, 0], [1, 1, 1]],
+  S: [[0, 1, 1], [1, 1, 0]],
+  Z: [[1, 1, 0], [0, 1, 1]],
+  J: [[1, 0, 0], [1, 1, 1]],
+  L: [[0, 0, 1], [1, 1, 1]],
 };
 const TYPES = Object.keys(PIECES);
 const SCORE_VALUES = [0, 100, 300, 500, 800];
@@ -36,7 +40,8 @@ const createPiece = (width: number): Piece => { const type = TYPES[Math.floor(Ma
 const createGame = (width: number, height: number): GameState => ({ board: emptyBoard(width, height), piece: createPiece(width), score: 0, lines: 0, gameOver: false });
 const rotateShape = (shape: Shape): Shape => shape[0].map((_, column) => shape.map((row) => row[column]).reverse());
 const collides = (board: Board, piece: Piece, shape = piece.shape, x = piece.x, y = piece.y) => {
-  const height = board.length; const width = board[0].length;
+  const height = board.length;
+  const width = board[0].length;
   for (let row = 0; row < shape.length; row += 1) for (let column = 0; column < shape[row].length; column += 1) {
     if (!shape[row][column]) continue;
     const boardX = x + column; const boardY = y + row;
@@ -77,52 +82,25 @@ const renderBoard = (game: GameState): Board => {
 };
 const gameCells = (board: Board, keyPrefix: string) => board.flatMap((row, y) => row.map((cell, x) => <div key={`${keyPrefix}-${x}-${y}`} className={`tetris-cell${cell ? " tetris-cell-filled" : ""}${cell === "ghost" ? " tetris-cell-ghost" : ""}`} />));
 
-function TouchBoard({ game, onMove, onRotate, onDrop, keyPrefix }: { game: GameState; onMove: (dx: number) => void; onRotate: () => void; onDrop: () => void; keyPrefix: string }) {
-  const start = useRef<{ x: number; y: number; movedX: number; dropped: boolean } | null>(null);
-  const boardRef = useRef<HTMLDivElement | null>(null);
-  const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
-    if (event.pointerType === "mouse") return;
-    event.preventDefault(); boardRef.current?.setPointerCapture(event.pointerId);
-    start.current = { x: event.clientX, y: event.clientY, movedX: 0, dropped: false };
-  };
-  const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
-    const gesture = start.current; if (!gesture || gesture.dropped) return;
-    event.preventDefault(); const dx = event.clientX - gesture.x; const dy = event.clientY - gesture.y;
-    if (dy > 45 && dy > Math.abs(dx) * 1.25) { gesture.dropped = true; onDrop(); return; }
-    const rect = boardRef.current?.getBoundingClientRect(); if (!rect) return;
-    const columnsMoved = Math.trunc((dx / rect.width) * game.board[0].length); const delta = columnsMoved - gesture.movedX;
-    if (delta) { onMove(delta); gesture.movedX += delta; }
-  };
-  const handlePointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
-    const gesture = start.current; if (!gesture) return;
-    event.preventDefault(); const dx = event.clientX - gesture.x; const dy = event.clientY - gesture.y;
-    if (!gesture.dropped && Math.abs(dx) < 10 && Math.abs(dy) < 10) onRotate(); start.current = null;
-  };
-  return <div ref={boardRef} className="tetris-touch-board" onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onPointerCancel={() => { start.current = null; }}><div className="tetris-board tetris-board-mobile">{gameCells(renderBoard(game), keyPrefix)}</div></div>;
-}
-
 function TetrisTerminal() {
-  const router = useRouter(); const searchParams = useSearchParams();
-  const mode = searchParams.get("mode"); const twoPlayer = mode === "2"; const mobile = mode === "m" || mode === "mobile";
-  const singleWidth = mobile ? MOBILE_WIDTH : BOARD_WIDTH; const singleHeight = mobile ? MOBILE_HEIGHT : BOARD_HEIGHT;
-  const [single, setSingle] = useState<GameState>(() => createGame(singleWidth, singleHeight));
+  const router = useRouter(); const searchParams = useSearchParams(); const twoPlayer = searchParams.get("mode") === "2";
+  const [single, setSingle] = useState<GameState>(() => createGame(BOARD_WIDTH, BOARD_HEIGHT));
   const [playerOne, setPlayerOne] = useState<GameState>(() => createGame(PLAYER_WIDTH, PLAYER_HEIGHT));
   const [playerTwo, setPlayerTwo] = useState<GameState>(() => createGame(PLAYER_WIDTH, PLAYER_HEIGHT));
-  const [input, setInput] = useState(""); const [commandOutput, setCommandOutput] = useState<string[]>(() => TETRIS_CONTROLS(twoPlayer, mobile));
+  const [input, setInput] = useState(""); const [commandOutput, setCommandOutput] = useState<string[]>(() => TETRIS_CONTROLS(twoPlayer));
   const writeCommand = useCallback((text: string) => setCommandOutput(text.split("\n").map((line) => line || " ").slice(-COMMAND_OUTPUT_LINES)), []);
-  const reset = useCallback(() => { if (twoPlayer) { setPlayerOne(createGame(PLAYER_WIDTH, PLAYER_HEIGHT)); setPlayerTwo(createGame(PLAYER_WIDTH, PLAYER_HEIGHT)); } else setSingle(createGame(singleWidth, singleHeight)); }, [twoPlayer, singleWidth, singleHeight]);
-  const showControls = useCallback(() => setCommandOutput(TETRIS_CONTROLS(twoPlayer, mobile)), [twoPlayer, mobile]);
+  const reset = useCallback(() => { if (twoPlayer) { setPlayerOne(createGame(PLAYER_WIDTH, PLAYER_HEIGHT)); setPlayerTwo(createGame(PLAYER_WIDTH, PLAYER_HEIGHT)); } else setSingle(createGame(BOARD_WIDTH, BOARD_HEIGHT)); }, [twoPlayer]);
+  const showControls = useCallback(() => setCommandOutput(TETRIS_CONTROLS(twoPlayer)), [twoPlayer]);
   const restart = useCallback(() => { reset(); showControls(); }, [reset, showControls]);
   useEffect(() => { showControls(); }, [showControls]);
   const runCommand = useCallback((value: string) => {
-    const parts = value.trim().split(/\s+/); const command = parts[0]?.toLowerCase(); const arg = parts[1]?.toLowerCase();
+    const parts = value.trim().split(/\s+/); const command = parts[0]?.toLowerCase(); const arg = parts[1];
     if (command === "/help" && parts.length === 1) return void writeCommand(COMMAND_HELP);
     if (command === "/clear" && parts.length === 1) return void showControls();
     if (command === "/tetris" && arg === "restart" && parts.length === 2) return void restart();
     if (command === "/home" && parts.length === 1) { writeCommand("opening home..."); router.push("/"); return; }
     if (command === "/games" && parts.length === 1) { writeCommand("opening games..."); router.push("/gametonics"); return; }
-    if (command === "/tetris" && (!arg || arg === "m" || arg === "mobile") && parts.length <= 2) { writeCommand("opening tetris mobile..."); router.push("/tetris?mode=m"); return; }
-    if (command === "/tetris" && arg === "1" && parts.length === 2) { writeCommand("opening tetris 1..."); router.push("/tetris?mode=1"); return; }
+    if (command === "/tetris" && (!arg || arg === "1") && parts.length <= 2) { writeCommand("opening tetris 1..."); router.push("/tetris?mode=1"); return; }
     if (command === "/tetris" && arg === "2" && parts.length === 2) { writeCommand("opening tetris 2..."); router.push("/tetris?mode=2"); return; }
     if (command === "/egg" && (!arg || arg === "0" || arg === "1") && parts.length <= 2) { writeCommand(`opening egg${arg ? ` ${arg}` : ""}...`); router.push(arg ? `/egg?mode=${arg}` : "/egg"); return; }
     if (command === "/etho" && parts.length === 1) { writeCommand("opening etho..."); router.push("/etho"); return; }
@@ -132,8 +110,11 @@ function TetrisTerminal() {
   useEffect(() => { const timer = window.setInterval(() => { if (twoPlayer) { setPlayerOne((game) => advance(game, 0, 1)); setPlayerTwo((game) => advance(game, 0, 1)); } else setSingle((game) => advance(game, 0, 1)); }, 1000); return () => window.clearInterval(timer); }, [twoPlayer]);
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement | null; if (target?.matches("input, textarea, select, [contenteditable=\"true\"]")) return;
-      const key = event.key.toLowerCase(); const controlled = ["arrowleft", "arrowright", "arrowup", "arrowdown", "a", "s", "d", "w"].includes(key); if (!controlled) return;
+      const target = event.target as HTMLElement | null;
+      if (target?.matches("input, textarea, select, [contenteditable=\"true\"]")) return;
+      const key = event.key.toLowerCase();
+      const controlled = ["arrowleft", "arrowright", "arrowup", "arrowdown", "a", "s", "d", "w"].includes(key);
+      if (!controlled) return;
       event.preventDefault();
       if (twoPlayer) {
         if (key === "a") setPlayerOne((game) => advance(game, -1, 0)); else if (key === "d") setPlayerOne((game) => advance(game, 1, 0)); else if (key === "s") setPlayerOne(hardDropGame); else if (key === "w") setPlayerOne(rotateGame);
@@ -148,10 +129,10 @@ function TetrisTerminal() {
   return (
     <main className={styles.page}>
       <div className={styles.siteVersion} aria-label="Site version">site v{SITE_VERSION}</div>
-      <section className={`${styles.terminal} tetris-terminal ${mobile ? "tetris-mobile-mode" : ""}`} aria-label="Tetris">
+      <section className={`${styles.terminal} tetris-terminal`} aria-label="Tetris">
         <header className={styles.header}><span>guest terminal</span><span>v{TERMINAL_VERSION}</span></header>
-        <div className="tetris-play-area" aria-label={twoPlayer ? "Two-player Tetris board" : mobile ? "Mobile Tetris board" : "Tetris board"}>
-          {!twoPlayer ? mobile ? <TouchBoard game={single} onMove={(dx) => setSingle((game) => advance(game, dx, 0))} onRotate={() => setSingle(rotateGame)} onDrop={() => setSingle(hardDropGame)} keyPrefix="mobile" /> : <div className="tetris-board tetris-board-single">{gameCells(singleBoard, "single")}</div> : <div className="tetris-dual-board">
+        <div className="tetris-play-area" aria-label={twoPlayer ? "Two-player Tetris board" : "Tetris board"}>
+          {!twoPlayer ? <div className="tetris-board tetris-board-single">{gameCells(singleBoard, "single")}</div> : <div className="tetris-dual-board">
             <div className="tetris-player-panel"><div className="tetris-board tetris-board-player">{gameCells(boardOne, "one")}</div><div className="tetris-player-label">wasd</div><div className="tetris-player-score">score: {playerOne.score} · lines: {playerOne.lines}</div></div>
             <div className="tetris-divider" aria-hidden="true" />
             <div className="tetris-player-panel"><div className="tetris-board tetris-board-player">{gameCells(boardTwo, "two")}</div><div className="tetris-player-label">arrows</div><div className="tetris-player-score">score: {playerTwo.score} · lines: {playerTwo.lines}</div></div>
@@ -161,19 +142,6 @@ function TetrisTerminal() {
         <form className={styles.inputBar} onSubmit={submit}><span className={styles.prompt} aria-hidden="true">&gt;</span><input className={styles.input} type="text" value={input} onChange={(event) => setInput(event.target.value)} placeholder="message or /help" autoComplete="off" spellCheck={false} aria-label="Terminal input" /></form>
         <div className={styles.commandOutput} aria-label="Command output">{commandOutput.map((line, index) => <div className={styles.commandLine} key={`${index}-${line}`}>{line === "> restart" ? <><span className="terminal-link-prefix">&gt;</span>{" "}<button className="terminal-text-link" type="button" onClick={restart}>restart</button></> : line || "\u00a0"}</div>)}</div>
       </section>
-      <style jsx global>{`
-        .tetris-play-area { position: relative; }
-        .tetris-game-over { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); z-index: 5; margin: 0; pointer-events: none; }
-        .tetris-mobile-mode .tetris-play-area { width: min(calc(100% - 20px), calc((100dvh - 280px) / 2)); height: auto; aspect-ratio: 1 / 2; margin: 0 auto; flex: 0 0 auto; align-self: center; }
-        .tetris-mobile-mode .tetris-touch-board, .tetris-mobile-mode .tetris-board-mobile { width: 100%; height: 100%; aspect-ratio: 1 / 2; }
-        .tetris-mobile-mode .tetris-touch-board { touch-action: none; user-select: none; -webkit-user-select: none; }
-        @media (max-width: 600px) {
-          .tetris-mobile-mode .tetris-play-area { width: min(calc(100% - 20px), calc((100dvh - 280px) / 2)); }
-          .tetris-mobile-mode .commandOutput { max-height: 22%; margin: 8px 10px 10px; font-size: 16px; line-height: 1.5; }
-          .tetris-mobile-mode .inputBar { flex-basis: 48px; margin: 0 10px; }
-          .tetris-mobile-mode .input { font-size: 16px; }
-        }
-      `}</style>
     </main>
   );
 }
