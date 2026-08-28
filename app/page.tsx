@@ -3,7 +3,7 @@
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "../lib/supabase";
-import { EGG_COMMANDS, MAIN_COMMANDS, PLAY_USAGE, SIGN_COMMANDS, TETRIS_COMMANDS, parsePlayCommand } from "../lib/commands";
+import { COMMAND_DEFINITIONS, type CommandDefinition, findCommandDefinition, getCommandChildren, PLAY_USAGE, parsePlayCommand } from "../lib/commands";
 import {
   GAME_LIBRARY_ROUTE,
   MAX_MESSAGES,
@@ -19,7 +19,7 @@ import styles from "./page.module.css";
 
 type Message = { id: number; username: string; message: string; created_at: string };
 type Account = { id: string; username: string; created_at?: string };
-type MenuEntry = { label: string; command?: string; submenu?: string; syntax?: string };
+type HelpSelection = { type: "confirm" | "syntax"; command: string; syntax?: string };
 
 const TERMINAL_VERSION = "1.6";
 const COMMAND_OUTPUT_LINES = 8;
@@ -42,18 +42,7 @@ const wrapMessage = (text: string, maximum: number) => {
   return lines.length ? lines : [""];
 };
 const sortMessages = (messages: Message[]) => [...messages].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-
-const menuEntries = (path: string[]): MenuEntry[] => {
-  if (path[0] === "sign") return SIGN_COMMANDS.map((command) => ({ label: command, command, syntax: command === "/sign out" ? undefined : `${command} <username> <password>` }));
-  if (path[0] === "egg") return EGG_COMMANDS.map((command) => ({ label: command, command }));
-  if (path[0] === "tetris") return TETRIS_COMMANDS.map((command) => ({ label: command, command }));
-  return MAIN_COMMANDS.map((command) => ({
-    label: command,
-    command: command === "/help" ? undefined : command,
-    submenu: command === "/sign" ? "sign" : command === "/egg" ? "egg" : command === "/tetris" ? "tetris" : undefined,
-    syntax: command === "/play" ? PLAY_USAGE : undefined,
-  }));
-};
+const getHelpEntries = (path: string[]) => path.length ? getCommandChildren(path[path.length - 1]) : COMMAND_DEFINITIONS;
 
 export default function Home() {
   const router = useRouter();
@@ -66,6 +55,8 @@ export default function Home() {
   const [connected, setConnected] = useState(false);
   const [busy, setBusy] = useState(false);
   const [helpPath, setHelpPath] = useState<string[] | null>(null);
+  const [helpSelection, setHelpSelection] = useState<HelpSelection | null>(null);
+
   const writeCommand = (text: string) => setCommandOutput(text.split("\n").map((line) => line || " ").slice(-COMMAND_OUTPUT_LINES));
   const loadAccount = async () => {
     try { const response = await fetch("/api/auth", { cache: "no-store" }); const result = await response.json(); setAccount(result.account ?? null); }
@@ -76,13 +67,19 @@ export default function Home() {
     if (error) { console.error("Error loading chat messages:", error); writeCommand("message error: unable to load chat."); return; }
     if (data) setMessages(sortMessages(data.reverse()));
   };
+
   useEffect(() => {
     let mounted = true;
     void Promise.all([loadAccount(), loadMessages()]);
     const channel = supabase.channel("guest-terminal-chat").on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, () => { if (mounted) void loadMessages(); }).subscribe((status) => { if (!mounted) return; setConnected(status === "SUBSCRIBED"); if (status === "SUBSCRIBED") void loadMessages(); });
     return () => { mounted = false; void supabase.removeChannel(channel); };
   }, []);
-  useEffect(() => { if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight; if (commandRef.current) commandRef.current.scrollTop = commandRef.current.scrollHeight; }, [messages, commandOutput]);
+
+  useEffect(() => {
+    if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight;
+    if (commandRef.current) commandRef.current.scrollTop = commandRef.current.scrollHeight;
+  }, [messages, commandOutput, helpPath, helpSelection]);
+
   const authenticate = async (action: "sign_up" | "sign_in", username: string, password: string) => {
     if (!isValidCredential(username, USERNAME_MIN, USERNAME_MAX)) return void writeCommand(`username error: use ${USERNAME_MIN}-${USERNAME_MAX} characters with no spaces.`);
     if (!isValidCredential(password, PASSWORD_MIN, PASSWORD_MAX)) return void writeCommand(`password error: use ${PASSWORD_MIN}-${PASSWORD_MAX} characters with no spaces.`);
@@ -96,6 +93,7 @@ export default function Home() {
     } catch (error) { console.error("Authentication error:", error); writeCommand("authentication error: unable to contact the server."); }
     finally { setBusy(false); }
   };
+
   const signOut = async () => {
     setBusy(true);
     try {
@@ -106,58 +104,59 @@ export default function Home() {
     } catch (error) { console.error("Sign out error:", error); writeCommand("sign out error: unable to contact the server."); }
     finally { setBusy(false); }
   };
+
   const runCommand = async (value: string) => {
-    const parts = splitCommand(value); const command = parts[0]?.toLowerCase(); const args = parts.slice(1);
-    switch (command) {
-      case "/help": setHelpPath([]); return;
-      case "/home": if (args.length) return void writeCommand("usage: /home"); writeCommand("opening home..."); router.push("/"); return;
-      case "/egg":
-        if (!args.length) { writeCommand("opening egg..."); router.push("/egg"); return; }
-        if (args.length === 1 && (args[0] === "0" || args[0] === "1")) { writeCommand(`opening egg ${args[0]}...`); router.push(`/egg?mode=${args[0]}`); return; }
-        writeCommand("usage: /egg, /egg 0, or /egg 1"); return;
-      case "/etho": if (args.length) return void writeCommand("usage: /etho"); writeCommand("opening etho..."); router.push("/etho"); return;
-      case "/games": if (args.length) return void writeCommand("usage: /games"); writeCommand("opening games..."); router.push(GAME_LIBRARY_ROUTE); return;
-      case "/tetris":
-        if (!args.length || (args.length === 1 && args[0] === "1")) { writeCommand("opening tetris 1..."); router.push("/tetris?mode=1"); return; }
-        if (args.length === 1 && args[0] === "2") { writeCommand("opening tetris 2..."); router.push("/tetris?mode=2"); return; }
-        if (args.length === 1 && args[0] === "restart") { writeCommand("restart requested..."); return; }
-        writeCommand("usage: /tetris, /tetris 1, or /tetris 2"); return;
-      case "/play": { const gameName = parsePlayCommand(value); if (!gameName) { writeCommand(PLAY_USAGE); return; } writeCommand(`opening ${gameName}...`); router.push(`/play/${encodeURIComponent(gameName)}`); return; }
-      case "/sign": {
-        const action = args[0]?.toLowerCase();
-        if (action === "up" && args.length === 3) { await authenticate("sign_up", args[1], args[2]); return; }
-        if (action === "in" && args.length === 3) { await authenticate("sign_in", args[1], args[2]); return; }
-        if (action === "out" && args.length === 1) { await signOut(); return; }
-        writeCommand("usage: /sign up <username> <password>, /sign in <username> <password>, or /sign out"); return;
-      }
+    const normalized = value.trim();
+    const parts = splitCommand(normalized);
+    const definition = findCommandDefinition(normalized);
+    const args = definition ? parts.slice(splitCommand(definition.command).length) : [];
+    const action = definition?.action;
+    switch (action) {
+      case "help": if (parts.length !== 1) return void writeCommand("usage: /help"); setHelpSelection(null); setHelpPath([]); return;
+      case "home": if (args.length) return void writeCommand("usage: /home"); writeCommand("opening home..."); router.push("/"); return;
+      case "egg": if (args.length) return void writeCommand("usage: /egg"); writeCommand("opening egg..."); router.push("/egg"); return;
+      case "egg_0": if (args.length) return void writeCommand("usage: /egg 0"); writeCommand("opening egg 0..."); router.push("/egg?mode=0"); return;
+      case "egg_1": if (args.length) return void writeCommand("usage: /egg 1"); writeCommand("opening egg 1..."); router.push("/egg?mode=1"); return;
+      case "etho": if (args.length) return void writeCommand("usage: /etho"); writeCommand("opening etho..."); router.push("/etho"); return;
+      case "games": if (args.length) return void writeCommand("usage: /games"); writeCommand("opening games..."); router.push(GAME_LIBRARY_ROUTE); return;
+      case "tetris_1": if (args.length) return void writeCommand("usage: /tetris 1"); writeCommand("opening tetris 1..."); router.push("/tetris?mode=1"); return;
+      case "tetris_2": if (args.length) return void writeCommand("usage: /tetris 2"); writeCommand("opening tetris 2..."); router.push("/tetris?mode=2"); return;
+      case "tetris_restart": if (args.length) return void writeCommand("usage: /tetris restart"); writeCommand("restart requested..."); return;
+      case "play": { const gameName = parsePlayCommand(normalized); if (!gameName) return void writeCommand(PLAY_USAGE); writeCommand(`opening ${gameName}...`); router.push(`/play/${encodeURIComponent(gameName)}`); return; }
+      case "sign_up": if (args.length !== 2) return void writeCommand("usage: /sign up <username> <password>"); await authenticate("sign_up", args[0], args[1]); return;
+      case "sign_in": if (args.length !== 2) return void writeCommand("usage: /sign in <username> <password>"); await authenticate("sign_in", args[0], args[1]); return;
+      case "sign_out": if (args.length) return void writeCommand("usage: /sign out"); await signOut(); return;
+      case "clear": if (args.length) return void writeCommand("usage: /clear"); setCommandOutput([]); setHelpPath(null); setHelpSelection(null); return;
       default: writeCommand("unknown command. type /help.");
     }
   };
-  const executeMenuCommand = async (command: string) => {
-    setHelpPath(null);
-    await runCommand(command);
+
+  const executeMenuCommand = async (command: string) => { setHelpSelection(null); await runCommand(command); };
+  const openHelpEntry = (entry: CommandDefinition) => {
+    if (entry.children?.length) { setHelpSelection(null); setHelpPath([...(helpPath ?? []), entry.command]); return; }
+    if (entry.syntax) { setHelpSelection({ type: "syntax", command: entry.command, syntax: entry.syntax }); return; }
+    setHelpSelection({ type: "confirm", command: entry.command });
   };
-  const openHelpEntry = (entry: MenuEntry) => {
-    if (entry.submenu) { setHelpPath([entry.submenu]); return; }
-    if (entry.syntax) { setHelpPath(["syntax", entry.command ?? entry.label]); return; }
-    if (entry.command) { setHelpPath(["confirm", entry.command]); }
+  const goBack = () => {
+    if (helpSelection) { setHelpSelection(null); return; }
+    if (!helpPath?.length) return;
+    const previousPath = helpPath.slice(0, -1);
+    setHelpPath(previousPath);
   };
+
   const renderHelp = () => {
-    if (!helpPath) return null;
-    if (helpPath[0] === "confirm") {
-      const command = helpPath[1] ?? "";
-      return <><div className={styles.commandLine}>{command}:</div><button className={styles.terminalLink} type="button" onClick={() => void executeMenuCommand(command)}><span className={styles.terminalPrefix}>&gt;</span>{" "}execute</button><button className={styles.terminalLink} type="button" onClick={() => setHelpPath([])}><span className={styles.terminalPrefix}>&lt;</span>{" "}back</button></>;
+    const path = helpPath ?? [];
+    if (helpSelection?.type === "confirm") return <><div className={styles.commandLine}>{helpSelection.command}:</div><button className={styles.terminalLink} type="button" onClick={() => void executeMenuCommand(helpSelection.command)} disabled={busy}><span className={styles.terminalPrefix}>&gt;</span>{" "}execute</button><button className={styles.terminalLink} type="button" onClick={goBack}><span className={styles.terminalPrefix}>&lt;</span>{" "}back</button></>;
+    if (helpSelection?.type === "syntax") {
+      const syntax = helpSelection.syntax ?? helpSelection.command;
+      return <><div className={styles.commandLine}>usage:</div><div className={styles.commandLine}>{syntax}</div><button className={styles.terminalLink} type="button" onClick={() => { setInput(helpSelection.command); setHelpSelection(null); }}><span className={styles.terminalPrefix}>&gt;</span>{" "}use syntax</button><button className={styles.terminalLink} type="button" onClick={goBack}><span className={styles.terminalPrefix}>&lt;</span>{" "}back</button></>;
     }
-    if (helpPath[0] === "syntax") {
-      const command = helpPath[1] ?? "";
-      return <><div className={styles.commandLine}>usage:</div><button className={styles.terminalLink} type="button" onClick={() => setInput(command)}><span className={styles.terminalPrefix}>&gt;</span>{" "}{command}</button><button className={styles.terminalLink} type="button" onClick={() => setHelpPath([])}><span className={styles.terminalPrefix}>&lt;</span>{" "}back</button></>;
-    }
-    const entries = menuEntries(helpPath);
-    return <>{entries.map((entry) => <button className={styles.terminalLink} type="button" key={entry.label} onClick={() => openHelpEntry(entry)}><span className={styles.terminalPrefix}>&gt;</span>{" "}{entry.label}</button>)}{helpPath.length > 0 && <button className={styles.terminalLink} type="button" onClick={() => setHelpPath([])}><span className={styles.terminalPrefix}>&lt;</span>{" "}back</button>}</>;
+    const entries = getHelpEntries(path);
+    return <>{entries.map((entry) => <button className={styles.terminalLink} type="button" key={entry.command} onClick={() => openHelpEntry(entry)}><span className={styles.terminalPrefix}>&gt;</span>{" "}{entry.label ?? entry.command}</button>)}{path.length > 0 && <button className={styles.terminalLink} type="button" onClick={goBack}><span className={styles.terminalPrefix}>&lt;</span>{" "}back</button>}</>;
   };
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault(); const value = input.trim(); if (!value || busy) return; setInput("");
-    if (value.toLowerCase() === "/clear") { setCommandOutput([]); setHelpPath(null); return; }
     if (value.startsWith("/")) { writeCommand(`> ${value}`); await runCommand(value); return; }
     if (!account) { writeCommand("sign in required. use /sign up or /sign in first."); return; }
     if (!connected) { writeCommand("message error: chat is still connecting."); return; }
@@ -166,6 +165,7 @@ export default function Home() {
     catch (error) { console.error("Error sending message:", error); writeCommand("message error: unable to contact the server."); }
     finally { setBusy(false); }
   };
+
   const displayLines = messages.flatMap((message) => wrapMessage(`${message.username}: ${message.message}`, MESSAGE_LINE_LENGTH));
   const visibleLines = displayLines.slice(-TERMINAL_DISPLAY_LINES);
   return (
@@ -175,7 +175,7 @@ export default function Home() {
         <header className={styles.header}><span>guest terminal</span><span>v{TERMINAL_VERSION}</span></header>
         <div ref={chatRef} className={styles.chatOutput} aria-live="polite">{visibleLines.length ? visibleLines.map((line, index) => <div className={styles.line} key={`${index}-${line}`}>{line || "\u00a0"}</div>) : <div className={styles.emptyLine}>waiting for messages...</div>}</div>
         <form className={styles.inputBar} onSubmit={handleSubmit}><span className={styles.prompt} aria-hidden="true">&gt;</span><input className={styles.input} type="text" value={input} onChange={(event) => setInput(event.target.value)} placeholder="message or /help" autoComplete="off" spellCheck={false} aria-label="Terminal input" disabled={busy} /></form>
-        <div ref={commandRef} className={styles.commandOutput} aria-label="Command output">{helpPath ? renderHelp() : commandOutput.map((line, index) => <div className={styles.commandLine} key={`${index}-${line}`}>{line || "\u00a0"}</div>)}</div>
+        <div ref={commandRef} className={styles.commandOutput} aria-label="Command output">{helpPath !== null ? renderHelp() : commandOutput.map((line, index) => <div className={styles.commandLine} key={`${index}-${line}`}>{line || "\u00a0"}</div>)}</div>
       </section>
     </main>
   );
