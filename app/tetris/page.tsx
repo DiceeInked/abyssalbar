@@ -175,6 +175,38 @@ function TetrisTerminal() {
         <form className={styles.inputBar} onSubmit={submit}><span className={styles.prompt} aria-hidden="true">&gt;</span><input className={styles.input} type="text" value={input} onChange={(event) => setInput(event.target.value)} placeholder="message or /help" autoComplete="off" spellCheck={false} aria-label="Terminal input" /></form>
         <div className={styles.commandOutput} aria-label="Command output">{commandOutput.map((line, index) => <div className={styles.commandLine} key={`${index}-${line}`}>{line === "> restart" ? <><span className="terminal-link-prefix">&gt;</span>{" "}<button className="terminal-text-link" type="button" onClick={restart}>restart</button></> : line || "\u00a0"}</div>)}</div>
       </section>
+      <style jsx global>{`
+        .tetris-mobile-mode .tetris-play-area {
+          width: min(calc(100% - 20px), calc((100dvh - 190px) / 2));
+          height: auto;
+          aspect-ratio: 1 / 2;
+          margin: 0 auto;
+          flex: 0 0 auto;
+          align-self: center;
+        }
+        .tetris-mobile-mode .tetris-touch-board,
+        .tetris-mobile-mode .tetris-board-mobile {
+          width: 100%;
+          height: 100%;
+          aspect-ratio: 1 / 2;
+        }
+        .tetris-mobile-mode .tetris-touch-board {
+          touch-action: none;
+          user-select: none;
+          -webkit-user-select: none;
+        }
+        @media (max-width: 600px) {
+          .tetris-mobile-mode .commandOutput {
+            max-height: 24%;
+            margin: 8px 10px 10px;
+            font-size: 16px;
+            line-height: 1.5;
+          }
+          .tetris-mobile-mode .inputBar { flex-basis: 48px; margin: 0 10px; }
+          .tetris-mobile-mode .input { font-size: 16px; }
+          .tetris-terminal:not(.tetris-mobile-mode) .tetris-play-area { max-width: calc(100% - 20px); }
+        }
+      `}</style>
     </main>
   );
 }
