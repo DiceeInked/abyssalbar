@@ -19,6 +19,7 @@ export const COMMAND_DEFINITIONS: CommandDefinition[] = [
   },
   {
     command: "/egg",
+    action: "egg",
     children: [
       { command: "/egg", action: "egg" },
       { command: "/egg 0", action: "egg_0" },
@@ -29,6 +30,7 @@ export const COMMAND_DEFINITIONS: CommandDefinition[] = [
   { command: "/games", action: "games" },
   {
     command: "/tetris",
+    action: "tetris_1",
     children: [
       { command: "/tetris 1", action: "tetris_1" },
       { command: "/tetris 2", action: "tetris_2" },
