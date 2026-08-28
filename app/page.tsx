@@ -104,10 +104,9 @@ export default function Home() {
       case "/etho": if (args.length) return void writeCommand("usage: /etho"); writeCommand("opening etho..."); router.push("/etho"); return;
       case "/games": if (args.length) return void writeCommand("usage: /games"); writeCommand("opening games..."); router.push(GAME_LIBRARY_ROUTE); return;
       case "/tetris":
-        if (!args.length || (args.length === 1 && (args[0] === "m" || args[0] === "mobile"))) { writeCommand("opening tetris mobile..."); router.push("/tetris?mode=m"); return; }
-        if (args.length === 1 && args[0] === "1") { writeCommand("opening tetris 1..."); router.push("/tetris?mode=1"); return; }
+        if (!args.length || (args.length === 1 && args[0] === "1")) { writeCommand("opening tetris 1..."); router.push("/tetris?mode=1"); return; }
         if (args.length === 1 && args[0] === "2") { writeCommand("opening tetris 2..."); router.push("/tetris?mode=2"); return; }
-        writeCommand("usage: /tetris, /tetris m, /tetris mobile, /tetris 1, or /tetris 2"); return;
+        writeCommand("usage: /tetris, /tetris 1, or /tetris 2"); return;
       case "/play": { const gameName = parsePlayCommand(value); if (!gameName) { writeCommand(PLAY_USAGE); return; } writeCommand(`opening ${gameName}...`); router.push(`/play/${encodeURIComponent(gameName)}`); return; }
       case "/sign": {
         const action = args[0]?.toLowerCase();
