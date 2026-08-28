@@ -6,6 +6,7 @@ export const COMMANDS = [
   "/sign out",
   "/egg",
   "/egg 0",
+  "/egg 1",
   "/etho",
   "/games",
   "/tetris",
