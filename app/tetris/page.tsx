@@ -17,6 +17,10 @@ const HEIGHT = 16;
 const PLAYER_WIDTH = 8;
 const TERMINAL_VERSION = "1.6";
 const COMMAND_OUTPUT_LINES = 8;
+const TETRIS_CONTROLS = (twoPlayer: boolean) => [
+  twoPlayer ? "p1: wasd · p2: arrow keys" : "← → move · ↑ rotate · ↓ drop",
+  "> restart",
+];
 
 const PIECES: Record<string, Shape> = {
   I: [[1, 1, 1, 1]],
@@ -80,13 +84,17 @@ function TetrisTerminal() {
   const [single, setSingle] = useState<GameState>(() => createGame(WIDTH));
   const [playerOne, setPlayerOne] = useState<GameState>(() => createGame(PLAYER_WIDTH));
   const [playerTwo, setPlayerTwo] = useState<GameState>(() => createGame(PLAYER_WIDTH));
-  const [input, setInput] = useState(""); const [commandOutput, setCommandOutput] = useState<string[]>(["tetris ready.", "type /help for commands."]);
+  const [input, setInput] = useState(""); const [commandOutput, setCommandOutput] = useState<string[]>(() => TETRIS_CONTROLS(twoPlayer));
   const writeCommand = useCallback((text: string) => setCommandOutput(text.split("\n").map((line) => line || " ").slice(-COMMAND_OUTPUT_LINES)), []);
   const reset = useCallback(() => { if (twoPlayer) { setPlayerOne(createGame(PLAYER_WIDTH)); setPlayerTwo(createGame(PLAYER_WIDTH)); } else setSingle(createGame(WIDTH)); }, [twoPlayer]);
+  const showControls = useCallback(() => setCommandOutput(TETRIS_CONTROLS(twoPlayer)), [twoPlayer]);
+  const restart = useCallback(() => { reset(); showControls(); }, [reset, showControls]);
+  useEffect(() => { showControls(); }, [showControls]);
   const runCommand = useCallback((value: string) => {
     const parts = value.trim().split(/\s+/); const command = parts[0]?.toLowerCase(); const arg = parts[1];
     if (command === "/help" && parts.length === 1) return void writeCommand(COMMAND_HELP);
-    if (command === "/clear" && parts.length === 1) return void setCommandOutput([]);
+    if (command === "/clear" && parts.length === 1) return void showControls();
+    if (command === "/tetris" && arg === "restart" && parts.length === 2) return void restart();
     if (command === "/home" && parts.length === 1) { writeCommand("opening home..."); router.push("/"); return; }
     if (command === "/games" && parts.length === 1) { writeCommand("opening games..."); router.push("/gametonics"); return; }
     if (command === "/tetris" && (!arg || arg === "1") && parts.length <= 2) { writeCommand("opening tetris 1..."); router.push("/tetris?mode=1"); return; }
@@ -94,7 +102,7 @@ function TetrisTerminal() {
     if (command === "/egg" && (!arg || arg === "0" || arg === "1") && parts.length <= 2) { writeCommand(`opening egg${arg ? ` ${arg}` : ""}...`); router.push(arg ? `/egg?mode=${arg}` : "/egg"); return; }
     if (command === "/etho" && parts.length === 1) { writeCommand("opening etho..."); router.push("/etho"); return; }
     writeCommand("unknown command. type /help.");
-  }, [router, writeCommand]);
+  }, [restart, router, showControls, writeCommand]);
   const submit = (event: FormEvent<HTMLFormElement>) => { event.preventDefault(); const value = input.trim(); if (!value) return; setInput(""); if (value.startsWith("/")) { writeCommand(`> ${value}`); runCommand(value); } else writeCommand("tetris: commands only. type /help."); };
   useEffect(() => { const timer = window.setInterval(() => { if (twoPlayer) { setPlayerOne((game) => advance(game, 0, 1)); setPlayerTwo((game) => advance(game, 0, 1)); } else setSingle((game) => advance(game, 0, 1)); }, 1000); return () => window.clearInterval(timer); }, [twoPlayer]);
   useEffect(() => {
@@ -125,8 +133,7 @@ function TetrisTerminal() {
           {((!twoPlayer && single.gameOver) || (twoPlayer && (playerOne.gameOver || playerTwo.gameOver))) && <div className="tetris-game-over">game over</div>}
         </div>
         <form className={styles.inputBar} onSubmit={submit}><span className={styles.prompt} aria-hidden="true">&gt;</span><input className={styles.input} type="text" value={input} onChange={(event) => setInput(event.target.value)} placeholder="message or /help" autoComplete="off" spellCheck={false} aria-label="Terminal input" /></form>
-        <div className={styles.commandOutput} aria-label="Command output">{commandOutput.map((line, index) => <div className={styles.commandLine} key={`${index}-${line}`}>{line || "\u00a0"}</div>)}</div>
-        <div className="tetris-footer-controls"><span>{twoPlayer ? "p1: wasd · p2: arrow keys" : "← → move · ↑ rotate · ↓ drop"}</span><button className="terminal-button" type="button" onClick={reset}>restart</button></div>
+        <div className={styles.commandOutput} aria-label="Command output">{commandOutput.map((line, index) => <div className={styles.commandLine} key={`${index}-${line}`}>{line === "> restart" ? <><span className="terminal-link-prefix">&gt;</span>{" "}<button className="terminal-text-link" type="button" onClick={restart}>restart</button></> : line || "\u00a0"}</div>)}</div>
       </section>
     </main>
   );
