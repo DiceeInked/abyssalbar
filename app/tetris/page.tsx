@@ -82,34 +82,23 @@ function TouchBoard({ game, onMove, onRotate, onDrop, keyPrefix }: { game: GameS
   const boardRef = useRef<HTMLDivElement | null>(null);
   const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
     if (event.pointerType === "mouse") return;
-    event.preventDefault();
-    boardRef.current?.setPointerCapture(event.pointerId);
+    event.preventDefault(); boardRef.current?.setPointerCapture(event.pointerId);
     start.current = { x: event.clientX, y: event.clientY, movedX: 0, dropped: false };
   };
   const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
-    const gesture = start.current;
-    if (!gesture || gesture.dropped) return;
-    event.preventDefault();
-    const dx = event.clientX - gesture.x;
-    const dy = event.clientY - gesture.y;
+    const gesture = start.current; if (!gesture || gesture.dropped) return;
+    event.preventDefault(); const dx = event.clientX - gesture.x; const dy = event.clientY - gesture.y;
     if (dy > 45 && dy > Math.abs(dx) * 1.25) { gesture.dropped = true; onDrop(); return; }
-    const rect = boardRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const columnsMoved = Math.trunc((dx / rect.width) * game.board[0].length);
-    const delta = columnsMoved - gesture.movedX;
+    const rect = boardRef.current?.getBoundingClientRect(); if (!rect) return;
+    const columnsMoved = Math.trunc((dx / rect.width) * game.board[0].length); const delta = columnsMoved - gesture.movedX;
     if (delta) { onMove(delta); gesture.movedX += delta; }
   };
   const handlePointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
-    const gesture = start.current;
-    if (!gesture) return;
-    event.preventDefault();
-    const dx = event.clientX - gesture.x; const dy = event.clientY - gesture.y;
-    if (!gesture.dropped && Math.abs(dx) < 10 && Math.abs(dy) < 10) onRotate();
-    start.current = null;
+    const gesture = start.current; if (!gesture) return;
+    event.preventDefault(); const dx = event.clientX - gesture.x; const dy = event.clientY - gesture.y;
+    if (!gesture.dropped && Math.abs(dx) < 10 && Math.abs(dy) < 10) onRotate(); start.current = null;
   };
-  return <div ref={boardRef} className="tetris-touch-board" onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onPointerCancel={() => { start.current = null; }}>
-    <div className="tetris-board tetris-board-mobile">{gameCells(renderBoard(game), keyPrefix)}</div>
-  </div>;
+  return <div ref={boardRef} className="tetris-touch-board" onPointerDown={handlePointerDown} onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onPointerCancel={() => { start.current = null; }}><div className="tetris-board tetris-board-mobile">{gameCells(renderBoard(game), keyPrefix)}</div></div>;
 }
 
 function TetrisTerminal() {
@@ -143,11 +132,8 @@ function TetrisTerminal() {
   useEffect(() => { const timer = window.setInterval(() => { if (twoPlayer) { setPlayerOne((game) => advance(game, 0, 1)); setPlayerTwo((game) => advance(game, 0, 1)); } else setSingle((game) => advance(game, 0, 1)); }, 1000); return () => window.clearInterval(timer); }, [twoPlayer]);
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement | null;
-      if (target?.matches("input, textarea, select, [contenteditable=\"true\"]")) return;
-      const key = event.key.toLowerCase();
-      const controlled = ["arrowleft", "arrowright", "arrowup", "arrowdown", "a", "s", "d", "w"].includes(key);
-      if (!controlled) return;
+      const target = event.target as HTMLElement | null; if (target?.matches("input, textarea, select, [contenteditable=\"true\"]")) return;
+      const key = event.key.toLowerCase(); const controlled = ["arrowleft", "arrowright", "arrowup", "arrowdown", "a", "s", "d", "w"].includes(key); if (!controlled) return;
       event.preventDefault();
       if (twoPlayer) {
         if (key === "a") setPlayerOne((game) => advance(game, -1, 0)); else if (key === "d") setPlayerOne((game) => advance(game, 1, 0)); else if (key === "s") setPlayerOne(hardDropGame); else if (key === "w") setPlayerOne(rotateGame);
@@ -176,35 +162,16 @@ function TetrisTerminal() {
         <div className={styles.commandOutput} aria-label="Command output">{commandOutput.map((line, index) => <div className={styles.commandLine} key={`${index}-${line}`}>{line === "> restart" ? <><span className="terminal-link-prefix">&gt;</span>{" "}<button className="terminal-text-link" type="button" onClick={restart}>restart</button></> : line || "\u00a0"}</div>)}</div>
       </section>
       <style jsx global>{`
-        .tetris-mobile-mode .tetris-play-area {
-          width: min(calc(100% - 20px), calc((100dvh - 190px) / 2));
-          height: auto;
-          aspect-ratio: 1 / 2;
-          margin: 0 auto;
-          flex: 0 0 auto;
-          align-self: center;
-        }
-        .tetris-mobile-mode .tetris-touch-board,
-        .tetris-mobile-mode .tetris-board-mobile {
-          width: 100%;
-          height: 100%;
-          aspect-ratio: 1 / 2;
-        }
-        .tetris-mobile-mode .tetris-touch-board {
-          touch-action: none;
-          user-select: none;
-          -webkit-user-select: none;
-        }
+        .tetris-play-area { position: relative; }
+        .tetris-game-over { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); z-index: 5; margin: 0; pointer-events: none; }
+        .tetris-mobile-mode .tetris-play-area { width: min(calc(100% - 20px), calc((100dvh - 280px) / 2)); height: auto; aspect-ratio: 1 / 2; margin: 0 auto; flex: 0 0 auto; align-self: center; }
+        .tetris-mobile-mode .tetris-touch-board, .tetris-mobile-mode .tetris-board-mobile { width: 100%; height: 100%; aspect-ratio: 1 / 2; }
+        .tetris-mobile-mode .tetris-touch-board { touch-action: none; user-select: none; -webkit-user-select: none; }
         @media (max-width: 600px) {
-          .tetris-mobile-mode .commandOutput {
-            max-height: 24%;
-            margin: 8px 10px 10px;
-            font-size: 16px;
-            line-height: 1.5;
-          }
+          .tetris-mobile-mode .tetris-play-area { width: min(calc(100% - 20px), calc((100dvh - 280px) / 2)); }
+          .tetris-mobile-mode .commandOutput { max-height: 22%; margin: 8px 10px 10px; font-size: 16px; line-height: 1.5; }
           .tetris-mobile-mode .inputBar { flex-basis: 48px; margin: 0 10px; }
           .tetris-mobile-mode .input { font-size: 16px; }
-          .tetris-terminal:not(.tetris-mobile-mode) .tetris-play-area { max-width: calc(100% - 20px); }
         }
       `}</style>
     </main>
