@@ -1,21 +1,24 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import styles from "../page.module.css";
+import { COMMAND_HELP } from "../../lib/commands";
+import { SITE_VERSION } from "../../lib/constants";
 
 type Cell = string | null;
+type Shape = number[][];
+type Piece = { shape: Shape; x: number; y: number; type: string };
 type Board = Cell[][];
-type Piece = {
-  shape: number[][];
-  x: number;
-  y: number;
-  type: string;
-};
+type GameState = { board: Board; piece: Piece; score: number; lines: number; gameOver: boolean };
 
-const WIDTH = 10;
-const HEIGHT = 20;
+const WIDTH = 16;
+const HEIGHT = 16;
+const PLAYER_WIDTH = 8;
+const TERMINAL_VERSION = "1.6";
+const COMMAND_OUTPUT_LINES = 8;
 
-const PIECES: Record<string, number[][]> = {
+const PIECES: Record<string, Shape> = {
   I: [[1, 1, 1, 1]],
   O: [[1, 1], [1, 1]],
   T: [[0, 1, 0], [1, 1, 1]],
@@ -28,40 +31,35 @@ const PIECES: Record<string, number[][]> = {
 const TYPES = Object.keys(PIECES);
 const SCORE_VALUES = [0, 100, 300, 500, 800];
 
-const emptyBoard = (): Board =>
-  Array.from({ length: HEIGHT }, () => Array<Cell>(WIDTH).fill(null));
+const emptyBoard = (width: number): Board =>
+  Array.from({ length: HEIGHT }, () => Array<Cell>(width).fill(null));
 
-const cloneShape = (shape: number[][]) => shape.map((row) => [...row]);
+const cloneShape = (shape: Shape): Shape => shape.map((row) => [...row]);
 
-const createPiece = (): Piece => {
+const createPiece = (width: number): Piece => {
   const type = TYPES[Math.floor(Math.random() * TYPES.length)];
   const shape = cloneShape(PIECES[type]);
-  return {
-    shape,
-    x: Math.floor((WIDTH - shape[0].length) / 2),
-    y: 0,
-    type,
-  };
+  return { shape, x: Math.floor((width - shape[0].length) / 2), y: 0, type };
 };
 
-const rotateShape = (shape: number[][]) =>
+const createGame = (width: number): GameState => ({
+  board: emptyBoard(width),
+  piece: createPiece(width),
+  score: 0,
+  lines: 0,
+  gameOver: false,
+});
+
+const rotateShape = (shape: Shape): Shape =>
   shape[0].map((_, column) => shape.map((row) => row[column]).reverse());
 
-const collides = (
-  board: Board,
-  piece: Piece,
-  shape = piece.shape,
-  x = piece.x,
-  y = piece.y,
-) => {
+const collides = (board: Board, piece: Piece, shape = piece.shape, x = piece.x, y = piece.y) => {
   for (let row = 0; row < shape.length; row += 1) {
     for (let column = 0; column < shape[row].length; column += 1) {
       if (!shape[row][column]) continue;
-
       const boardX = x + column;
       const boardY = y + row;
-
-      if (boardX < 0 || boardX >= WIDTH || boardY >= HEIGHT) return true;
+      if (boardX < 0 || boardX >= board[0].length || boardY >= HEIGHT) return true;
       if (boardY >= 0 && board[boardY][boardX]) return true;
     }
   }
@@ -70,196 +68,209 @@ const collides = (
 
 const mergePiece = (board: Board, piece: Piece): Board => {
   const next = board.map((row) => [...row]);
-
-  piece.shape.forEach((row, rowIndex) => {
-    row.forEach((filled, columnIndex) => {
-      const y = piece.y + rowIndex;
-      const x = piece.x + columnIndex;
-      if (filled && y >= 0 && y < HEIGHT && x >= 0 && x < WIDTH) {
-        next[y][x] = piece.type;
-      }
-    });
-  });
-
+  piece.shape.forEach((row, rowIndex) => row.forEach((filled, columnIndex) => {
+    const x = piece.x + columnIndex;
+    const y = piece.y + rowIndex;
+    if (filled && y >= 0 && y < HEIGHT && x >= 0 && x < board[0].length) next[y][x] = piece.type;
+  }));
   return next;
 };
 
 const clearLines = (board: Board) => {
   const remaining = board.filter((row) => row.some((cell) => !cell));
   const cleared = HEIGHT - remaining.length;
-  const emptyRows = Array.from(
-    { length: cleared },
-    () => Array<Cell>(WIDTH).fill(null),
-  );
+  const emptyRows = Array.from({ length: cleared }, () => Array<Cell>(board[0].length).fill(null));
   return { board: [...emptyRows, ...remaining], cleared };
 };
 
+const dropY = (board: Board, piece: Piece) => {
+  let y = piece.y;
+  while (!collides(board, piece, piece.shape, piece.x, y + 1)) y += 1;
+  return y;
+};
+
+const advance = (game: GameState, dx: number, dy: number): GameState => {
+  if (game.gameOver) return game;
+  if (!collides(game.board, game.piece, game.piece.shape, game.piece.x + dx, game.piece.y + dy)) {
+    return { ...game, piece: { ...game.piece, x: game.piece.x + dx, y: game.piece.y + dy } };
+  }
+  if (dy <= 0) return game;
+  const merged = mergePiece(game.board, game.piece);
+  const result = clearLines(merged);
+  const nextPiece = createPiece(merged[0].length);
+  const gameOver = collides(result.board, nextPiece);
+  return {
+    ...game,
+    board: result.board,
+    piece: gameOver ? game.piece : nextPiece,
+    lines: game.lines + result.cleared,
+    score: game.score + (SCORE_VALUES[result.cleared] ?? 0),
+    gameOver,
+  };
+};
+
+const rotateGame = (game: GameState): GameState => {
+  if (game.gameOver) return game;
+  const rotated = rotateShape(game.piece.shape);
+  for (const offset of [0, -1, 1, -2, 2]) {
+    if (!collides(game.board, game.piece, rotated, game.piece.x + offset, game.piece.y)) {
+      return { ...game, piece: { ...game.piece, shape: rotated, x: game.piece.x + offset } };
+    }
+  }
+  return game;
+};
+
+const hardDropGame = (game: GameState): GameState => {
+  if (game.gameOver) return game;
+  const y = dropY(game.board, game.piece);
+  return advance({ ...game, piece: { ...game.piece, y } }, 0, 1);
+};
+
+const renderBoard = (game: GameState): Board => {
+  const board = game.board.map((row) => [...row]);
+  const ghostY = dropY(game.board, game.piece);
+  game.piece.shape.forEach((row, rowIndex) => row.forEach((filled, columnIndex) => {
+    if (!filled) return;
+    const x = game.piece.x + columnIndex;
+    const y = ghostY + rowIndex;
+    if (y >= 0 && y < HEIGHT && x >= 0 && x < board[0].length && !board[y][x]) board[y][x] = "ghost";
+  }));
+  game.piece.shape.forEach((row, rowIndex) => row.forEach((filled, columnIndex) => {
+    if (!filled) return;
+    const x = game.piece.x + columnIndex;
+    const y = game.piece.y + rowIndex;
+    if (y >= 0 && y < HEIGHT && x >= 0 && x < board[0].length) board[y][x] = game.piece.type;
+  }));
+  return board;
+};
+
+const gameCells = (board: Board, keyPrefix: string) => board.flatMap((row, y) => row.map((cell, x) => (
+  <div key={`${keyPrefix}-${x}-${y}`} className={`tetris-cell${cell ? " tetris-cell-filled" : ""}${cell === "ghost" ? " tetris-cell-ghost" : ""}`} />
+)));
+
 export default function Tetris() {
   const router = useRouter();
-  const [board, setBoard] = useState<Board>(() => emptyBoard());
-  const [piece, setPiece] = useState<Piece>(() => createPiece());
-  const [score, setScore] = useState(0);
-  const [lines, setLines] = useState(0);
-  const [gameOver, setGameOver] = useState(false);
+  const searchParams = useSearchParams();
+  const twoPlayer = searchParams.get("mode") === "2";
+  const [single, setSingle] = useState<GameState>(() => createGame(WIDTH));
+  const [playerOne, setPlayerOne] = useState<GameState>(() => createGame(PLAYER_WIDTH));
+  const [playerTwo, setPlayerTwo] = useState<GameState>(() => createGame(PLAYER_WIDTH));
+  const [input, setInput] = useState("");
+  const [commandOutput, setCommandOutput] = useState<string[]>(["tetris ready.", "type /help for commands."]);
+
+  const writeCommand = useCallback((text: string) => {
+    setCommandOutput(text.split("\n").map((line) => line || " ").slice(-COMMAND_OUTPUT_LINES));
+  }, []);
 
   const reset = useCallback(() => {
-    setBoard(emptyBoard());
-    setPiece(createPiece());
-    setScore(0);
-    setLines(0);
-    setGameOver(false);
-  }, []);
-
-  const lockPiece = useCallback((pieceToLock: Piece) => {
-    setBoard((currentBoard) => {
-      const merged = mergePiece(currentBoard, pieceToLock);
-      const result = clearLines(merged);
-      const nextPiece = createPiece();
-
-      setLines((current) => current + result.cleared);
-      setScore((current) => current + (SCORE_VALUES[result.cleared] ?? 0));
-      setGameOver(collides(result.board, nextPiece));
-      if (!collides(result.board, nextPiece)) setPiece(nextPiece);
-
-      return result.board;
-    });
-  }, []);
-
-  const move = useCallback(
-    (dx: number, dy: number) => {
-      if (gameOver) return false;
-
-      if (!collides(board, piece, piece.shape, piece.x + dx, piece.y + dy)) {
-        setPiece((current) => ({
-          ...current,
-          x: current.x + dx,
-          y: current.y + dy,
-        }));
-        return true;
-      }
-
-      if (dy > 0) lockPiece(piece);
-      return false;
-    },
-    [board, gameOver, lockPiece, piece],
-  );
-
-  const hardDrop = useCallback(() => {
-    if (gameOver) return;
-
-    let finalY = piece.y;
-    while (!collides(board, piece, piece.shape, piece.x, finalY + 1)) {
-      finalY += 1;
+    if (twoPlayer) {
+      setPlayerOne(createGame(PLAYER_WIDTH));
+      setPlayerTwo(createGame(PLAYER_WIDTH));
+    } else {
+      setSingle(createGame(WIDTH));
     }
-    lockPiece({ ...piece, y: finalY });
-  }, [board, gameOver, lockPiece, piece]);
+  }, [twoPlayer]);
 
-  const rotatePiece = useCallback(() => {
-    if (gameOver) return;
-    const rotated = rotateShape(piece.shape);
+  const runCommand = useCallback((value: string) => {
+    const parts = value.trim().split(/\s+/);
+    const command = parts[0]?.toLowerCase();
+    const arg = parts[1];
+    if (command === "/help" && parts.length === 1) return void writeCommand(COMMAND_HELP);
+    if (command === "/clear" && parts.length === 1) return void setCommandOutput([]);
+    if (command === "/home" && parts.length === 1) { writeCommand("opening home..."); router.push("/"); return; }
+    if (command === "/games" && parts.length === 1) { writeCommand("opening games..."); router.push("/gametonics"); return; }
+    if (command === "/tetris" && (!arg || arg === "1") && parts.length <= 2) { writeCommand("opening tetris 1..."); router.push("/tetris?mode=1"); return; }
+    if (command === "/tetris" && arg === "2" && parts.length === 2) { writeCommand("opening tetris 2..."); router.push("/tetris?mode=2"); return; }
+    if (command === "/egg" && (!arg || arg === "0" || arg === "1") && parts.length <= 2) { writeCommand(`opening egg${arg ? ` ${arg}` : ""}...`); router.push(arg ? `/egg?mode=${arg}` : "/egg"); return; }
+    if (command === "/etho" && parts.length === 1) { writeCommand("opening etho..."); router.push("/etho"); return; }
+    writeCommand("unknown command. type /help.");
+  }, [router, writeCommand]);
 
-    for (const offset of [0, -1, 1, -2, 2]) {
-      if (!collides(board, piece, rotated, piece.x + offset, piece.y)) {
-        setPiece((current) => ({
-          ...current,
-          shape: rotated,
-          x: current.x + offset,
-        }));
-        return;
-      }
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const value = input.trim();
+    if (!value) return;
+    setInput("");
+    if (value.startsWith("/")) {
+      writeCommand(`> ${value}`);
+      runCommand(value);
+    } else {
+      writeCommand("tetris: commands only. type /help.");
     }
-  }, [board, gameOver, piece]);
+  };
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      if (twoPlayer) {
+        setPlayerOne((game) => advance(game, 0, 1));
+        setPlayerTwo((game) => advance(game, 0, 1));
+      } else {
+        setSingle((game) => advance(game, 0, 1));
+      }
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [twoPlayer]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (["ArrowLeft", "ArrowRight", "ArrowDown", "ArrowUp", " "].includes(event.key)) {
-        event.preventDefault();
+      const key = event.key.toLowerCase();
+      const controlled = ["arrowleft", "arrowright", "arrowup", "arrowdown", "a", "s", "d", "w"].includes(key);
+      if (!controlled) return;
+      event.preventDefault();
+      if (twoPlayer) {
+        if (key === "a") setPlayerOne((game) => advance(game, -1, 0));
+        else if (key === "d") setPlayerOne((game) => advance(game, 1, 0));
+        else if (key === "s") setPlayerOne(hardDropGame);
+        else if (key === "w") setPlayerOne(rotateGame);
+        else if (key === "arrowleft") setPlayerTwo((game) => advance(game, -1, 0));
+        else if (key === "arrowright") setPlayerTwo((game) => advance(game, 1, 0));
+        else if (key === "arrowdown") setPlayerTwo(hardDropGame);
+        else if (key === "arrowup") setPlayerTwo(rotateGame);
+      } else {
+        if (key === "arrowleft") setSingle((game) => advance(game, -1, 0));
+        else if (key === "arrowright") setSingle((game) => advance(game, 1, 0));
+        else if (key === "arrowdown") setSingle(hardDropGame);
+        else if (key === "arrowup") setSingle(rotateGame);
       }
-
-      if (event.key === "ArrowLeft") move(-1, 0);
-      else if (event.key === "ArrowRight") move(1, 0);
-      else if (event.key === "ArrowDown") move(0, 1);
-      else if (event.key === "ArrowUp") rotatePiece();
-      else if (event.key === " ") hardDrop();
-      else if (event.key.toLowerCase() === "r") reset();
     };
-
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [hardDrop, move, reset, rotatePiece]);
+  }, [twoPlayer]);
 
-  useEffect(() => {
-    if (gameOver) return;
-    const speed = Math.max(100, 650 - Math.floor(lines / 10) * 70);
-    const timer = window.setInterval(() => move(0, 1), speed);
-    return () => window.clearInterval(timer);
-  }, [gameOver, lines, move]);
-
-  const displayBoard = useMemo(() => {
-    const next = board.map((row) => [...row]);
-
-    piece.shape.forEach((row, rowIndex) => {
-      row.forEach((filled, columnIndex) => {
-        const y = piece.y + rowIndex;
-        const x = piece.x + columnIndex;
-        if (filled && y >= 0 && y < HEIGHT && x >= 0 && x < WIDTH) {
-          next[y][x] = piece.type;
-        }
-      });
-    });
-
-    return next;
-  }, [board, piece]);
+  const singleBoard = useMemo(() => renderBoard(single), [single]);
+  const boardOne = useMemo(() => renderBoard(playerOne), [playerOne]);
+  const boardTwo = useMemo(() => renderBoard(playerTwo), [playerTwo]);
 
   return (
-    <main className="terminal tetris-page">
-      <div className="scanlines" aria-hidden="true" />
-      <section className="tetris-window" aria-label="Tetris">
-        <header className="tetris-title">
-          <span>tetris</span>
+    <main className={styles.page}>
+      <div className={styles.siteVersion} aria-label="Site version">site v{SITE_VERSION}</div>
+      <section className={`${styles.terminal} tetris-terminal`} aria-label="Tetris">
+        <header className={styles.header}>
           <span>guest terminal</span>
+          <span>v{TERMINAL_VERSION}</span>
         </header>
-
-        <div className="tetris-body">
-          <div
-            className="tetris-board"
-            style={{ gridTemplateColumns: `repeat(${WIDTH}, 22px)` }}
-            aria-label="Tetris board"
-          >
-            {displayBoard.flatMap((row, y) =>
-              row.map((cell, x) => (
-                <div
-                  key={`${x}-${y}`}
-                  className={`tetris-cell${cell ? " tetris-cell-filled" : ""}`}
-                />
-              )),
-            )}
-          </div>
-
-          <aside className="tetris-info">
-            <div className="tetris-stat">score: {score}</div>
-            <div className="tetris-stat">lines: {lines}</div>
-            <div className="tetris-controls">
-              <div>← → move</div>
-              <div>↑ rotate</div>
-              <div>↓ drop</div>
-              <div>space hard drop</div>
-              <div>r restart</div>
+        <div className="tetris-play-area" aria-label={twoPlayer ? "Two-player Tetris board" : "Tetris board"}>
+          {!twoPlayer ? (
+            <div className="tetris-board tetris-board-single">{gameCells(singleBoard, "single")}</div>
+          ) : (
+            <div className="tetris-dual-board">
+              <div className="tetris-player-panel"><div className="tetris-player-label">player 1</div><div className="tetris-board">{gameCells(boardOne, "one")}</div><div>score: {playerOne.score} · lines: {playerOne.lines}</div></div>
+              <div className="tetris-divider" aria-hidden="true" />
+              <div className="tetris-player-panel"><div className="tetris-player-label">player 2</div><div className="tetris-board">{gameCells(boardTwo, "two")}</div><div>score: {playerTwo.score} · lines: {playerTwo.lines}</div></div>
             </div>
-            {gameOver && <div className="tetris-game-over">game over</div>}
-            <div className="tetris-actions">
-              <button className="terminal-button" type="button" onClick={reset}>
-                restart
-              </button>
-              <button
-                className="terminal-button"
-                type="button"
-                onClick={() => router.push("/")}
-              >
-                back
-              </button>
-            </div>
-          </aside>
+          )}
+          {((!twoPlayer && single.gameOver) || (twoPlayer && (playerOne.gameOver || playerTwo.gameOver))) && <div className="tetris-game-over">game over</div>}
+        </div>
+        <form className={styles.inputBar} onSubmit={submit}>
+          <span className={styles.prompt} aria-hidden="true">&gt;</span>
+          <input className={styles.input} type="text" value={input} onChange={(event) => setInput(event.target.value)} placeholder="message or /help" autoComplete="off" spellCheck={false} aria-label="Terminal input" />
+        </form>
+        <div className={styles.commandOutput} aria-label="Command output">
+          {commandOutput.map((line, index) => <div className={styles.commandLine} key={`${index}-${line}`}>{line || "\u00a0"}</div>)}
+        </div>
+        <div className="tetris-footer-controls">
+          <span>{twoPlayer ? "p1: wasd · p2: arrow keys" : "← → move · ↑ rotate · ↓ drop"}</span>
+          <button className="terminal-button" type="button" onClick={reset}>restart</button>
         </div>
       </section>
     </main>
