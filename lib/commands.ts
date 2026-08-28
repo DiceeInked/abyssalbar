@@ -10,6 +10,8 @@ export const COMMANDS = [
   "/etho",
   "/games",
   "/tetris",
+  "/tetris 1",
+  "/tetris 2",
   "/play <game>",
   "/clear",
 ] as const;
