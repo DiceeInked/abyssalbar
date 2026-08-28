@@ -1,5 +1,6 @@
 .page {
   --terminal-color: #00FFC8;
+  --link-color: #FF0066;
   --background: #000;
   position: relative;
   min-height: 100vh;
@@ -134,6 +135,33 @@
 
 .commandLine {
   min-height: 1.5em;
+}
+
+.terminalLink {
+  display: block;
+  width: fit-content;
+  min-height: 1.5em;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--link-color);
+  font: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.terminalLink:hover,
+.terminalLink:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.terminalPrefix {
+  color: var(--terminal-color);
 }
 
 .hintBar {
