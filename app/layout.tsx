@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AbyssalBar by me",
+  title: "Abyssal Bar",
   description: "(HELP I'M TRAPPED IN THE CODE)",
 //  Ha Ha Jk I love It Here 
 //    ╱|、♡
