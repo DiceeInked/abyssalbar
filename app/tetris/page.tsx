@@ -12,10 +12,10 @@ type Piece = { shape: Shape; x: number; y: number; type: string };
 type Board = Cell[][];
 type GameState = { board: Board; piece: Piece; score: number; lines: number; gameOver: boolean };
 
-const BOARD_WIDTH = 64;
-const BOARD_HEIGHT = 32;
-const PLAYER_WIDTH = 32;
-const PLAYER_HEIGHT = 32;
+const BOARD_WIDTH = 32;
+const BOARD_HEIGHT = 16;
+const PLAYER_WIDTH = 16;
+const PLAYER_HEIGHT = 16;
 const TERMINAL_VERSION = "1.6";
 const COMMAND_OUTPUT_LINES = 8;
 const TETRIS_CONTROLS = (twoPlayer: boolean) => [
@@ -110,6 +110,8 @@ function TetrisTerminal() {
   useEffect(() => { const timer = window.setInterval(() => { if (twoPlayer) { setPlayerOne((game) => advance(game, 0, 1)); setPlayerTwo((game) => advance(game, 0, 1)); } else setSingle((game) => advance(game, 0, 1)); }, 1000); return () => window.clearInterval(timer); }, [twoPlayer]);
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (target?.matches("input, textarea, select, [contenteditable=\"true\"]")) return;
       const key = event.key.toLowerCase();
       const controlled = ["arrowleft", "arrowright", "arrowup", "arrowdown", "a", "s", "d", "w"].includes(key);
       if (!controlled) return;
