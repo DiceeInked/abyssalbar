@@ -17,7 +17,37 @@ export const COMMANDS = [
   "/clear",
 ] as const;
 
-export const COMMAND_HELP = `commands:\n${COMMANDS.join("\n")}`;
+export const MAIN_COMMANDS = [
+  "/help",
+  "/home",
+  "/sign",
+  "/egg",
+  "/etho",
+  "/games",
+  "/tetris",
+  "/play",
+  "/clear",
+] as const;
+
+export const SIGN_COMMANDS = [
+  "/sign up",
+  "/sign in",
+  "/sign out",
+] as const;
+
+export const EGG_COMMANDS = [
+  "/egg",
+  "/egg 0",
+  "/egg 1",
+] as const;
+
+export const TETRIS_COMMANDS = [
+  "/tetris 1",
+  "/tetris 2",
+  "/tetris restart",
+] as const;
+
+export const COMMAND_HELP = `commands:\n${MAIN_COMMANDS.join("\n")}`;
 
 export const PLAY_USAGE = "usage: /play <game>";
 
