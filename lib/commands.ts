@@ -12,6 +12,7 @@ export const COMMANDS = [
   "/tetris",
   "/tetris 1",
   "/tetris 2",
+  "/tetris restart",
   "/play <game>",
   "/clear",
 ] as const;
