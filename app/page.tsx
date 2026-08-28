@@ -236,7 +236,12 @@ export default function Home() {
           router.push("/egg?mode=0");
           return;
         }
-        writeCommand("usage: /egg or /egg 0");
+        if (args.length === 1 && args[0] === "1") {
+          writeCommand("opening egg 1...");
+          router.push("/egg?mode=1");
+          return;
+        }
+        writeCommand("usage: /egg, /egg 0, or /egg 1");
         return;
       case "/etho":
         if (args.length) return void writeCommand("usage: /etho");
