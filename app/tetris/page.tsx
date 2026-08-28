@@ -111,7 +111,7 @@ function TetrisTerminal() {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       const key = event.key.toLowerCase();
-      const controlled = twoPlayer ? ["arrowleft", "arrowright", "arrowup", "arrowdown", "a", "s", "d", "w"].includes(key) : ["arrowleft", "arrowright", "arrowup", "arrowdown", "a", "s", "d", "w"].includes(key);
+      const controlled = ["arrowleft", "arrowright", "arrowup", "arrowdown", "a", "s", "d", "w"].includes(key);
       if (!controlled) return;
       event.preventDefault();
       if (twoPlayer) {
@@ -131,9 +131,9 @@ function TetrisTerminal() {
         <header className={styles.header}><span>guest terminal</span><span>v{TERMINAL_VERSION}</span></header>
         <div className="tetris-play-area" aria-label={twoPlayer ? "Two-player Tetris board" : "Tetris board"}>
           {!twoPlayer ? <div className="tetris-board tetris-board-single">{gameCells(singleBoard, "single")}</div> : <div className="tetris-dual-board">
-            <div className="tetris-player-panel"><div className="tetris-board tetris-board-player"><span className="tetris-player-label">wasd</span>{gameCells(boardOne, "one")}</div><div>score: {playerOne.score} · lines: {playerOne.lines}</div></div>
+            <div className="tetris-player-panel"><div className="tetris-board tetris-board-player">{gameCells(boardOne, "one")}</div><div className="tetris-player-label">wasd</div><div className="tetris-player-score">score: {playerOne.score} · lines: {playerOne.lines}</div></div>
             <div className="tetris-divider" aria-hidden="true" />
-            <div className="tetris-player-panel"><div className="tetris-board tetris-board-player"><span className="tetris-player-label">arrows</span>{gameCells(boardTwo, "two")}</div><div>score: {playerTwo.score} · lines: {playerTwo.lines}</div></div>
+            <div className="tetris-player-panel"><div className="tetris-board tetris-board-player">{gameCells(boardTwo, "two")}</div><div className="tetris-player-label">arrows</div><div className="tetris-player-score">score: {playerTwo.score} · lines: {playerTwo.lines}</div></div>
           </div>}
           {((!twoPlayer && single.gameOver) || (twoPlayer && (playerOne.gameOver || playerTwo.gameOver))) && <div className="tetris-game-over">game over</div>}
         </div>
