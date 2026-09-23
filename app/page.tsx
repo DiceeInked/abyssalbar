@@ -8,22 +8,16 @@ import {
   GAME_LIBRARY_ROUTE,
   MAX_MESSAGES,
   MESSAGE_LINE_LENGTH,
-  PASSWORD_MAX,
-  PASSWORD_MIN,
   SITE_VERSION,
   TERMINAL_DISPLAY_LINES,
-  USERNAME_MAX,
-  USERNAME_MIN,
 } from "../lib/constants";
 import styles from "./page.module.css";
 
 type Message = { id: number; username: string; message: string; created_at: string };
-type Account = { id: string; username: string; created_at?: string };
 type HelpSelection = { type: "confirm" | "syntax"; command: string; syntax?: string };
 
 const TERMINAL_VERSION = "1.6";
 const COMMAND_OUTPUT_LINES = 8;
-const isValidCredential = (value: string, minimum: number, maximum: number) => value.length >= minimum && value.length <= maximum && !/\s/.test(value);
 const splitCommand = (value: string) => value.trim().split(/\s+/);
 const wrapMessage = (text: string, maximum: number) => {
   const lines: string[] = [];
@@ -51,17 +45,12 @@ export default function Home() {
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [commandOutput, setCommandOutput] = useState<string[]>(["guest terminal ready.", "type /help for commands."]);
-  const [account, setAccount] = useState<Account | null>(null);
   const [connected, setConnected] = useState(false);
   const [busy, setBusy] = useState(false);
   const [helpPath, setHelpPath] = useState<string[] | null>(null);
   const [helpSelection, setHelpSelection] = useState<HelpSelection | null>(null);
 
   const writeCommand = (text: string) => setCommandOutput(text.split("\n").map((line) => line || " ").slice(-COMMAND_OUTPUT_LINES));
-  const loadAccount = async () => {
-    try { const response = await fetch("/api/auth", { cache: "no-store" }); const result = await response.json(); setAccount(result.account ?? null); }
-    catch (error) { console.error("Error loading account session:", error); writeCommand("authentication error: unable to load session."); }
-  };
   const loadMessages = async () => {
     const { data, error } = await supabase.from("messages").select("id, username, message, created_at").order("created_at", { ascending: false }).limit(MAX_MESSAGES);
     if (error) { console.error("Error loading chat messages:", error); writeCommand("message error: unable to load chat."); return; }
@@ -70,7 +59,7 @@ export default function Home() {
 
   useEffect(() => {
     let mounted = true;
-    void Promise.all([loadAccount(), loadMessages()]);
+    void loadMessages();
     const channel = supabase.channel("guest-terminal-chat").on("postgres_changes", { event: "INSERT", schema: "public", table: "messages" }, () => { if (mounted) void loadMessages(); }).subscribe((status) => { if (!mounted) return; setConnected(status === "SUBSCRIBED"); if (status === "SUBSCRIBED") void loadMessages(); });
     return () => { mounted = false; void supabase.removeChannel(channel); };
   }, []);
@@ -79,31 +68,6 @@ export default function Home() {
     if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight;
     if (commandRef.current) commandRef.current.scrollTop = commandRef.current.scrollHeight;
   }, [messages, commandOutput, helpPath, helpSelection]);
-
-  const authenticate = async (action: "sign_up" | "sign_in", username: string, password: string) => {
-    if (!isValidCredential(username, USERNAME_MIN, USERNAME_MAX)) return void writeCommand(`username error: use ${USERNAME_MIN}-${USERNAME_MAX} characters with no spaces.`);
-    if (!isValidCredential(password, PASSWORD_MIN, PASSWORD_MAX)) return void writeCommand(`password error: use ${PASSWORD_MIN}-${PASSWORD_MAX} characters with no spaces.`);
-    setBusy(true);
-    try {
-      const response = await fetch("/api/auth", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, username, password }) });
-      const result = await response.json();
-      if (!response.ok) { writeCommand(`${action === "sign_up" ? "sign up" : "sign in"} error: ${result.error}`); return; }
-      setAccount(result.account);
-      writeCommand(action === "sign_up" ? `account created. welcome, ${result.account.username}!` : `signed in. welcome back, ${result.account.username}!`);
-    } catch (error) { console.error("Authentication error:", error); writeCommand("authentication error: unable to contact the server."); }
-    finally { setBusy(false); }
-  };
-
-  const signOut = async () => {
-    setBusy(true);
-    try {
-      const response = await fetch("/api/auth", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "sign_out" }) });
-      const result = await response.json();
-      if (!response.ok) { writeCommand(`sign out error: ${result.error}`); return; }
-      setAccount(null); writeCommand("signed out.");
-    } catch (error) { console.error("Sign out error:", error); writeCommand("sign out error: unable to contact the server."); }
-    finally { setBusy(false); }
-  };
 
   const runCommand = async (value: string) => {
     const normalized = value.trim();
@@ -123,9 +87,6 @@ export default function Home() {
       case "tetris_2": if (args.length) return void writeCommand("usage: /tetris 2"); writeCommand("opening tetris 2..."); router.push("/tetris?mode=2"); return;
       case "tetris_restart": if (args.length) return void writeCommand("usage: /tetris restart"); writeCommand("restart requested..."); return;
       case "play": { const gameName = parsePlayCommand(normalized); if (!gameName) return void writeCommand(PLAY_USAGE); writeCommand(`opening ${gameName}...`); router.push(`/play/${encodeURIComponent(gameName)}`); return; }
-      case "sign_up": if (args.length !== 2) return void writeCommand("usage: /sign up <username> <password>"); await authenticate("sign_up", args[0], args[1]); return;
-      case "sign_in": if (args.length !== 2) return void writeCommand("usage: /sign in <username> <password>"); await authenticate("sign_in", args[0], args[1]); return;
-      case "sign_out": if (args.length) return void writeCommand("usage: /sign out"); await signOut(); return;
       case "clear": if (args.length) return void writeCommand("usage: /clear"); setCommandOutput([]); setHelpPath(null); setHelpSelection(null); return;
       default: writeCommand("unknown command. type /help.");
     }
@@ -158,7 +119,6 @@ export default function Home() {
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault(); const value = input.trim(); if (!value || busy) return; setInput("");
     if (value.startsWith("/")) { writeCommand(`> ${value}`); await runCommand(value); return; }
-    if (!account) { writeCommand("sign in required. use /sign up or /sign in first."); return; }
     if (!connected) { writeCommand("message error: chat is still connecting."); return; }
     setBusy(true);
     try { const response = await fetch("/api/messages", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: value }) }); const result = await response.json(); if (!response.ok) writeCommand(`message error: ${result.error}`); }
