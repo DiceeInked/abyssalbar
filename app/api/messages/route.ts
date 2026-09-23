@@ -1,26 +1,20 @@
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { supabase } from "../../../lib/supabase";
-import { SESSION_COOKIE } from "../../../lib/constants";
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const message = typeof body?.message === "string" ? body.message : "";
-    const cookieStore = await cookies();
-    const token = cookieStore.get(SESSION_COOKIE)?.value;
+    const message = typeof body?.message === "string" ? body.message.trim() : "";
 
-    if (!token) {
-      return NextResponse.json(
-        { error: "You must be signed in." },
-        { status: 401 }
-      );
+    if (!message) {
+      return NextResponse.json({ error: "Message cannot be empty." }, { status: 400 });
     }
 
-    const { data, error } = await supabase.rpc("send_account_message", {
-      p_token: token,
-      p_message: message,
-    });
+    const { data, error } = await supabase
+      .from("messages")
+      .insert({ username: "guest", message })
+      .select("id, username, message, created_at")
+      .single();
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 400 });
