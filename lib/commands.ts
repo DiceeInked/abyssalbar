@@ -10,14 +10,6 @@ export const COMMAND_DEFINITIONS: CommandDefinition[] = [
   { command: "/help", action: "help" },
   { command: "/home", action: "home" },
   {
-    command: "/sign",
-    children: [
-      { command: "/sign up", syntax: "/sign up <username> <password>", action: "sign_up" },
-      { command: "/sign in", syntax: "/sign in <username> <password>", action: "sign_in" },
-      { command: "/sign out", action: "sign_out" },
-    ],
-  },
-  {
     command: "/egg",
     action: "egg",
     children: [
