@@ -1,11 +1,4 @@
-export const SITE_VERSION = "4.0";
-
-export const SESSION_COOKIE = "abyssal_session";
-
-export const USERNAME_MIN = 3;
-export const USERNAME_MAX = 30;
-export const PASSWORD_MIN = 3;
-export const PASSWORD_MAX = 30;
+export const SITE_VERSION = "4.1";
 
 export const GAME_BUCKET = "gametonics";
 export const GAME_LIBRARY_ROUTE = "/gametonics";
