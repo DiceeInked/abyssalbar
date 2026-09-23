@@ -16,7 +16,6 @@ import styles from "./page.module.css";
 type Message = { id: number; username: string; message: string; created_at: string };
 type HelpSelection = { type: "confirm" | "syntax"; command: string; syntax?: string };
 
-const TERMINAL_VERSION = "1.6";
 const COMMAND_OUTPUT_LINES = 8;
 const splitCommand = (value: string) => value.trim().split(/\s+/);
 const wrapMessage = (text: string, maximum: number) => {
@@ -132,7 +131,7 @@ export default function Home() {
     <main className={styles.page}>
       <div className={styles.siteVersion} aria-label="Site version">site v{SITE_VERSION}</div>
       <section className={styles.terminal} aria-label="Guest Terminal">
-        <header className={styles.header}><span>guest terminal</span><span>v{TERMINAL_VERSION}</span></header>
+        <header className={styles.header}><span>guest terminal</span></header>
         <div ref={chatRef} className={styles.chatOutput} aria-live="polite">{visibleLines.length ? visibleLines.map((line, index) => <div className={styles.line} key={`${index}-${line}`}>{line || "\u00a0"}</div>) : <div className={styles.emptyLine}>waiting for messages...</div>}</div>
         <form className={styles.inputBar} onSubmit={handleSubmit}><span className={styles.prompt} aria-hidden="true">&gt;</span><input className={styles.input} type="text" value={input} onChange={(event) => setInput(event.target.value)} placeholder="message or /help" autoComplete="off" spellCheck={false} aria-label="Terminal input" disabled={busy} /></form>
         <div ref={commandRef} className={styles.commandOutput} aria-label="Command output">{helpPath !== null ? renderHelp() : commandOutput.map((line, index) => <div className={styles.commandLine} key={`${index}-${line}`}>{line || "\u00a0"}</div>)}</div>
