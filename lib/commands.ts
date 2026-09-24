@@ -9,6 +9,7 @@ export type CommandDefinition = {
 export const COMMAND_DEFINITIONS: CommandDefinition[] = [
   { command: "/help", action: "help" },
   { command: "/home", action: "home" },
+  { command: "/balls", action: "balls" },
   {
     command: "/egg",
     action: "egg",
