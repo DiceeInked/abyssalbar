@@ -1,4 +1,4 @@
-export const SITE_VERSION = "4.2";
+export const SITE_VERSION = "4.3";
 
 export const GAME_BUCKET = "gametonics";
 export const GAME_LIBRARY_ROUTE = "/gametonics";
