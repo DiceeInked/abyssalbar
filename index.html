@@ -1,0 +1,566 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#070910">
+  <meta name="description" content="A tiny sensory playground. Tap the fixed dot field and watch color ripple through a pocket-sized universe.">
+  <title>DOTFIELD — a sensory playground</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --night: #070910;
+      --paper: #f4f5f8;
+      --muted: rgba(232, 238, 248, .57);
+      --hairline: rgba(232, 238, 248, .12);
+      --glass: rgba(13, 16, 27, .72);
+      --teal: #00ffc8;
+      --ease: cubic-bezier(.2,.75,.2,1);
+    }
+    * { box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; }
+    body {
+      background: var(--night);
+      color: var(--paper);
+      font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      -webkit-font-smoothing: antialiased;
+      text-rendering: optimizeLegibility;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    button { font: inherit; color: inherit; }
+    button:focus-visible, canvas:focus-visible {
+      outline: 2px solid var(--teal);
+      outline-offset: 4px;
+    }
+    #universe, #field { position: fixed; inset: 0; width: 100%; height: 100%; }
+    #universe { overflow: hidden; isolation: isolate; background: #070910; }
+    #field { display: block; touch-action: none; cursor: crosshair; }
+    .shade, .grain { position: fixed; inset: 0; pointer-events: none; }
+    .shade {
+      z-index: 1;
+      background:
+        linear-gradient(180deg, rgba(5,7,14,.52) 0%, transparent 32%, transparent 62%, rgba(5,7,14,.43) 100%),
+        radial-gradient(ellipse at 50% 45%, transparent 30%, rgba(3,5,12,.38) 100%);
+    }
+    .grain {
+      z-index: 2;
+      opacity: .115;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.88' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.22'/%3E%3C/svg%3E");
+      mix-blend-mode: soft-light;
+    }
+    .topbar {
+      position: fixed; z-index: 5; top: 0; left: 0; right: 0;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: max(23px, env(safe-area-inset-top)) clamp(18px, 4vw, 54px) 0;
+      gap: 16px;
+    }
+    .brand { display: inline-flex; align-items: center; gap: 11px; color: var(--paper); text-decoration: none; }
+    .brand-mark { width: 31px; height: 31px; filter: drop-shadow(0 0 9px rgba(0,255,200,.25)); flex: 0 0 auto; }
+    .brand-name { font-size: 12px; font-weight: 850; letter-spacing: .19em; line-height: 1.15; }
+    .brand-sub { display: block; color: var(--muted); font-size: 8px; letter-spacing: .19em; font-weight: 650; margin-top: 5px; }
+    .top-right { display: flex; align-items: center; gap: 9px; }
+    .live-tag, .utility-button {
+      min-height: 36px; border: 1px solid var(--hairline); border-radius: 999px;
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      background: rgba(10,13,23,.44); backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px); font-size: 9px; letter-spacing: .12em; font-weight: 750;
+      color: rgba(244,245,248,.72); white-space: nowrap;
+    }
+    .live-tag { padding: 0 13px; }
+    .live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 10px rgba(0,255,200,.8); }
+    .utility-button { padding: 0 13px; cursor: pointer; transition: border-color .2s, background .2s, color .2s; }
+    .utility-button:hover { border-color: rgba(0,255,200,.5); color: white; background: rgba(14,25,30,.75); }
+    .utility-button[aria-pressed="true"] { border-color: rgba(0,255,200,.45); color: var(--teal); }
+    .utility-button svg { width: 13px; height: 13px; }
+    .intro {
+      position: fixed; z-index: 3; top: clamp(106px, 16.5vh, 176px); left: 50%;
+      width: min(680px, calc(100% - 34px)); transform: translateX(-50%); text-align: center;
+      pointer-events: none;
+    }
+    .eyebrow { display: flex; align-items: center; justify-content: center; gap: 10px; color: rgba(215,228,241,.63); font-size: 9px; font-weight: 750; letter-spacing: .24em; text-transform: uppercase; }
+    .eyebrow::before, .eyebrow::after { content: ""; display: block; width: 19px; height: 1px; background: rgba(215,228,241,.35); }
+    h1 { margin: 23px 0 13px; font-size: clamp(48px, 7.3vw, 91px); line-height: .91; letter-spacing: -.075em; font-weight: 570; }
+    h1 .color-word {
+      font-family: Georgia, "Times New Roman", serif; font-style: italic; font-weight: 400; letter-spacing: -.085em;
+      background: linear-gradient(105deg, #a3fff0 2%, #00ffc8 32%, #72aaff 68%, #d9a4ff 100%);
+      color: transparent; background-clip: text; -webkit-background-clip: text;
+      filter: drop-shadow(0 0 20px rgba(0,255,200,.15));
+    }
+    .intro p { margin: 0 auto; color: rgba(232,238,248,.64); font-size: clamp(12px, 1.4vw, 14px); letter-spacing: .015em; line-height: 1.7; }
+    .side-note {
+      position: fixed; z-index: 3; top: 49%; left: clamp(17px, 3.8vw, 50px);
+      writing-mode: vertical-rl; transform: rotate(180deg); color: rgba(226,234,247,.42);
+      font-size: 8px; font-weight: 700; letter-spacing: .23em; pointer-events: none;
+    }
+    .side-note-right {
+      left: auto; right: clamp(17px, 3.8vw, 50px); transform: none;
+    }
+    .bottom-zone {
+      position: fixed; z-index: 5; left: 50%; bottom: max(25px, env(safe-area-inset-bottom));
+      transform: translateX(-50%); width: min(1000px, calc(100% - 52px));
+      display: grid; grid-template-columns: minmax(320px, 1fr) auto auto; align-items: end; gap: 12px;
+    }
+    .glass-panel {
+      border: 1px solid rgba(234,239,250,.12); border-radius: 17px;
+      background: linear-gradient(135deg, rgba(20,24,38,.83), rgba(10,13,22,.72));
+      box-shadow: 0 15px 60px rgba(0,0,0,.2), inset 0 1px 0 rgba(255,255,255,.035);
+      backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px);
+    }
+    .palette-panel { padding: 13px 14px 12px; }
+    .panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 4px 12px; }
+    .panel-label { color: rgba(237,241,249,.53); font-size: 8px; font-weight: 800; letter-spacing: .2em; }
+    .palette-readout { color: rgba(0,255,200,.8); font-size: 8px; font-weight: 800; letter-spacing: .15em; }
+    .swatches { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 7px; }
+    .swatch {
+      min-width: 0; border: 1px solid transparent; border-radius: 10px; padding: 8px 9px;
+      display: flex; align-items: center; gap: 7px; background: rgba(255,255,255,.035);
+      color: rgba(240,243,250,.64); font-size: 10px; font-weight: 680;
+      cursor: pointer; transition: background .2s, border-color .2s, color .2s, transform .2s;
+    }
+    .swatch:hover { background: rgba(255,255,255,.075); color: white; transform: translateY(-1px); }
+    .swatch[aria-pressed="true"] { border-color: rgba(0,255,200,.48); background: rgba(0,255,200,.085); color: white; }
+    .swatch-dot { width: 13px; height: 13px; border-radius: 50%; flex: 0 0 auto; background: var(--swatch); box-shadow: 0 0 11px color-mix(in srgb, var(--swatch) 35%, transparent); }
+    .hint-panel { padding: 14px 17px; min-height: 91px; display: flex; align-items: center; gap: 12px; min-width: 157px; }
+    .hint-glyph { display: grid; place-items: center; width: 31px; height: 31px; border: 1px solid rgba(0,255,200,.23); border-radius: 50%; color: var(--teal); font-size: 15px; box-shadow: inset 0 0 16px rgba(0,255,200,.06); }
+    .hint-title { color: rgba(247,248,252,.92); font-size: 9px; font-weight: 850; letter-spacing: .13em; white-space: nowrap; }
+    .hint-caption { color: rgba(224,231,243,.49); font-size: 9px; margin-top: 6px; white-space: nowrap; }
+    .action-stack { display: flex; flex-direction: column; gap: 8px; min-width: 126px; }
+    .action-button {
+      min-height: 42px; border: 1px solid rgba(237,241,250,.15); border-radius: 11px;
+      padding: 0 15px; display: flex; align-items: center; justify-content: space-between; gap: 14px;
+      background: rgba(13,16,27,.72); color: rgba(242,245,251,.84); font-size: 10px; font-weight: 780;
+      letter-spacing: .025em; cursor: pointer; backdrop-filter: blur(16px);
+      transition: transform .2s var(--ease), border-color .2s, background .2s;
+    }
+    .action-button:hover { transform: translateY(-2px); border-color: rgba(0,255,200,.45); background: rgba(14,27,31,.83); }
+    .action-button.primary { border-color: rgba(0,255,200,.24); background: linear-gradient(110deg, rgba(0,255,200,.12), rgba(93,113,255,.11)); }
+    .action-button .arrow { color: var(--teal); font-size: 15px; font-weight: 400; }
+    .bottom-foot {
+      position: fixed; z-index: 4; bottom: 9px; left: 50%; transform: translateX(-50%);
+      color: rgba(224,231,243,.27); font-size: 7px; letter-spacing: .18em; font-weight: 700;
+      text-align: center; white-space: nowrap; pointer-events: none;
+    }
+    .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+    @media (min-width: 1500px) { .bottom-zone { width: min(1080px, calc(100% - 100px)); } }
+    @media (max-width: 760px) {
+      .topbar { padding-left: 17px; padding-right: 17px; gap: 8px; }
+      .brand { gap: 8px; }
+      .brand-mark { width: 27px; height: 27px; }
+      .brand-name { font-size: 10px; }
+      .brand-sub { font-size: 7px; letter-spacing: .13em; }
+      .top-right { gap: 6px; }
+      .live-tag { display: none; }
+      .utility-button { min-height: 33px; padding: 0 10px; font-size: 8px; letter-spacing: .08em; gap: 6px; }
+      .intro { top: 15.5vh; }
+      h1 { margin-top: 18px; margin-bottom: 10px; font-size: clamp(44px, 12vw, 72px); }
+      .intro p { max-width: 320px; font-size: 12px; }
+      .side-note { display: none; }
+      .bottom-zone {
+        bottom: max(13px, env(safe-area-inset-bottom)); width: calc(100% - 24px);
+        grid-template-columns: 1fr auto; gap: 8px; align-items: stretch;
+      }
+      .palette-panel { grid-column: 1 / -1; padding: 11px 11px 10px; }
+      .panel-heading { padding: 0 3px 9px; }
+      .swatches { gap: 5px; }
+      .swatch { padding: 8px 5px; justify-content: center; gap: 5px; font-size: 9px; }
+      .swatch-dot { width: 10px; height: 10px; }
+      .hint-panel { display: none; }
+      .action-stack { grid-column: 1 / -1; flex-direction: row; min-width: 0; gap: 7px; }
+      .action-button { min-height: 39px; flex: 1; padding: 0 11px; font-size: 9px; }
+      .bottom-foot { display: none; }
+    }
+    @media (max-width: 370px) {
+      .brand-sub { display: none; }
+      .swatch { font-size: 8px; padding-left: 3px; padding-right: 3px; }
+      .utility-button { padding: 0 8px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <div id="universe">
+    <canvas id="field" tabindex="0" role="img" aria-label="A fixed perspective grid of glowing dots. Tap or click to create colorful ripples. Use Enter or Space when the canvas is focused."></canvas>
+    <div class="shade" aria-hidden="true"></div>
+    <div class="grain" aria-hidden="true"></div>
+  </div>
+
+  <header class="topbar">
+    <a class="brand" href="#" aria-label="DOTFIELD home">
+      <svg class="brand-mark" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+        <circle cx="7" cy="7" r="3.5" fill="#00FFC8"/>
+        <circle cx="16" cy="7" r="3.5" fill="#00FFC8" fill-opacity=".75"/>
+        <circle cx="25" cy="7" r="3.5" fill="#00FFC8" fill-opacity=".42"/>
+        <circle cx="7" cy="16" r="3.5" fill="#00FFC8" fill-opacity=".78"/>
+        <circle cx="16" cy="16" r="3.5" fill="#E8FFF9"/>
+        <circle cx="25" cy="16" r="3.5" fill="#5B9EFF" fill-opacity=".72"/>
+        <circle cx="7" cy="25" r="3.5" fill="#00FFC8" fill-opacity=".4"/>
+        <circle cx="16" cy="25" r="3.5" fill="#5B9EFF" fill-opacity=".68"/>
+        <circle cx="25" cy="25" r="3.5" fill="#C29AFF" fill-opacity=".88"/>
+      </svg>
+      <span class="brand-name">DOTFIELD<span class="brand-sub">A SENSORY PLAYGROUND</span></span>
+    </a>
+    <div class="top-right">
+      <div class="live-tag"><span class="live-dot"></span><span>LIVE COLOR FIELD</span></div>
+      <button id="calm-button" class="utility-button" type="button" aria-pressed="false" title="Reduce the motion of the color ripples">CALM MODE</button>
+      <button id="sound-button" class="utility-button" type="button" aria-pressed="false" title="Turn gentle tones on or off">
+        <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3 8v4h3l4 3V5L6 8H3Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M13 7.2a4 4 0 0 1 0 5.6M15.5 4.8a7.4 7.4 0 0 1 0 10.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        SOUND OFF
+      </button>
+    </div>
+  </header>
+
+  <section class="intro" aria-label="Introduction">
+    <div class="eyebrow">A LITTLE SPACE TO RESET</div>
+    <h1>Touch the<br><span class="color-word">color.</span></h1>
+    <p>One tap, one ripple. Explore a pocket-sized universe<br>where light flows and the dots stay still.</p>
+  </section>
+
+  <div class="side-note" aria-hidden="true">FIXED DOT MATRIX &nbsp; / &nbsp; INFINITE COLOR</div>
+  <div class="side-note side-note-right" aria-hidden="true">NO SCORE &nbsp; • &nbsp; JUST FEEL</div>
+
+  <section class="bottom-zone" aria-label="Sensory playground controls">
+    <div class="palette-panel glass-panel">
+      <div class="panel-heading">
+        <span class="panel-label">CHOOSE YOUR COLOR WORLD</span>
+        <span class="palette-readout" id="palette-readout">PRISM / 01</span>
+      </div>
+      <div class="swatches" role="group" aria-label="Color palettes">
+        <button class="swatch" type="button" data-theme="prism" aria-pressed="true" style="--swatch:linear-gradient(135deg,#00ffc8,#718cff 58%,#d0a2ff)"><span class="swatch-dot"></span>Prism</button>
+        <button class="swatch" type="button" data-theme="tide" aria-pressed="false" style="--swatch:linear-gradient(135deg,#9effef,#31a7db)"><span class="swatch-dot"></span>Tide</button>
+        <button class="swatch" type="button" data-theme="ember" aria-pressed="false" style="--swatch:linear-gradient(135deg,#ffd18a,#ff526f)"><span class="swatch-dot"></span>Ember</button>
+        <button class="swatch" type="button" data-theme="dream" aria-pressed="false" style="--swatch:linear-gradient(135deg,#e09aff,#8375ff 58%,#00ffc8)"><span class="swatch-dot"></span>Dream</button>
+      </div>
+    </div>
+
+    <div class="hint-panel glass-panel" aria-hidden="true">
+      <div class="hint-glyph">✳</div>
+      <div><div class="hint-title">TAP TO BLOOM</div><div class="hint-caption">Light moves. Dots stay.</div></div>
+    </div>
+
+    <div class="action-stack">
+      <button class="action-button primary" id="surprise-button" type="button"><span>Surprise me</span><span class="arrow">↗</span></button>
+      <button class="action-button" id="clear-button" type="button"><span>Clear the field</span><span class="arrow">↺</span></button>
+    </div>
+  </section>
+
+  <div class="bottom-foot" aria-hidden="true">MADE FOR A MOMENT OF WONDER &nbsp; • &nbsp; TAKE YOUR TIME</div>
+  <div id="announcement" class="sr-only" aria-live="polite">Prism palette selected.</div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      const canvas = document.getElementById("field");
+      const ctx = canvas.getContext("2d", { alpha: false });
+      const paletteReadout = document.getElementById("palette-readout");
+      const announce = document.getElementById("announcement");
+      const soundButton = document.getElementById("sound-button");
+      const calmButton = document.getElementById("calm-button");
+      const themes = {
+        prism: { label: "PRISM / 01", hues: [171, 191, 218, 265], sat: 91 },
+        tide:  { label: "TIDE / 02", hues: [176, 190, 202, 218], sat: 79 },
+        ember: { label: "EMBER / 03", hues: [7, 18, 34, 350], sat: 91 },
+        dream: { label: "DREAM / 04", hues: [273, 294, 316, 177], sat: 84 }
+      };
+
+      let themeName = "prism";
+      let width = 0;
+      let height = 0;
+      let dpr = 1;
+      let dots = [];
+      let effects = [];
+      let tapCount = 0;
+      let soundOn = false;
+      let calmMode = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      let audioContext = null;
+      let lastFrame = 0;
+
+      function clamp(value, min, max) { return Math.max(min, Math.min(max, value)); }
+      function hueDelta(a, b) { return ((b - a + 540) % 360) - 180; }
+      function activeTheme() { return themes[themeName]; }
+
+      function rebuildDots() {
+        dots = [];
+        const columns = Math.max(17, Math.min(82, Math.ceil(width / 22)));
+        const rows = Math.max(19, Math.min(39, Math.ceil(height / 25)));
+        for (let row = 0; row < rows; row++) {
+          const depth = row / (rows - 1);
+          const y = height * 0.265 + Math.pow(depth, 1.48) * height * 0.96;
+          const spread = 0.63 + depth * 0.49;
+          for (let col = 0; col < columns; col++) {
+            const across = col / (columns - 1);
+            const x = width * 0.5 + (across - 0.5) * width * spread;
+            dots.push({
+              x: x,
+              y: y,
+              depth: depth,
+              across: across,
+              row: row,
+              col: col,
+              radius: 0.75 + depth * 1.05,
+              hueIndex: (row + col) % 4
+            });
+          }
+        }
+      }
+
+      function resize() {
+        width = window.innerWidth;
+        height = window.innerHeight;
+        dpr = Math.min(window.devicePixelRatio || 1, 2);
+        canvas.width = Math.round(width * dpr);
+        canvas.height = Math.round(height * dpr);
+        canvas.style.width = width + "px";
+        canvas.style.height = height + "px";
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        rebuildDots();
+        draw(performance.now());
+      }
+
+      function playNote(x) {
+        if (!soundOn) return;
+        try {
+          const AudioCtor = window.AudioContext || window.webkitAudioContext;
+          if (!AudioCtor) return;
+          if (!audioContext) audioContext = new AudioCtor();
+          if (audioContext.state === "suspended") audioContext.resume();
+          const osc = audioContext.createOscillator();
+          const gain = audioContext.createGain();
+          const pan = audioContext.createStereoPanner ? audioContext.createStereoPanner() : null;
+          const freq = 220 + (clamp(x / Math.max(1, width), 0, 1) * 370) + (tapCount % 4) * 22;
+          osc.type = "sine";
+          osc.frequency.setValueAtTime(freq, audioContext.currentTime);
+          gain.gain.setValueAtTime(0.0001, audioContext.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.025, audioContext.currentTime + 0.025);
+          gain.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + (calmMode ? 0.24 : 0.42));
+          if (pan) {
+            pan.pan.value = clamp((x / Math.max(1, width)) * 2 - 1, -1, 1);
+            osc.connect(gain);
+            gain.connect(pan);
+            pan.connect(audioContext.destination);
+          } else {
+            osc.connect(gain);
+            gain.connect(audioContext.destination);
+          }
+          osc.start();
+          osc.stop(audioContext.currentTime + (calmMode ? 0.26 : 0.45));
+          osc.addEventListener("ended", function () {
+            osc.disconnect();
+            gain.disconnect();
+            if (pan) pan.disconnect();
+          }, { once: true });
+        } catch (error) {
+          // Audio is an optional extra. The visual experience still works without it.
+        }
+      }
+
+      function createEffect(x, y) {
+        tapCount += 1;
+        const palette = activeTheme();
+        const hue = palette.hues[(tapCount - 1) % palette.hues.length];
+        effects.push({ x: x, y: y, hue: hue, born: performance.now(), id: tapCount });
+        if (effects.length > 7) effects.shift();
+        playNote(x);
+        announce.textContent = "Ripple " + tapCount + " created in the " + themeName + " palette.";
+      }
+
+      function drawBackground(now) {
+        ctx.fillStyle = "#070910";
+        ctx.fillRect(0, 0, width, height);
+
+        const phase = calmMode ? 0 : now * 0.000055;
+        const palette = activeTheme();
+        const leftHue = palette.hues[0];
+        const rightHue = palette.hues[palette.hues.length - 1];
+
+        const glowA = ctx.createRadialGradient(width * (0.22 + Math.sin(phase) * 0.025), height * 0.48, 0, width * 0.22, height * 0.48, Math.max(width, height) * 0.62);
+        glowA.addColorStop(0, "hsla(" + leftHue + ", 90%, 42%, 0.10)");
+        glowA.addColorStop(1, "hsla(" + leftHue + ", 90%, 28%, 0)");
+        ctx.fillStyle = glowA;
+        ctx.fillRect(0, 0, width, height);
+
+        const glowB = ctx.createRadialGradient(width * 0.84, height * 0.56, 0, width * 0.84, height * 0.56, Math.max(width, height) * 0.55);
+        glowB.addColorStop(0, "hsla(" + rightHue + ", 86%, 44%, 0.075)");
+        glowB.addColorStop(1, "hsla(" + rightHue + ", 86%, 28%, 0)");
+        ctx.fillStyle = glowB;
+        ctx.fillRect(0, 0, width, height);
+      }
+
+      function drawEffects(now) {
+        const life = calmMode ? 1050 : 2850;
+        effects = effects.filter(function (fx) { return now - fx.born < life; });
+        for (let i = 0; i < effects.length; i++) {
+          const fx = effects[i];
+          const age = now - fx.born;
+          const progress = clamp(age / life, 0, 1);
+          const fade = Math.pow(1 - progress, calmMode ? 1.25 : 1.45);
+          const maxRadius = Math.min(Math.max(width, height) * (calmMode ? 0.2 : 0.39), 610);
+          const eased = 1 - Math.pow(1 - progress, 2.2);
+          const radius = 12 + eased * maxRadius;
+
+          const mist = ctx.createRadialGradient(fx.x, fx.y, 0, fx.x, fx.y, Math.max(20, radius));
+          mist.addColorStop(0, "hsla(" + fx.hue + ", 100%, 65%, " + (0.09 * fade) + ")");
+          mist.addColorStop(0.42, "hsla(" + fx.hue + ", 100%, 56%, " + (0.035 * fade) + ")");
+          mist.addColorStop(1, "hsla(" + fx.hue + ", 100%, 50%, 0)");
+          ctx.fillStyle = mist;
+          ctx.fillRect(fx.x - radius, fx.y - radius, radius * 2, radius * 2);
+
+          const ringCount = calmMode ? 1 : 3;
+          for (let ring = 0; ring < ringCount; ring++) {
+            const offset = ring * (calmMode ? 0 : 0.17);
+            const ringProgress = (progress + offset) % 1;
+            const ringRadius = 8 + ringProgress * maxRadius;
+            const ringAlpha = fade * (1 - offset) * (calmMode ? 0.23 : 0.36);
+            ctx.beginPath();
+            ctx.arc(fx.x, fx.y, ringRadius, 0, Math.PI * 2);
+            ctx.strokeStyle = "hsla(" + fx.hue + ", 100%, 72%, " + ringAlpha + ")";
+            ctx.lineWidth = ring === 0 ? 1.25 : 0.8;
+            ctx.stroke();
+          }
+        }
+      }
+
+      function drawDots(now) {
+        const palette = activeTheme();
+        const phase = calmMode ? 0 : now * 0.00042;
+
+        for (let i = 0; i < dots.length; i++) {
+          const dot = dots[i];
+          let hue = palette.hues[dot.hueIndex];
+          hue += (dot.across - 0.5) * 16 + Math.sin(dot.depth * 5.2 + dot.across * 2.8 + phase) * (calmMode ? 0 : 4);
+          let influence = 0;
+          let brightness = 0;
+
+          for (let j = 0; j < effects.length; j++) {
+            const fx = effects[j];
+            const age = now - fx.born;
+            const life = calmMode ? 1050 : 2850;
+            const progress = clamp(age / life, 0, 1);
+            const fade = Math.pow(1 - progress, calmMode ? 1.3 : 1.45);
+            const dx = dot.x - fx.x;
+            const dy = dot.y - fx.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            const waveFront = age * (calmMode ? 0.12 : 0.31);
+            const waveDistance = Math.abs(distance - waveFront);
+            const wave = Math.exp(-(waveDistance * waveDistance) / (calmMode ? 3100 : 4100)) * fade;
+            const haloRadius = 62 + age * (calmMode ? 0.025 : 0.09);
+            const halo = Math.exp(-(distance * distance) / (2 * haloRadius * haloRadius)) * fade * 0.38;
+            const weight = clamp(wave * (calmMode ? 0.32 : 0.76) + halo, 0, 0.9);
+            hue += hueDelta(hue, fx.hue) * weight;
+            influence = Math.max(influence, weight);
+            brightness = Math.max(brightness, wave * 24 + halo * 15);
+          }
+
+          hue = ((hue % 360) + 360) % 360;
+          const sat = palette.sat;
+          const light = clamp(39 + dot.depth * 22 + brightness, 28, 83);
+          const alpha = 0.25 + dot.depth * 0.66;
+          const r = dot.radius;
+
+          // A shaded lower edge, a saturated face and a tiny specular highlight make each point read as a bead.
+          ctx.beginPath();
+          ctx.arc(dot.x + 0.45, dot.y + 0.7, r + 0.55, 0, Math.PI * 2);
+          ctx.fillStyle = "rgba(0, 0, 0, " + (0.5 + dot.depth * 0.28) + ")";
+          ctx.fill();
+
+          if (influence > 0.04) {
+            ctx.shadowColor = "hsla(" + hue + ", 100%, 66%, " + (0.2 + influence * 0.55) + ")";
+            ctx.shadowBlur = Math.min(13, influence * 13);
+          } else {
+            ctx.shadowBlur = 0;
+          }
+          ctx.beginPath();
+          ctx.arc(dot.x, dot.y, r, 0, Math.PI * 2);
+          ctx.fillStyle = "hsla(" + hue + ", " + sat + "%, " + light + "%, " + alpha + ")";
+          ctx.fill();
+          ctx.shadowBlur = 0;
+
+          ctx.beginPath();
+          ctx.arc(dot.x - r * 0.28, dot.y - r * 0.32, Math.max(0.28, r * 0.29), 0, Math.PI * 2);
+          ctx.fillStyle = "rgba(255,255,255," + (0.2 + dot.depth * 0.42 + influence * 0.3) + ")";
+          ctx.fill();
+        }
+      }
+
+      function draw(now) {
+        if (!width || !height) return;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        drawBackground(now);
+        drawEffects(now);
+        drawDots(now);
+        lastFrame = now;
+        requestAnimationFrame(draw);
+      }
+
+      function setTheme(name) {
+        if (!themes[name]) return;
+        themeName = name;
+        const buttons = document.querySelectorAll("[data-theme]");
+        buttons.forEach(function (button) {
+          const selected = button.dataset.theme === name;
+          button.setAttribute("aria-pressed", selected ? "true" : "false");
+        });
+        paletteReadout.textContent = themes[name].label;
+        announce.textContent = name.charAt(0).toUpperCase() + name.slice(1) + " palette selected.";
+      }
+
+      document.querySelectorAll("[data-theme]").forEach(function (button) {
+        button.addEventListener("click", function () { setTheme(button.dataset.theme); });
+      });
+
+      canvas.addEventListener("pointerdown", function (event) {
+        if (!event.isPrimary) return;
+        if (event.pointerType === "mouse" && event.button !== 0) return;
+        createEffect(event.clientX, event.clientY);
+      });
+
+      canvas.addEventListener("keydown", function (event) {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          createEffect(width * 0.5, height * 0.56);
+        }
+      });
+
+      document.getElementById("surprise-button").addEventListener("click", function () {
+        const x = width * (0.18 + Math.random() * 0.64);
+        const y = height * (0.37 + Math.random() * 0.48);
+        createEffect(x, y);
+      });
+
+      document.getElementById("clear-button").addEventListener("click", function () {
+        effects = [];
+        tapCount = 0;
+        announce.textContent = "The field is clear. Tap anywhere to begin again.";
+      });
+
+      soundButton.addEventListener("click", function () {
+        soundOn = !soundOn;
+        soundButton.setAttribute("aria-pressed", soundOn ? "true" : "false");
+        soundButton.innerHTML = '<svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M3 8v4h3l4 3V5L6 8H3Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/>' +
+          (soundOn ? '<path d="M13 7.2a4 4 0 0 1 0 5.6M15.5 4.8a7.4 7.4 0 0 1 0 10.4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>' : '<path d="m13 8 4 4m0-4-4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>') +
+          '</svg>' + (soundOn ? 'SOUND ON' : 'SOUND OFF');
+        announce.textContent = soundOn ? "Gentle tap tones enabled." : "Sound off.";
+      });
+
+      calmButton.addEventListener("click", function () {
+        calmMode = !calmMode;
+        calmButton.setAttribute("aria-pressed", calmMode ? "true" : "false");
+        calmButton.textContent = calmMode ? "CALM MODE ON" : "CALM MODE";
+        announce.textContent = calmMode ? "Calm mode enabled. Color ripples are shorter and quieter." : "Calm mode disabled.";
+      });
+
+      window.addEventListener("resize", resize, { passive: true });
+      document.addEventListener("visibilitychange", function () {
+        if (!document.hidden) draw(performance.now());
+      });
+
+      resize();
+      setTheme("prism");
+      requestAnimationFrame(draw);
+    })();
+  </script>
+</body>
+</html>
