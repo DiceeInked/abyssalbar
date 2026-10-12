@@ -288,7 +288,7 @@
         const rows = Math.max(19, Math.min(39, Math.ceil(height / 25)));
         for (let row = 0; row < rows; row++) {
           const depth = row / (rows - 1);
-          const y = height * 0.265 + Math.pow(depth, 1.48) * height * 0.96;
+          const y = height * 0.35 + Math.pow(depth, 1.48) * height * 0.96;
           const spread = 0.63 + depth * 0.49;
           for (let col = 0; col < columns; col++) {
             const across = col / (columns - 1);
@@ -317,7 +317,6 @@
         canvas.style.height = height + "px";
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         rebuildDots();
-        draw(performance.now());
       }
 
       function playNote(x) {
@@ -553,10 +552,6 @@
       });
 
       window.addEventListener("resize", resize, { passive: true });
-      document.addEventListener("visibilitychange", function () {
-        if (!document.hidden) draw(performance.now());
-      });
-
       resize();
       setTheme("prism");
       requestAnimationFrame(draw);
