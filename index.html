@@ -37,8 +37,8 @@ button{font:inherit}
 <body>
 <main id="menu" aria-label="Choose a dot">
   <div class="grid" role="group" aria-label="Sensory experiences">
-    <button class="dot active" type="button" aria-label="Open sensory experience"></button>
-    <button class="dot" type="button" aria-label="Unavailable experience"></button>
+    <button class="dot active" type="button" aria-label="Open elastic blob experience"></button>
+    <button class="dot active" type="button" aria-label="Open ripple rings experience"></button>
     <button class="dot" type="button" aria-label="Unavailable experience"></button>
     <button class="dot" type="button" aria-label="Unavailable experience"></button>
     <button class="dot" type="button" aria-label="Unavailable experience"></button>
@@ -82,6 +82,9 @@ button{font:inherit}
   const ctx = canvas.getContext('2d', { alpha: false });
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   let opened = false;
+  let mode = "blob";
+  let ripples = [];
+  let lastRippleAt = 0;
   let width = 0, height = 0, dpr = 1, radius = 100;
   let x = 0, y = 0, vx = 0, vy = 0, homeX = 0, homeY = 0;
   let targetX = 0, targetY = 0, grabX = 0, grabY = 0;
@@ -149,7 +152,35 @@ button{font:inherit}
     path.closePath();
     return path;
   }
+  function addRipple(px, py, strength = 1) {
+    ripples.push({x:px,y:py,r:2,life:1,speed:(1.8+Math.random()*1.1)*strength,weight:strength});
+    if(ripples.length>90) ripples.splice(0,ripples.length-90);
+  }
+  function drawRipples(time) {
+    ctx.fillStyle='#000';ctx.fillRect(0,0,width,height);
+    const breathe = reduceMotion ? 0 : Math.sin(time*.0011)*5;
+    ctx.save();ctx.translate(width/2,height/2);
+    for(let layer=0;layer<7;layer++){
+      const phase=((time*.018+layer*19)%120);
+      const r=phase*2.1+layer*7+breathe;
+      ctx.beginPath();ctx.arc(0,0,Math.max(1,r),0,Math.PI*2);
+      ctx.strokeStyle='rgba(255,255,255,'+(0.28*(1-phase/120))+')';
+      ctx.lineWidth=layer%2===0?1.25:.7;ctx.stroke();
+    }
+    ctx.restore();
+    for(let i=ripples.length-1;i>=0;i--){
+      const ring=ripples[i];ring.r+=ring.speed*(reduceMotion?1:1.25);ring.life-=reduceMotion?.035:.012;
+      if(ring.life<=0){ripples.splice(i,1);continue;}
+      for(let band=0;band<3;band++){
+        const rr=ring.r-band*9;if(rr<=0)continue;
+        ctx.beginPath();ctx.arc(ring.x,ring.y,rr,0,Math.PI*2);
+        ctx.strokeStyle='rgba(255,255,255,'+(ring.life*(.65-band*.17))+')';
+        ctx.lineWidth=band===0?1.5:1;ctx.stroke();
+      }
+    }
+  }
   function draw(sx,sy,time) {
+    if(mode==='ripples'){drawRipples(time);return;}
     ctx.fillStyle='#000';ctx.fillRect(0,0,width,height);
     ctx.fillStyle='#fff';ctx.fill(shape(sx,sy,time));
   }
@@ -179,8 +210,11 @@ button{font:inherit}
 
   dots.forEach((dot,index)=>{
     dot.addEventListener('click',()=>{
-      if(index!==0||opened)return;
+      if(index>1||opened)return;
+      mode=index===0?'blob':'ripples';
       opened=true;
+      experience.setAttribute('aria-label',mode==='blob'?'Elastic blob fidget':'Ripple ring sensory experience');
+      canvas.setAttribute('aria-label',mode==='blob'?'Drag the white blob to stretch it and release to let it spring back. Press Enter or Space to bounce it.':'Tap or drag anywhere to send soft rings rippling across the dark water.');
       const r=dot.getBoundingClientRect();
       zoom.style.left=(r.left+r.width/2)+'px';
       zoom.style.top=(r.top+r.height/2)+'px';
@@ -192,7 +226,8 @@ button{font:inherit}
       menu.classList.add('leaving');
       zoom.classList.add('grow');
       window.setTimeout(()=>{
-        startBlobEntrance();
+        if(mode==='blob') startBlobEntrance();
+        else { ripples=[]; addRipple(width/2,height/2,1.7); addRipple(width/2,height/2,1.1); }
         experience.classList.add('ready');
         experience.inert=false;
         zoom.style.display='none';
@@ -224,6 +259,10 @@ button{font:inherit}
   });
 
   canvas.addEventListener('pointerdown',event=>{
+    if(mode==='ripples'){
+      const p=local(event);addRipple(p.x,p.y,1.25);activePointer=event.pointerId;
+      lastPointerX=p.x;lastPointerY=p.y;canvas.setPointerCapture(event.pointerId);event.preventDefault();return;
+    }
     if(activePointer!==null)return;
     const p=local(event);
     const hitRadius=radius*(1+dragGrowth*(maxBlobScale()-1))*1.28;
@@ -235,18 +274,24 @@ button{font:inherit}
   });
   canvas.addEventListener('pointermove',event=>{
     if(activePointer!==event.pointerId)return;
-    const p=local(event);lastPointerX=p.x;lastPointerY=p.y;
+    const p=local(event);
+    if(mode==='ripples'){
+      const moved=Math.hypot(p.x-lastPointerX,p.y-lastPointerY);
+      if(moved>20 && performance.now()-lastRippleAt>22){addRipple(p.x,p.y,Math.min(1.6,moved/35));lastRippleAt=performance.now();}
+      lastPointerX=p.x;lastPointerY=p.y;return;
+    }
+    lastPointerX=p.x;lastPointerY=p.y;
     const travel=Math.hypot(p.x-dragStartX,p.y-dragStartY);
     const threshold=Math.max(120,Math.min(width,height)*.65);
     targetDragGrowth=Math.min(1,travel/threshold);
     jelly=Math.max(jelly,.06+targetDragGrowth*.12);pulse=Math.max(pulse,targetDragGrowth*.18);
   });
-  function release(event){if(activePointer!==event.pointerId)return;activePointer=null;targetDragGrowth=0;pulse=.72;jelly=1.15+dragGrowth*.35;}
+  function release(event){if(activePointer!==event.pointerId)return;activePointer=null;if(mode==='ripples')return;targetDragGrowth=0;pulse=.72;jelly=1.15+dragGrowth*.35;}
   canvas.addEventListener('pointerup',release);
   canvas.addEventListener('pointercancel',release);
   canvas.addEventListener('lostpointercapture',event=>{if(activePointer===event.pointerId){activePointer=null;targetDragGrowth=0;pulse=.3;jelly=Math.max(jelly,.8);}});
   canvas.addEventListener('keydown',event=>{
-    if(event.key==='Enter'||event.key===' '){event.preventDefault();pulse=.85;jelly=1.1;if(!reduceMotion){vy-=7;targetDragGrowth=Math.max(targetDragGrowth,.28);window.setTimeout(()=>{targetDragGrowth=0;},180);}}
+    if(event.key==='Enter'||event.key===' '){event.preventDefault();if(mode==='ripples'){addRipple(width/2,height/2,1.5);return;}pulse=.85;jelly=1.1;if(!reduceMotion){vy-=7;targetDragGrowth=Math.max(targetDragGrowth,.28);window.setTimeout(()=>{targetDragGrowth=0;},180);}}
   });
   window.addEventListener('resize',resize,{passive:true});
   if(window.visualViewport) window.visualViewport.addEventListener('resize',resize,{passive:true});
