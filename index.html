@@ -87,6 +87,8 @@ button{font:inherit}
   let activePointer = null, pulse = 0, previousTime = 0;
   let points = [];
   let entrySide = 0;
+  let jelly = 0;
+  let lastPointerX = 0, lastPointerY = 0;
 
   function resize() {
     const oldX = homeX, oldY = homeY;
@@ -112,18 +114,24 @@ button{font:inherit}
   function shape(sx, sy, time) {
     const stretch = Math.min(.72, Math.hypot(sx,sy) / Math.max(radius,1) * .85);
     const angle = Math.atan2(sy,sx);
-    const speed = Math.min(.24,Math.hypot(vx,vy)/1050);
+    const speed = Math.min(.32,Math.hypot(vx,vy)/760);
     const pull = Math.max(stretch,speed);
-    const breathe = reduceMotion ? 0 : Math.sin(time*.00145)*.035 + Math.sin(time*.00073+1.7)*.018;
-    const rX = radius*(1+breathe+pulse*.12+pull*.48);
-    const rY = radius*(1+breathe+pulse*.12-pull*.27);
+    const breath = reduceMotion ? 0 : Math.sin(time*.0015)*.032 + Math.sin(time*.0008+1.7)*.018;
+    const velocityAngle = Math.atan2(vy,vx);
+    const squash = reduceMotion ? 0 : Math.min(.25,Math.hypot(vx,vy)/30);
+    const rX = radius*(1+breath+pulse*.15+pull*.42+squash*Math.cos(velocityAngle)**2);
+    const rY = radius*(1+breath+pulse*.15-pull*.25+squash*Math.sin(velocityAngle)**2);
     points.length = 0;
     const n = 72;
     for(let i=0;i<n;i++){
       const a=i/n*Math.PI*2, rel=a-angle;
-      const organic=1+.052*Math.sin(a*3+.55+time*.00055)+.031*Math.cos(a*5-.8-time*.00042)+(reduceMotion?0:.018*Math.sin(a*2+time*.0011)+.012*Math.cos(a*4-time*.00085));
-      const warp=1+pull*((1+Math.cos(rel))*.24-Math.sin(rel)**2*.12);
-      points.push({x:x+Math.cos(a)*rX*organic*warp,y:y+Math.sin(a)*rY*organic*warp});
+      const idleWave=reduceMotion?0:(.035*Math.sin(a*2-time*.0018)+.024*Math.sin(a*3+time*.0012)+.014*Math.cos(a*5-time*.0015));
+      const ripple=reduceMotion?0:jelly*(.105*Math.sin(a*2+time*.009)+.055*Math.sin(a*3-time*.007));
+      const organic=1+.048*Math.sin(a*3+.55+time*.0008)+.028*Math.cos(a*5-.8-time*.0006)+idleWave+ripple;
+      const warp=1+pull*((1+Math.cos(rel))*.28-Math.sin(rel)**2*.13);
+      const px=Math.cos(a)*rX*organic*warp, py=Math.sin(a)*rY*organic*warp;
+      const rotate=squash*.35*Math.sin(velocityAngle*2);
+      points.push({x:x+px+py*rotate,y:y+py-px*rotate});
     }
     const path=new Path2D(), first=mid(points[n-1],points[0]);
     path.moveTo(first.x,first.y);
@@ -148,8 +156,10 @@ button{font:inherit}
       const damping=Math.pow(activePointer===null?.84:.76,dt);
       vx*=damping;vy*=damping;x+=vx*dt;y+=vy*dt;
     }
-    pulse*=reduceMotion?.7:Math.pow(.88,dt);
+    pulse*=reduceMotion?.7:Math.pow(.9,dt);
+    jelly*=reduceMotion?0:Math.pow(.965,dt);
     if(pulse<.001)pulse=0;
+    if(jelly<.002)jelly=0;
     draw(activePointer===null?homeX-x:targetX-x,activePointer===null?homeY-y:targetY-y,time);
     requestAnimationFrame(animate);
   }
@@ -181,14 +191,14 @@ button{font:inherit}
 
   function startBlobEntrance(){
     entrySide=(entrySide+1)%4;
-    x=homeX;y=homeY;vx=0;vy=0;
+    x=homeX;y=homeY;vx=0;vy=0;jelly=.95;
     const margin=radius*2.15;
     if(reduceMotion){x=homeX;y=homeY;return;}
     if(entrySide===0){x=-margin;y=height*.5;vx=8;}
     else if(entrySide===1){x=width+margin;y=height*.42;vx=-8;}
     else if(entrySide===2){x=width*.5;y=-margin;vy=8;}
     else{x=width*.5;y=height+margin;vy=-8;}
-    targetX=homeX;targetY=homeY;activePointer=null;pulse=.16;
+    targetX=homeX;targetY=homeY;activePointer=null;pulse=.24;
   }
 
   back.addEventListener('click',()=>{
@@ -206,19 +216,19 @@ button{font:inherit}
     const p=local(event);
     if(Math.hypot(p.x-x,p.y-y)>radius*1.28)return;
     activePointer=event.pointerId;grabX=p.x-x;grabY=p.y-y;
-    targetX=p.x-grabX;targetY=p.y-grabY;pulse=Math.max(pulse,.18);
+    targetX=p.x-grabX;targetY=p.y-grabY;lastPointerX=p.x;lastPointerY=p.y;pulse=Math.max(pulse,.18);jelly=Math.max(jelly,.12);
     canvas.setPointerCapture(event.pointerId);event.preventDefault();
   });
   canvas.addEventListener('pointermove',event=>{
     if(activePointer!==event.pointerId)return;
-    const p=local(event);targetX=p.x-grabX;targetY=p.y-grabY;
+    const p=local(event);targetX=p.x-grabX;targetY=p.y-grabY;lastPointerX=p.x;lastPointerY=p.y;jelly=Math.max(jelly,.06);
   });
-  function release(event){if(activePointer!==event.pointerId)return;activePointer=null;pulse=.5;}
+  function release(event){if(activePointer!==event.pointerId)return;activePointer=null;pulse=.62;jelly=1.15;}
   canvas.addEventListener('pointerup',release);
   canvas.addEventListener('pointercancel',release);
   canvas.addEventListener('lostpointercapture',event=>{if(activePointer===event.pointerId){activePointer=null;pulse=.3;}});
   canvas.addEventListener('keydown',event=>{
-    if(event.key==='Enter'||event.key===' '){event.preventDefault();pulse=.62;vy-=reduceMotion?0:5;}
+    if(event.key==='Enter'||event.key===' '){event.preventDefault();pulse=.72;jelly=.95;if(!reduceMotion)vy-=7;}
   });
   window.addEventListener('resize',resize,{passive:true});
   resize();
