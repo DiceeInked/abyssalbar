@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#ffffff">
+<meta name="theme-color" content="#000000">
 <meta name="description" content="A minimalist field of dots hiding a tactile little world.">
 <title>Still</title>
 <style>
-:root{color-scheme:light;--paper:#fff;--ink:#000}
+:root{color-scheme:dark;--paper:#000;--ink:#fff}
 *{box-sizing:border-box}
 html,body{width:100%;height:100%;margin:0;overflow:hidden;background:var(--paper)}
 body{overscroll-behavior:none;font-family:system-ui,-apple-system,sans-serif;-webkit-tap-highlight-color:transparent}
@@ -20,10 +20,10 @@ button{font:inherit}
 #menu.leaving{pointer-events:none;opacity:0}
 #zoom{position:fixed;z-index:3;left:0;top:0;width:0;height:0;border-radius:50%;background:#000;transform:translate(-50%,-50%) scale(0);pointer-events:none;will-change:transform}
 #zoom.grow{animation:zoom-in .8s cubic-bezier(.65,0,.25,1) forwards}
-@keyframes zoom-in{0%{transform:translate(-50%,-50%) scale(0);border-radius:50%}65%{transform:translate(-50%,-50%) scale(45);border-radius:50%}100%{transform:translate(-50%,-50%) scale(65);border-radius:0}}
-#experience{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;transition:opacity .4s ease;z-index:1}
+@keyframes zoom-in{0%{transform:translate(-50%,-50%) scale(0);border-radius:50%}100%{transform:translate(-50%,-50%) scale(var(--zoom-scale,90));border-radius:50%}}
+#experience{position:fixed;inset:0;background:#000;opacity:0;pointer-events:none;transition:opacity .35s ease;z-index:1}
 #experience.ready{opacity:1;pointer-events:auto}
-#blob{display:block;width:100%;height:100%;touch-action:none;cursor:grab;outline:none}
+#blob{display:block;width:100%;height:100%;touch-action:none;cursor:grab;outline:none;background:#000}
 #blob:active{cursor:grabbing}
 #blob:focus-visible{outline:2px solid #000;outline-offset:-7px}
 #back{position:absolute;left:18px;top:18px;width:42px;height:42px;padding:0;border:0;background:transparent;color:#000;opacity:0;pointer-events:none;cursor:pointer;transition:opacity .2s;z-index:4}
@@ -86,6 +86,7 @@ button{font:inherit}
   let targetX = 0, targetY = 0, grabX = 0, grabY = 0;
   let activePointer = null, pulse = 0, previousTime = 0;
   let points = [];
+  let entrySide = 0;
 
   function resize() {
     const oldX = homeX, oldY = homeY;
@@ -99,7 +100,8 @@ button{font:inherit}
     homeY = height / 2;
     radius = Math.min(176, Math.max(70, Math.min(width, height) * .205));
     if (!oldX && !oldY) { x = homeX; y = homeY; }
-    else if (activePointer === null) { x = homeX; y = homeY; }
+    else if (activePointer === null && !opened) { x = homeX; y = homeY; }
+    else if (activePointer === null) { x += homeX - oldX; y += homeY - oldY; }
     else { x += homeX - oldX; y += homeY - oldY; }
     targetX = activePointer === null ? homeX : targetX + homeX - oldX;
     targetY = activePointer === null ? homeY : targetY + homeY - oldY;
@@ -112,14 +114,14 @@ button{font:inherit}
     const angle = Math.atan2(sy,sx);
     const speed = Math.min(.24,Math.hypot(vx,vy)/1050);
     const pull = Math.max(stretch,speed);
-    const breathe = reduceMotion ? 0 : Math.sin(time*.00115)*.014;
+    const breathe = reduceMotion ? 0 : Math.sin(time*.00145)*.035 + Math.sin(time*.00073+1.7)*.018;
     const rX = radius*(1+breathe+pulse*.12+pull*.48);
     const rY = radius*(1+breathe+pulse*.12-pull*.27);
     points.length = 0;
     const n = 72;
     for(let i=0;i<n;i++){
       const a=i/n*Math.PI*2, rel=a-angle;
-      const organic=1+.042*Math.sin(a*3+.55)+.025*Math.cos(a*5-.8)+(reduceMotion?0:.009*Math.sin(a*2+time*.0007));
+      const organic=1+.052*Math.sin(a*3+.55+time*.00055)+.031*Math.cos(a*5-.8-time*.00042)+(reduceMotion?0:.018*Math.sin(a*2+time*.0011)+.012*Math.cos(a*4-time*.00085));
       const warp=1+pull*((1+Math.cos(rel))*.24-Math.sin(rel)**2*.12);
       points.push({x:x+Math.cos(a)*rX*organic*warp,y:y+Math.sin(a)*rY*organic*warp});
     }
@@ -130,8 +132,8 @@ button{font:inherit}
     return path;
   }
   function draw(sx,sy,time) {
-    ctx.fillStyle='#fff';ctx.fillRect(0,0,width,height);
-    ctx.fillStyle='#000';ctx.fill(shape(sx,sy,time));
+    ctx.fillStyle='#000';ctx.fillRect(0,0,width,height);
+    ctx.fillStyle='#fff';ctx.fill(shape(sx,sy,time));
   }
   function animate(time) {
     if(!width||!height){requestAnimationFrame(animate);return;}
@@ -141,9 +143,9 @@ button{font:inherit}
     const destY=activePointer===null?homeY:targetY;
     if(reduceMotion){x+=(destX-x)*.34;y+=(destY-y)*.34;vx*=.65;vy*=.65;}
     else {
-      const stiffness=activePointer===null?.105:.15;
+      const stiffness=activePointer===null?.082:.15;
       vx+=(destX-x)*stiffness*dt;vy+=(destY-y)*stiffness*dt;
-      const damping=Math.pow(activePointer===null?.79:.76,dt);
+      const damping=Math.pow(activePointer===null?.84:.76,dt);
       vx*=damping;vy*=damping;x+=vx*dt;y+=vy*dt;
     }
     pulse*=reduceMotion?.7:Math.pow(.88,dt);
@@ -163,16 +165,31 @@ button{font:inherit}
       zoom.style.width=r.width+'px';
       zoom.style.height=r.height+'px';
       zoom.style.transformOrigin='center';
+      const coverScale=(Math.hypot(window.innerWidth,window.innerHeight)*1.55)/r.width;
+      zoom.style.setProperty('--zoom-scale',String(Math.ceil(coverScale)));
       menu.classList.add('leaving');
       zoom.classList.add('grow');
       window.setTimeout(()=>{
+        startBlobEntrance();
         experience.classList.add('ready');
         experience.inert=false;
         zoom.style.display='none';
         canvas.focus({preventScroll:true});
-      },reduceMotion?180:590);
+      },reduceMotion?200:810);
     });
   });
+
+  function startBlobEntrance(){
+    entrySide=(entrySide+1)%4;
+    x=homeX;y=homeY;vx=0;vy=0;
+    const margin=radius*2.15;
+    if(reduceMotion){x=homeX;y=homeY;return;}
+    if(entrySide===0){x=-margin;y=height*.5;vx=8;}
+    else if(entrySide===1){x=width+margin;y=height*.42;vx=-8;}
+    else if(entrySide===2){x=width*.5;y=-margin;vy=8;}
+    else{x=width*.5;y=height+margin;vy=-8;}
+    targetX=homeX;targetY=homeY;activePointer=null;pulse=.16;
+  }
 
   back.addEventListener('click',()=>{
     experience.classList.remove('ready');
