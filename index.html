@@ -39,7 +39,7 @@ button{font:inherit}
   <div class="grid" role="group" aria-label="Sensory experiences">
     <button class="dot active" type="button" aria-label="Open elastic blob experience"></button>
     <button class="dot active" type="button" aria-label="Open ripple rings experience"></button>
-    <button class="dot" type="button" aria-label="Unavailable experience"></button>
+    <button class="dot active" type="button" aria-label="Open drifting particles experience"></button>
     <button class="dot" type="button" aria-label="Unavailable experience"></button>
     <button class="dot" type="button" aria-label="Unavailable experience"></button>
     <button class="dot" type="button" aria-label="Unavailable experience"></button>
@@ -83,6 +83,8 @@ button{font:inherit}
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   let opened = false;
   let mode = "blob";
+  let particles = [];
+  let particleTouch = null;
   let ripples = [];
   let lastRippleAt = 0;
   let width = 0, height = 0, dpr = 1, radius = 100;
@@ -179,7 +181,35 @@ button{font:inherit}
       }
     }
   }
+  function initParticles() {
+    particles = Array.from({length:Math.min(150,Math.max(70,Math.round(width*height/9000)) )},()=>({
+      x:Math.random()*width,y:Math.random()*height,
+      vx:(Math.random()-.5)*.45,vy:(Math.random()-.5)*.45,
+      r:.6+Math.random()*1.5,phase:Math.random()*Math.PI*2
+    }));
+  }
+  function drawParticles(time) {
+    ctx.fillStyle='#000';ctx.fillRect(0,0,width,height);
+    for(const p of particles){
+      if(!reduceMotion){p.x+=p.vx;p.y+=p.vy;p.phase+=.012;}
+      if(p.x<0)p.x=width;if(p.x>width)p.x=0;
+      if(p.y<0)p.y=height;if(p.y>height)p.y=0;
+      if(particleTouch && !reduceMotion){
+        const dx=p.x-particleTouch.x,dy=p.y-particleTouch.y,dist=Math.hypot(dx,dy);
+        if(dist<150 && dist>1){const force=(150-dist)/150*.045;p.vx+=dx/dist*force;p.vy+=dy/dist*force;}
+      }
+      p.vx*=.997;p.vy*=.997;
+      const glow=reduceMotion?1:(.55+.45*Math.sin(p.phase+time*.001));
+      ctx.beginPath();ctx.arc(p.x,p.y,p.r*glow,0,Math.PI*2);
+      ctx.fillStyle='rgba(255,255,255,'+(.25+glow*.75)+')';ctx.fill();
+    }
+    if(particleTouch){
+      ctx.beginPath();ctx.arc(particleTouch.x,particleTouch.y,5,0,Math.PI*2);
+      ctx.fillStyle='rgba(255,255,255,.9)';ctx.fill();
+    }
+  }
   function draw(sx,sy,time) {
+    if(mode==='particles'){drawParticles(time);return;}
     if(mode==='ripples'){drawRipples(time);return;}
     ctx.fillStyle='#000';ctx.fillRect(0,0,width,height);
     ctx.fillStyle='#fff';ctx.fill(shape(sx,sy,time));
@@ -210,11 +240,11 @@ button{font:inherit}
 
   dots.forEach((dot,index)=>{
     dot.addEventListener('click',()=>{
-      if(index>1||opened)return;
-      mode=index===0?'blob':'ripples';
+      if(index>2||opened)return;
+      mode=index===0?'blob':index===1?'ripples':'particles';
       opened=true;
-      experience.setAttribute('aria-label',mode==='blob'?'Elastic blob fidget':'Ripple ring sensory experience');
-      canvas.setAttribute('aria-label',mode==='blob'?'Drag the white blob to stretch it and release to let it spring back. Press Enter or Space to bounce it.':'Tap or drag anywhere to send soft rings rippling across the dark water.');
+      experience.setAttribute('aria-label',mode==='blob'?'Elastic blob fidget':mode==='ripples'?'Ripple ring sensory experience':'Drifting particle field');
+      canvas.setAttribute('aria-label',mode==='blob'?'Drag the white blob to stretch it and release to let it spring back. Press Enter or Space to bounce it.':mode==='ripples'?'Tap or drag anywhere to send soft rings rippling across the dark water.':'Move your finger through the floating lights to gently scatter them.');
       const r=dot.getBoundingClientRect();
       zoom.style.left=(r.left+r.width/2)+'px';
       zoom.style.top=(r.top+r.height/2)+'px';
@@ -227,7 +257,8 @@ button{font:inherit}
       zoom.classList.add('grow');
       window.setTimeout(()=>{
         if(mode==='blob') startBlobEntrance();
-        else { ripples=[]; addRipple(width/2,height/2,1.7); addRipple(width/2,height/2,1.1); }
+        else if(mode==='ripples') { ripples=[]; addRipple(width/2,height/2,1.7); addRipple(width/2,height/2,1.1); }
+        else { particleTouch=null; initParticles(); }
         experience.classList.add('ready');
         experience.inert=false;
         zoom.style.display='none';
@@ -259,6 +290,10 @@ button{font:inherit}
   });
 
   canvas.addEventListener('pointerdown',event=>{
+    if(mode==='particles'){
+      const p=local(event);particleTouch=p;activePointer=event.pointerId;lastPointerX=p.x;lastPointerY=p.y;
+      canvas.setPointerCapture(event.pointerId);event.preventDefault();return;
+    }
     if(mode==='ripples'){
       const p=local(event);addRipple(p.x,p.y,1.25);activePointer=event.pointerId;
       lastPointerX=p.x;lastPointerY=p.y;canvas.setPointerCapture(event.pointerId);event.preventDefault();return;
@@ -275,6 +310,7 @@ button{font:inherit}
   canvas.addEventListener('pointermove',event=>{
     if(activePointer!==event.pointerId)return;
     const p=local(event);
+    if(mode==='particles') { particleTouch=p;lastPointerX=p.x;lastPointerY=p.y;return; }
     if(mode==='ripples'){
       const moved=Math.hypot(p.x-lastPointerX,p.y-lastPointerY);
       if(moved>20 && performance.now()-lastRippleAt>22){addRipple(p.x,p.y,Math.min(1.6,moved/35));lastRippleAt=performance.now();}
@@ -286,12 +322,12 @@ button{font:inherit}
     targetDragGrowth=Math.min(1,travel/threshold);
     jelly=Math.max(jelly,.06+targetDragGrowth*.12);pulse=Math.max(pulse,targetDragGrowth*.18);
   });
-  function release(event){if(activePointer!==event.pointerId)return;activePointer=null;if(mode==='ripples')return;targetDragGrowth=0;pulse=.72;jelly=1.15+dragGrowth*.35;}
+  function release(event){if(activePointer!==event.pointerId)return;activePointer=null;if(mode==='particles'){particleTouch=null;return;}if(mode==='ripples')return;targetDragGrowth=0;pulse=.72;jelly=1.15+dragGrowth*.35;}
   canvas.addEventListener('pointerup',release);
   canvas.addEventListener('pointercancel',release);
   canvas.addEventListener('lostpointercapture',event=>{if(activePointer===event.pointerId){activePointer=null;targetDragGrowth=0;pulse=.3;jelly=Math.max(jelly,.8);}});
   canvas.addEventListener('keydown',event=>{
-    if(event.key==='Enter'||event.key===' '){event.preventDefault();if(mode==='ripples'){addRipple(width/2,height/2,1.5);return;}pulse=.85;jelly=1.1;if(!reduceMotion){vy-=7;targetDragGrowth=Math.max(targetDragGrowth,.28);window.setTimeout(()=>{targetDragGrowth=0;},180);}}
+    if(event.key==='Enter'||event.key===' '){event.preventDefault();if(mode==='particles'){for(const p of particles){p.vx+=(Math.random()-.5)*3;p.vy+=(Math.random()-.5)*3;}return;}if(mode==='ripples'){addRipple(width/2,height/2,1.5);return;}pulse=.85;jelly=1.1;if(!reduceMotion){vy-=7;targetDragGrowth=Math.max(targetDragGrowth,.28);window.setTimeout(()=>{targetDragGrowth=0;},180);}}
   });
   window.addEventListener('resize',resize,{passive:true});
   if(window.visualViewport) window.visualViewport.addEventListener('resize',resize,{passive:true});
