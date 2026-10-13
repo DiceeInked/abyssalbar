@@ -9,8 +9,9 @@
 <style>
 :root{color-scheme:dark;--paper:#000;--ink:#fff}
 *{box-sizing:border-box}
-html,body{width:100%;height:100%;margin:0;overflow:hidden;background:var(--paper)}
-body{overscroll-behavior:none;font-family:system-ui,-apple-system,sans-serif;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;min-height:100%;margin:0;overflow:hidden;background:var(--paper)}
+@supports(height:100dvh){html,body{height:100dvh;min-height:100dvh}}
+body{overscroll-behavior:none;overscroll-behavior-y:none;font-family:system-ui,-apple-system,sans-serif;-webkit-tap-highlight-color:transparent;touch-action:pan-x pan-y}
 button{font:inherit}
 #menu{position:fixed;inset:0;display:grid;place-items:center;background:#fff;opacity:1;transition:opacity .45s ease;z-index:2}
 .grid{display:grid;grid-template-columns:repeat(5,clamp(18px,5.2vw,36px));grid-template-rows:repeat(5,clamp(18px,5.2vw,36px));gap:clamp(16px,4.2vw,34px)}
@@ -21,9 +22,9 @@ button{font:inherit}
 #zoom{position:fixed;z-index:3;left:0;top:0;width:0;height:0;border-radius:50%;background:#000;transform:translate(-50%,-50%) scale(0);pointer-events:none;will-change:transform}
 #zoom.grow{animation:zoom-in .8s cubic-bezier(.65,0,.25,1) forwards}
 @keyframes zoom-in{0%{transform:translate(-50%,-50%) scale(0);border-radius:50%}100%{transform:translate(-50%,-50%) scale(var(--zoom-scale,90));border-radius:50%}}
-#experience{position:fixed;inset:0;background:#000;opacity:0;pointer-events:none;transition:opacity .35s ease;z-index:1}
+#experience{position:fixed;inset:0;background:#000;opacity:0;pointer-events:none;transition:opacity .35s ease;z-index:1;height:100vh;height:100dvh;overflow:hidden}
 #experience.ready{opacity:1;pointer-events:auto}
-#blob{display:block;width:100%;height:100%;touch-action:none;cursor:grab;outline:none;background:#000}
+#blob{display:block;width:100%;height:100%;height:100dvh;touch-action:none;overscroll-behavior:none;cursor:grab;outline:none;background:#000;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 #blob:active{cursor:grabbing}
 #blob:focus-visible{outline:2px solid #000;outline-offset:-7px}
 #back{position:absolute;left:18px;top:18px;width:42px;height:42px;padding:0;border:0;background:transparent;color:#fff;opacity:0;pointer-events:none;cursor:pointer;transition:opacity .2s;z-index:4}
@@ -156,8 +157,8 @@ button{font:inherit}
     if(!width||!height){requestAnimationFrame(animate);return;}
     const dt=previousTime?Math.min((time-previousTime)/16.667,2):1;
     previousTime=time;
-    const destX=activePointer===null?homeX:targetX;
-    const destY=activePointer===null?homeY:targetY;
+    const destX=homeX;
+    const destY=homeY;
     if(reduceMotion){x+=(destX-x)*.34;y+=(destY-y)*.34;vx*=.65;vy*=.65;}
     else {
       const stiffness=activePointer===null?.082:.15;
@@ -171,7 +172,7 @@ button{font:inherit}
     if(pulse<.001)pulse=0;
     if(jelly<.002)jelly=0;
     if(dragGrowth<.001 && targetDragGrowth===0)dragGrowth=0;
-    draw(activePointer===null?homeX-x:targetX-x,activePointer===null?homeY-y:targetY-y,time);
+    draw(0,0,time);
     requestAnimationFrame(animate);
   }
   function local(event){const r=canvas.getBoundingClientRect();return{x:event.clientX-r.left,y:event.clientY-r.top};}
@@ -229,12 +230,12 @@ button{font:inherit}
     if(Math.hypot(p.x-x,p.y-y)>hitRadius)return;
     activePointer=event.pointerId;grabX=p.x-x;grabY=p.y-y;
     dragStartX=p.x;dragStartY=p.y;targetDragGrowth=dragGrowth;
-    targetX=p.x-grabX;targetY=p.y-grabY;lastPointerX=p.x;lastPointerY=p.y;pulse=Math.max(pulse,.18);jelly=Math.max(jelly,.12);
+    targetX=homeX;targetY=homeY;lastPointerX=p.x;lastPointerY=p.y;pulse=Math.max(pulse,.18);jelly=Math.max(jelly,.12);
     canvas.setPointerCapture(event.pointerId);event.preventDefault();
   });
   canvas.addEventListener('pointermove',event=>{
     if(activePointer!==event.pointerId)return;
-    const p=local(event);targetX=p.x-grabX;targetY=p.y-grabY;lastPointerX=p.x;lastPointerY=p.y;
+    const p=local(event);lastPointerX=p.x;lastPointerY=p.y;
     const travel=Math.hypot(p.x-dragStartX,p.y-dragStartY);
     const threshold=Math.max(120,Math.min(width,height)*.65);
     targetDragGrowth=Math.min(1,travel/threshold);
@@ -248,6 +249,7 @@ button{font:inherit}
     if(event.key==='Enter'||event.key===' '){event.preventDefault();pulse=.85;jelly=1.1;if(!reduceMotion){vy-=7;targetDragGrowth=Math.max(targetDragGrowth,.28);window.setTimeout(()=>{targetDragGrowth=0;},180);}}
   });
   window.addEventListener('resize',resize,{passive:true});
+  if(window.visualViewport) window.visualViewport.addEventListener('resize',resize,{passive:true});
   resize();
   requestAnimationFrame(animate);
 })();
