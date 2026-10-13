@@ -4,53 +4,91 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#ffffff">
-<meta name="description" content="A single elastic shape to stretch, tug, and release.">
-<title>Form</title>
+<meta name="description" content="A minimalist field of dots hiding a tactile little world.">
+<title>Still</title>
 <style>
 :root{color-scheme:light;--paper:#fff;--ink:#000}
 *{box-sizing:border-box}
 html,body{width:100%;height:100%;margin:0;overflow:hidden;background:var(--paper)}
-body{overscroll-behavior:none}
-canvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab;outline:none}
-canvas:active{cursor:grabbing}
-canvas:focus-visible{outline:2px solid var(--ink);outline-offset:-7px}
-@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+body{overscroll-behavior:none;font-family:system-ui,-apple-system,sans-serif;-webkit-tap-highlight-color:transparent}
+button{font:inherit}
+#menu{position:fixed;inset:0;display:grid;place-items:center;background:#fff;opacity:1;transition:opacity .45s ease;z-index:2}
+.grid{display:grid;grid-template-columns:repeat(5,clamp(18px,5.2vw,36px));grid-template-rows:repeat(5,clamp(18px,5.2vw,36px));gap:clamp(16px,4.2vw,34px)}
+.dot{width:100%;height:100%;padding:0;border:0;border-radius:50%;background:#000;cursor:pointer;transform:scale(1);transition:transform .25s cubic-bezier(.2,.8,.2,1),opacity .25s;touch-action:manipulation}
+.dot:not(.active):hover{transform:scale(1.2)}
+.dot:focus-visible{outline:2px solid #000;outline-offset:5px}
+#menu.leaving{pointer-events:none;opacity:0}
+#zoom{position:fixed;z-index:3;left:0;top:0;width:0;height:0;border-radius:50%;background:#000;transform:translate(-50%,-50%) scale(0);pointer-events:none;will-change:transform}
+#zoom.grow{animation:zoom-in .8s cubic-bezier(.65,0,.25,1) forwards}
+@keyframes zoom-in{0%{transform:translate(-50%,-50%) scale(0);border-radius:50%}65%{transform:translate(-50%,-50%) scale(45);border-radius:50%}100%{transform:translate(-50%,-50%) scale(65);border-radius:0}}
+#experience{position:fixed;inset:0;background:#fff;opacity:0;pointer-events:none;transition:opacity .4s ease;z-index:1}
+#experience.ready{opacity:1;pointer-events:auto}
+#blob{display:block;width:100%;height:100%;touch-action:none;cursor:grab;outline:none}
+#blob:active{cursor:grabbing}
+#blob:focus-visible{outline:2px solid #000;outline-offset:-7px}
+#back{position:absolute;left:18px;top:18px;width:42px;height:42px;padding:0;border:0;background:transparent;color:#000;opacity:0;pointer-events:none;cursor:pointer;transition:opacity .2s;z-index:4}
+#back svg{display:block;width:100%;height:100%}
+#experience.ready #back{opacity:1;pointer-events:auto}
+#back:focus-visible{outline:2px solid #000;outline-offset:2px}
+@media(prefers-reduced-motion:reduce){#menu,#experience{transition-duration:.01ms}#zoom.grow{animation-duration:.2s}.dot{transition-duration:.01ms}}
 </style>
 </head>
 <body>
-<canvas id="form" role="button" tabindex="0" aria-label="Elastic shape. Drag to stretch it, then release. Press enter or space to give it a little bounce."></canvas>
+<main id="menu" aria-label="Choose a dot">
+  <div class="grid" role="group" aria-label="Sensory experiences">
+    <button class="dot active" type="button" aria-label="Open sensory experience"></button>
+    <button class="dot" type="button" aria-label="Unavailable experience"></button>
+    <button class="dot" type="button" aria-label="Unavailable experience"></button>
+    <button class="dot" type="button" aria-label="Unavailable experience"></button>
+    <button class="dot" type="button" aria-label="Unavailable experience"></button>
+    <button class="dot" type="button" aria-label="Unavailable experience"></button>
+    <button class="dot" type="button" aria-label="Unavailable experience"></button>
+    <button class="dot" type="button" aria-label="Unavailable experience"></button>
+    <button class="dot" type="button" aria-label="Unavailable experience"></button>
+    <button class="dot" type="button" aria-label="Unavailable experience"></button>
+    <button class="dot" type="button" aria-label="Unavailable experience"></button>
+    <button class="dot" type="button" aria-label="Unavailable experience"></button>
+    <button class="dot" type="button" aria-label="Unavailable experience"></button>
+    <button class="dot" type="button" aria-label="Unavailable experience"></button>
+    <button class="dot" type="button" aria-label="Unavailable experience"></button>
+    <button class="dot" type="button" aria-label="Unavailable experience"></button>
+    <button class="dot" type="button" aria-label="Unavailable experience"></button>
+    <button class="dot" type="button" aria-label="Unavailable experience"></button>
+    <button class="dot" type="button" aria-label="Unavailable experience"></button>
+    <button class="dot" type="button" aria-label="Unavailable experience"></button>
+    <button class="dot" type="button" aria-label="Unavailable experience"></button>
+    <button class="dot" type="button" aria-label="Unavailable experience"></button>
+    <button class="dot" type="button" aria-label="Unavailable experience"></button>
+    <button class="dot" type="button" aria-label="Unavailable experience"></button>
+    <button class="dot" type="button" aria-label="Unavailable experience"></button>
+  </div>
+</main>
+<div id="zoom" aria-hidden="true"></div>
+<section id="experience" aria-label="Elastic blob fidget" inert>
+  <canvas id="blob" tabindex="0" role="application" aria-label="Drag the black blob to stretch it and release to let it spring back. Press Enter or Space to bounce it."></canvas>
+  <button id="back" type="button" aria-label="Back to dot grid">
+    <svg viewBox="0 0 48 48" fill="none" aria-hidden="true"><path d="M28 12L16 24L28 36" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  </button>
+</section>
 <script>
 (() => {
-  'use strict';
-
-  const canvas = document.getElementById('form');
+  const menu = document.getElementById('menu');
+  const dots = Array.from(document.querySelectorAll('.dot'));
+  const zoom = document.getElementById('zoom');
+  const experience = document.getElementById('experience');
+  const back = document.getElementById('back');
+  const canvas = document.getElementById('blob');
   const ctx = canvas.getContext('2d', { alpha: false });
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-  let width = 0;
-  let height = 0;
-  let dpr = 1;
-  let radius = 120;
-  let x = 0;
-  let y = 0;
-  let vx = 0;
-  let vy = 0;
-  let homeX = 0;
-  let homeY = 0;
-  let targetX = 0;
-  let targetY = 0;
-  let grabX = 0;
-  let grabY = 0;
-  let activePointer = null;
-  let moved = false;
-  let pulse = 0;
-  let phase = 0;
-  let previousTime = 0;
+  let opened = false;
+  let width = 0, height = 0, dpr = 1, radius = 100;
+  let x = 0, y = 0, vx = 0, vy = 0, homeX = 0, homeY = 0;
+  let targetX = 0, targetY = 0, grabX = 0, grabY = 0;
+  let activePointer = null, pulse = 0, previousTime = 0;
   let points = [];
 
   function resize() {
-    const oldHomeX = homeX;
-    const oldHomeY = homeY;
+    const oldX = homeX, oldY = homeY;
     width = window.innerWidth;
     height = window.innerHeight;
     dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -59,168 +97,113 @@ canvas:focus-visible{outline:2px solid var(--ink);outline-offset:-7px}
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     homeX = width / 2;
     homeY = height / 2;
-    radius = Math.min(176, Math.max(74, Math.min(width, height) * 0.205));
-    if (!oldHomeX && !oldHomeY) {
-      x = homeX;
-      y = homeY;
-    } else if (activePointer === null) {
-      x = homeX;
-      y = homeY;
-    } else {
-      x += homeX - oldHomeX;
-      y += homeY - oldHomeY;
-    }
-    targetX = activePointer === null ? homeX : targetX + homeX - oldHomeX;
-    targetY = activePointer === null ? homeY : targetY + homeY - oldHomeY;
-    drawShape(0, 0);
+    radius = Math.min(176, Math.max(70, Math.min(width, height) * .205));
+    if (!oldX && !oldY) { x = homeX; y = homeY; }
+    else if (activePointer === null) { x = homeX; y = homeY; }
+    else { x += homeX - oldX; y += homeY - oldY; }
+    targetX = activePointer === null ? homeX : targetX + homeX - oldX;
+    targetY = activePointer === null ? homeY : targetY + homeY - oldY;
+    draw(0, 0, 0);
   }
 
-  function roundedBlob(cx, cy, stretchX, stretchY, t) {
-    const velocity = Math.hypot(vx, vy);
-    const direction = Math.atan2(stretchY, stretchX);
-    const pull = Math.min(0.72, Math.hypot(stretchX, stretchY) / Math.max(radius, 1) * 0.85);
-    const speedPull = Math.min(0.24, velocity / 1050);
-    const elongation = Math.max(pull, speedPull);
-    const breathe = reduceMotion ? 0 : Math.sin(t * 0.00115) * 0.014;
-    const throb = pulse * 0.12;
-    const rx = radius * (1 + breathe + throb + elongation * 0.48);
-    const ry = radius * (1 + breathe + throb - elongation * 0.27);
-
+  function mid(a, b) { return {x:(a.x+b.x)/2,y:(a.y+b.y)/2}; }
+  function shape(sx, sy, time) {
+    const stretch = Math.min(.72, Math.hypot(sx,sy) / Math.max(radius,1) * .85);
+    const angle = Math.atan2(sy,sx);
+    const speed = Math.min(.24,Math.hypot(vx,vy)/1050);
+    const pull = Math.max(stretch,speed);
+    const breathe = reduceMotion ? 0 : Math.sin(time*.00115)*.014;
+    const rX = radius*(1+breathe+pulse*.12+pull*.48);
+    const rY = radius*(1+breathe+pulse*.12-pull*.27);
     points.length = 0;
-    const count = 72;
-    for (let i = 0; i < count; i++) {
-      const a = i / count * Math.PI * 2;
-      const relative = a - direction;
-      const toward = (1 + Math.cos(relative)) / 2;
-      const across = Math.sin(relative);
-      const organic = 1
-        + 0.042 * Math.sin(a * 3 + 0.55)
-        + 0.025 * Math.cos(a * 5 - 0.8)
-        + (reduceMotion ? 0 : 0.009 * Math.sin(a * 2 + t * 0.0007));
-      const dragWarp = 1 + elongation * (toward * 0.48 - across * across * 0.12);
-      points.push({
-        x: cx + Math.cos(a) * rx * organic * dragWarp,
-        y: cy + Math.sin(a) * ry * organic * dragWarp
-      });
+    const n = 72;
+    for(let i=0;i<n;i++){
+      const a=i/n*Math.PI*2, rel=a-angle;
+      const organic=1+.042*Math.sin(a*3+.55)+.025*Math.cos(a*5-.8)+(reduceMotion?0:.009*Math.sin(a*2+time*.0007));
+      const warp=1+pull*((1+Math.cos(rel))*.24-Math.sin(rel)**2*.12);
+      points.push({x:x+Math.cos(a)*rX*organic*warp,y:y+Math.sin(a)*rY*organic*warp});
     }
-
-    const path = new Path2D();
-    const firstMid = midpoint(points[count - 1], points[0]);
-    path.moveTo(firstMid.x, firstMid.y);
-    for (let i = 0; i < count; i++) {
-      const current = points[i];
-      const next = points[(i + 1) % count];
-      const mid = midpoint(current, next);
-      path.quadraticCurveTo(current.x, current.y, mid.x, mid.y);
-    }
+    const path=new Path2D(), first=mid(points[n-1],points[0]);
+    path.moveTo(first.x,first.y);
+    for(let i=0;i<n;i++){const p=points[i],m=mid(p,points[(i+1)%n]);path.quadraticCurveTo(p.x,p.y,m.x,m.y);}
     path.closePath();
     return path;
   }
-
-  function midpoint(a, b) {
-    return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+  function draw(sx,sy,time) {
+    ctx.fillStyle='#fff';ctx.fillRect(0,0,width,height);
+    ctx.fillStyle='#000';ctx.fill(shape(sx,sy,time));
   }
-
-  function drawShape(stretchX, stretchY, time = 0) {
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(0, 0, width, height);
-    const path = roundedBlob(x, y, stretchX, stretchY, time);
-    ctx.fillStyle = '#000';
-    ctx.fill(path);
-  }
-
   function animate(time) {
-    if (!width || !height) {
-      requestAnimationFrame(animate);
-      return;
+    if(!width||!height){requestAnimationFrame(animate);return;}
+    const dt=previousTime?Math.min((time-previousTime)/16.667,2):1;
+    previousTime=time;
+    const destX=activePointer===null?homeX:targetX;
+    const destY=activePointer===null?homeY:targetY;
+    if(reduceMotion){x+=(destX-x)*.34;y+=(destY-y)*.34;vx*=.65;vy*=.65;}
+    else {
+      const stiffness=activePointer===null?.105:.15;
+      vx+=(destX-x)*stiffness*dt;vy+=(destY-y)*stiffness*dt;
+      const damping=Math.pow(activePointer===null?.79:.76,dt);
+      vx*=damping;vy*=damping;x+=vx*dt;y+=vy*dt;
     }
-    const dt = previousTime ? Math.min((time - previousTime) / 16.667, 2) : 1;
-    previousTime = time;
-
-    if (reduceMotion) {
-      const targetXNow = activePointer === null ? homeX : targetX;
-      const targetYNow = activePointer === null ? homeY : targetY;
-      x += (targetXNow - x) * 0.34;
-      y += (targetYNow - y) * 0.34;
-      vx *= 0.65;
-      vy *= 0.65;
-    } else {
-      const destinationX = activePointer === null ? homeX : targetX;
-      const destinationY = activePointer === null ? homeY : targetY;
-      const stiffness = activePointer === null ? 0.105 : 0.15;
-      vx += (destinationX - x) * stiffness * dt;
-      vy += (destinationY - y) * stiffness * dt;
-      const damping = Math.pow(activePointer === null ? 0.79 : 0.76, dt);
-      vx *= damping;
-      vy *= damping;
-      x += vx * dt;
-      y += vy * dt;
-    }
-
-    pulse *= reduceMotion ? 0.7 : Math.pow(0.88, dt);
-    if (pulse < 0.001) pulse = 0;
-
-    const stretchX = activePointer === null ? homeX - x : targetX - x;
-    const stretchY = activePointer === null ? homeY - y : targetY - y;
-    drawShape(stretchX, stretchY, time);
+    pulse*=reduceMotion?.7:Math.pow(.88,dt);
+    if(pulse<.001)pulse=0;
+    draw(activePointer===null?homeX-x:targetX-x,activePointer===null?homeY-y:targetY-y,time);
     requestAnimationFrame(animate);
   }
+  function local(event){const r=canvas.getBoundingClientRect();return{x:event.clientX-r.left,y:event.clientY-r.top};}
 
-  function localPoint(event) {
-    const rect = canvas.getBoundingClientRect();
-    return { x: event.clientX - rect.left, y: event.clientY - rect.top };
-  }
-
-  canvas.addEventListener('pointerdown', (event) => {
-    if (activePointer !== null) return;
-    const p = localPoint(event);
-    if (Math.hypot(p.x - x, p.y - y) > radius * 1.28) return;
-    activePointer = event.pointerId;
-    grabX = p.x - x;
-    grabY = p.y - y;
-    targetX = p.x - grabX;
-    targetY = p.y - grabY;
-    moved = false;
-    pulse = Math.max(pulse, 0.18);
-    canvas.setPointerCapture(event.pointerId);
-    event.preventDefault();
+  dots.forEach((dot,index)=>{
+    dot.addEventListener('click',()=>{
+      if(index!==0||opened)return;
+      opened=true;
+      const r=dot.getBoundingClientRect();
+      zoom.style.left=(r.left+r.width/2)+'px';
+      zoom.style.top=(r.top+r.height/2)+'px';
+      zoom.style.width=r.width+'px';
+      zoom.style.height=r.height+'px';
+      zoom.style.transformOrigin='center';
+      menu.classList.add('leaving');
+      zoom.classList.add('grow');
+      window.setTimeout(()=>{
+        experience.classList.add('ready');
+        experience.inert=false;
+        zoom.style.display='none';
+        canvas.focus({preventScroll:true});
+      },reduceMotion?180:590);
+    });
   });
 
-  canvas.addEventListener('pointermove', (event) => {
-    if (activePointer !== event.pointerId) return;
-    const p = localPoint(event);
-    targetX = p.x - grabX;
-    targetY = p.y - grabY;
-    if (Math.hypot(targetX - homeX, targetY - homeY) > 5) moved = true;
+  back.addEventListener('click',()=>{
+    experience.classList.remove('ready');
+    experience.inert=true;
+    zoom.style.display='block';
+    zoom.classList.remove('grow');
+    menu.classList.remove('leaving');
+    opened=false;
+    window.setTimeout(()=>{zoom.style.width='0';zoom.style.height='0';},20);
   });
 
-  function release(event) {
-    if (activePointer !== event.pointerId) return;
-    activePointer = null;
-    pulse = moved ? 0.5 : 0.28;
-    moved = false;
-  }
-  canvas.addEventListener('pointerup', release);
-  canvas.addEventListener('pointercancel', release);
-  canvas.addEventListener('lostpointercapture', (event) => {
-    if (activePointer === event.pointerId) {
-      activePointer = null;
-      pulse = 0.3;
-    }
+  canvas.addEventListener('pointerdown',event=>{
+    if(activePointer!==null)return;
+    const p=local(event);
+    if(Math.hypot(p.x-x,p.y-y)>radius*1.28)return;
+    activePointer=event.pointerId;grabX=p.x-x;grabY=p.y-y;
+    targetX=p.x-grabX;targetY=p.y-grabY;pulse=Math.max(pulse,.18);
+    canvas.setPointerCapture(event.pointerId);event.preventDefault();
   });
-
-  function bounce() {
-    pulse = 0.62;
-    vy -= reduceMotion ? 0 : 5;
-  }
-  canvas.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter' || event.key === ' ') {
-      event.preventDefault();
-      bounce();
-    }
+  canvas.addEventListener('pointermove',event=>{
+    if(activePointer!==event.pointerId)return;
+    const p=local(event);targetX=p.x-grabX;targetY=p.y-grabY;
   });
-
-  window.addEventListener('resize', resize, { passive: true });
+  function release(event){if(activePointer!==event.pointerId)return;activePointer=null;pulse=.5;}
+  canvas.addEventListener('pointerup',release);
+  canvas.addEventListener('pointercancel',release);
+  canvas.addEventListener('lostpointercapture',event=>{if(activePointer===event.pointerId){activePointer=null;pulse=.3;}});
+  canvas.addEventListener('keydown',event=>{
+    if(event.key==='Enter'||event.key===' '){event.preventDefault();pulse=.62;vy-=reduceMotion?0:5;}
+  });
+  window.addEventListener('resize',resize,{passive:true});
   resize();
   requestAnimationFrame(animate);
 })();
