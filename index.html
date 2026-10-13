@@ -3,367 +3,226 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#000000">
-<meta name="description" content="A quiet collection of tactile, black-and-white fidget interactions.">
-<title>Still</title>
+<meta name="theme-color" content="#ffffff">
+<meta name="description" content="A single elastic shape to stretch, tug, and release.">
+<title>Form</title>
 <style>
-:root{color-scheme:light;--black:#000;--white:#fff}
+:root{color-scheme:light;--paper:#fff;--ink:#000}
 *{box-sizing:border-box}
-html,body{margin:0;min-width:280px;min-height:100%;background:var(--black)}
-body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;overflow-x:hidden;overscroll-behavior-x:none;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
-button,input{font:inherit}
-button{color:inherit}
-button:focus-visible,.toy:focus-visible{outline:3px solid currentColor;outline-offset:-7px}
-.wall{width:100%;min-height:100svh;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:repeat(3,minmax(190px,1fr));gap:9px;padding:9px;background:var(--black)}
-.toy{--surface:var(--white);--ink:var(--black);position:relative;display:grid;place-items:center;min-width:0;min-height:0;overflow:hidden;margin:0;padding:0;border:0;border-radius:2px;background:var(--surface);color:var(--ink);touch-action:manipulation;cursor:pointer;isolation:isolate}
-.toy.dark{--surface:var(--black);--ink:var(--white)}
-.toy:focus{outline:none}
-.toy:focus-visible{outline:3px solid var(--surface);outline-offset:-7px;box-shadow:inset 0 0 0 5px var(--ink)}
-.stage{position:absolute;inset:0;display:grid;place-items:center;overflow:hidden}
-.orbit-system{position:relative;display:block;width:clamp(96px,10vw,148px);max-width:58%;aspect-ratio:1;touch-action:none;transform:rotate(0deg);cursor:grab}
-.orbit-system:active{cursor:grabbing}
-.orbit-ring{position:absolute;inset:0;border:2px solid var(--ink);border-radius:50%;display:block}
-.orbit-ring.ring-b{inset:14%;transform:rotate(52deg) scaleX(.73)}
-.orbit-ring.ring-c{inset:27%;transform:rotate(-52deg) scaleX(.72)}
-.orbit-ring i{position:absolute;left:50%;top:-7px;width:14px;height:14px;transform:translateX(-50%);border:3px solid var(--surface);border-radius:50%;background:var(--ink)}
-.orbit-ring.ring-b i{top:auto;bottom:-7px;left:25%}
-.orbit-ring.ring-c i{top:50%;left:auto;right:-7px;transform:translateY(-50%)}
-.orbit-core{position:absolute;left:50%;top:50%;width:15%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;background:var(--ink)}
-.orbit-system.running{animation:orbit-turn 13s linear infinite}
-@keyframes orbit-turn{to{transform:rotate(360deg)}}
-.pulse-stack{position:relative;display:block;width:clamp(86px,9vw,130px);aspect-ratio:1}
-.pulse-ring{position:absolute;inset:0;border:2px solid var(--ink);border-radius:50%;transform:scale(.76)}
-.pulse-ring:nth-child(2){inset:12%;transform:scale(.76)}
-.pulse-ring:nth-child(3){inset:24%;transform:scale(.76)}
-.pulse-core{position:absolute;inset:38%;border-radius:50%;background:var(--ink)}
-.pulse-stack.active .pulse-ring{animation:pulse-out 1.3s cubic-bezier(.15,.65,.25,1) infinite}
-.pulse-stack.active .pulse-ring:nth-child(2){animation-delay:.22s}
-.pulse-stack.active .pulse-ring:nth-child(3){animation-delay:.44s}
-@keyframes pulse-out{0%{transform:scale(.56);border-width:2px}100%{transform:scale(1.2);border-width:0}}
-.bead-field{position:absolute;inset:0;display:grid;place-content:center;grid-template-columns:repeat(7,clamp(7px,1.05vw,13px));grid-auto-rows:clamp(7px,1.05vw,13px);gap:clamp(8px,1.12vw,16px);touch-action:pan-y}
-.bead{appearance:none;-webkit-appearance:none;display:block;width:100%;height:100%;min-width:0;min-height:0;padding:0;border:1px solid var(--ink);border-radius:50%;background:var(--ink);cursor:pointer;transition:transform .22s cubic-bezier(.2,.8,.2,1),border-radius .22s}
-.bead.is-on{background:var(--surface);border-radius:2px;transform:scale(.82)}
-.bead:focus-visible{outline:2px solid var(--ink);outline-offset:4px}
-.squish-shape{display:block;width:clamp(86px,9vw,132px);aspect-ratio:1;border-radius:56% 44% 62% 38% / 45% 54% 46% 55%;background:var(--ink);transform:rotate(-8deg);transition:transform .25s cubic-bezier(.2,.85,.25,1),border-radius .25s}
-.squish-shape:before{content:"";position:absolute;inset:15%;border:2px solid var(--surface);border-radius:50%}
-.squish-shape.squeezed{transform:scaleX(1.32) scaleY(.68) rotate(9deg);border-radius:43% 57% 37% 63% / 57% 42% 58% 43%}
-.slider-wrap{width:min(72%,250px);display:grid;place-items:center;position:relative}
-.slider-wrap:before{content:"";position:absolute;left:0;right:0;height:3px;background:var(--ink)}
-.range{appearance:none;-webkit-appearance:none;position:relative;z-index:1;width:100%;height:42px;margin:0;background:transparent;cursor:ew-resize;touch-action:pan-y}
-.range::-webkit-slider-runnable-track{height:3px;background:transparent}
-.range::-moz-range-track{height:3px;background:transparent}
-.range::-webkit-slider-thumb{appearance:none;-webkit-appearance:none;width:33px;height:33px;margin-top:-15px;border:4px solid var(--surface);border-radius:50%;background:var(--ink);box-shadow:0 0 0 2px var(--ink)}
-.range::-moz-range-thumb{width:25px;height:25px;border:4px solid var(--surface);border-radius:50%;background:var(--ink);box-shadow:0 0 0 2px var(--ink)}
-.spinner-disc{position:relative;display:block;width:clamp(88px,9vw,132px);aspect-ratio:1;border:2px solid var(--ink);border-radius:50%;background:conic-gradient(var(--ink) 0 25%,var(--surface) 25% 50%,var(--ink) 50% 75%,var(--surface) 75% 100%);transform:rotate(0deg)}
-.spinner-disc:before{content:"";position:absolute;inset:35%;border:2px solid var(--ink);border-radius:50%;background:var(--surface)}
-.spinner-disc.spinning{animation:spinner-turn 2.2s cubic-bezier(.18,.7,.2,1) infinite}
-@keyframes spinner-turn{to{transform:rotate(360deg)}}
-.stack-shapes{position:relative;width:clamp(90px,10vw,142px);height:clamp(82px,8vw,120px)}
-.stack-shape{position:absolute;left:50%;top:50%;width:66%;height:23%;border:2px solid var(--surface);border-radius:999px;background:var(--ink);transform:translate(-50%,-50%) rotate(-26deg)}
-.stack-shape:nth-child(1){margin-top:-34px;margin-left:-7px;transform:translate(-50%,-50%) rotate(25deg)}
-.stack-shape:nth-child(2){margin-top:-12px;margin-left:8px;transform:translate(-50%,-50%) rotate(-18deg)}
-.stack-shape:nth-child(3){margin-top:12px;margin-left:-7px;transform:translate(-50%,-50%) rotate(22deg)}
-.stack-shape:nth-child(4){margin-top:34px;margin-left:8px;transform:translate(-50%,-50%) rotate(-22deg)}
-.stack-shapes.bouncing .stack-shape{animation:stack-hop .7s cubic-bezier(.3,.1,.2,1) 2}
-.stack-shapes.bouncing .stack-shape:nth-child(2){animation-delay:.05s}
-.stack-shapes.bouncing .stack-shape:nth-child(3){animation-delay:.1s}
-.stack-shapes.bouncing .stack-shape:nth-child(4){animation-delay:.15s}
-@keyframes stack-hop{0%,100%{translate:0 0}50%{translate:0 -16px}}
-.tile-field{position:relative;display:grid;grid-template-columns:repeat(3,clamp(26px,3vw,43px));grid-template-rows:repeat(3,clamp(26px,3vw,43px));gap:7px}
-.tile-cell{appearance:none;-webkit-appearance:none;display:block;padding:0;border:2px solid var(--ink);background:var(--ink);cursor:pointer;transition:transform .2s}
-.tile-cell.is-on{background:var(--surface);transform:scale(.86)}
-.tile-cell:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
-.well{position:relative;display:block;width:clamp(112px,11vw,158px);aspect-ratio:1;border:2px solid var(--ink);border-radius:50%;touch-action:none}
-.marble{position:absolute;left:50%;top:50%;width:clamp(22px,2.4vw,32px);aspect-ratio:1;border:3px solid var(--surface);border-radius:50%;background:var(--ink);transform:translate(calc(-50% + var(--x,0px)),calc(-50% + var(--y,0px)));cursor:grab;touch-action:none}
-.marble.returning{transition:transform .68s cubic-bezier(.16,1,.3,1)}
-.marble:active{cursor:grabbing}
-.switch{appearance:none;-webkit-appearance:none;position:relative;display:block;width:clamp(108px,11vw,146px);height:clamp(52px,5.4vw,66px);padding:5px;border:2px solid var(--ink);border-radius:999px;background:var(--surface);cursor:pointer;transition:background .2s}
-.switch span{position:absolute;left:5px;top:50%;width:calc(clamp(52px,5.4vw,66px) - 14px);aspect-ratio:1;transform:translateY(-50%);border-radius:50%;background:var(--ink);border:2px solid var(--surface);transition:transform .32s cubic-bezier(.2,.8,.2,1),background .2s}
-.switch.on{background:var(--ink)}
-.switch.on span{background:var(--surface);border-color:var(--ink);transform:translate(clamp(48px,5.1vw,70px),-50%)}
-.ripple-stage{position:absolute;inset:0;overflow:hidden;touch-action:manipulation}
-.ripple-wave{position:absolute;width:12px;height:12px;border:2px solid var(--ink);border-radius:50%;pointer-events:none;transform:translate(-50%,-50%) scale(.2);animation:ripple-spread 1.15s cubic-bezier(.1,.5,.2,1) forwards}
-.ripple-wave:nth-child(2){animation-delay:.12s}
-.ripple-wave:nth-child(3){animation-delay:.24s}
-@keyframes ripple-spread{0%{transform:translate(-50%,-50%) scale(.2);border-width:2px}100%{transform:translate(-50%,-50%) scale(11);border-width:0}}
-.pendulum{position:relative;display:block;width:clamp(85px,9vw,128px);height:clamp(126px,13vw,180px);transform-origin:50% 0;transform:rotate(0deg)}
-.pendulum:before{content:"";position:absolute;top:0;left:50%;width:2px;height:74%;background:var(--ink);transform:translateX(-50%)}
-.pendulum:after{content:"";position:absolute;top:68%;left:50%;width:clamp(24px,2.8vw,38px);aspect-ratio:1;border-radius:50%;border:3px solid var(--surface);background:var(--ink);transform:translate(-50%,-50%)}
-.pendulum.swing{animation:pendulum-swing 1.35s ease-in-out 3}
-@keyframes pendulum-swing{0%,100%{transform:rotate(0deg)}22%{transform:rotate(38deg)}50%{transform:rotate(0deg)}76%{transform:rotate(-38deg)}}
-.sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
-@media(max-width:800px){.wall{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:none;grid-auto-rows:clamp(166px,42vw,260px);gap:7px;padding:7px}.bead-field{grid-template-columns:repeat(7,clamp(7px,1.7vw,13px));grid-auto-rows:clamp(7px,1.7vw,13px);gap:clamp(8px,2vw,15px)}.tile-field{grid-template-columns:repeat(3,clamp(26px,6vw,43px));grid-template-rows:repeat(3,clamp(26px,6vw,43px))}}
-@media(max-width:360px){.wall{grid-auto-rows:165px;gap:5px;padding:5px}.tile-field{gap:5px}.bead-field{gap:7px}}
-@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:var(--paper)}
+body{overscroll-behavior:none}
+canvas{display:block;width:100%;height:100%;touch-action:none;cursor:grab;outline:none}
+canvas:active{cursor:grabbing}
+canvas:focus-visible{outline:2px solid var(--ink);outline-offset:-7px}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
 </style>
 </head>
 <body>
-<main class="wall" aria-label="Monochrome tactile playground">
-  <div class="toy light" data-kind="orbit" role="button" tabindex="0" aria-label="Drag the orbiting rings or tap to spin">
-    <div class="stage"><span class="orbit-system"><span class="orbit-ring ring-a"><i></i></span><span class="orbit-ring ring-b"><i></i></span><span class="orbit-ring ring-c"><i></i></span><span class="orbit-core"></span></span></div>
-  </div>
-  <div class="toy dark" data-kind="pulse" role="button" tabindex="0" aria-label="Toggle the pulsing rings">
-    <div class="stage"><span class="pulse-stack"><span class="pulse-ring"></span><span class="pulse-ring"></span><span class="pulse-ring"></span><span class="pulse-core"></span></span></div>
-  </div>
-  <div class="toy light" data-kind="beads" role="group" aria-label="Move through and toggle the dots">
-    <div class="bead-field"></div>
-  </div>
-  <div class="toy dark" data-kind="squish" role="button" tabindex="0" aria-label="Press and reshape the soft form">
-    <div class="stage"><span class="squish-shape"></span></div>
-  </div>
-  <div class="toy dark" data-kind="slider" role="group" aria-label="Slide the control">
-    <div class="stage"><div class="slider-wrap"><input class="range" type="range" min="0" max="100" value="50" aria-label="Move the slider"></div></div>
-  </div>
-  <div class="toy light" data-kind="spinner" role="button" tabindex="0" aria-label="Spin the black and white disc">
-    <div class="stage"><span class="spinner-disc"></span></div>
-  </div>
-  <div class="toy light" data-kind="stack" role="button" tabindex="0" aria-label="Bounce the stacked shapes">
-    <div class="stage"><span class="stack-shapes"><span class="stack-shape"></span><span class="stack-shape"></span><span class="stack-shape"></span><span class="stack-shape"></span></span></div>
-  </div>
-  <div class="toy dark" data-kind="tiles" role="group" aria-label="Invert the small tiles">
-    <div class="stage"><div class="tile-field"></div></div>
-  </div>
-  <div class="toy dark" data-kind="marble" role="group" aria-label="Drag the marble and release it">
-    <div class="stage"><span class="well"><span class="marble" role="slider" aria-label="Drag marble" aria-valuemin="-100" aria-valuemax="100" aria-valuenow="0" tabindex="0"></span></span></div>
-  </div>
-  <div class="toy light" data-kind="switch" role="group" aria-label="Flip the switch">
-    <div class="stage"><button class="switch" type="button" aria-label="Toggle switch" aria-pressed="false"><span></span></button></div>
-  </div>
-  <div class="toy light" data-kind="ripple" role="button" tabindex="0" aria-label="Tap to create expanding ripples">
-    <div class="ripple-stage"></div>
-  </div>
-  <div class="toy dark" data-kind="pendulum" role="button" tabindex="0" aria-label="Set the pendulum swinging">
-    <div class="stage"><span class="pendulum"></span></div>
-  </div>
-</main>
+<canvas id="form" role="button" tabindex="0" aria-label="Elastic shape. Drag to stretch it, then release. Press enter or space to give it a little bounce."></canvas>
 <script>
 (() => {
-  const toys = Array.from(document.querySelectorAll('.toy'));
-  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  'use strict';
 
-  document.querySelectorAll('[data-kind="beads"] .bead-field').forEach((field) => {
-    for (let i = 0; i < 49; i++) {
-      const bead = document.createElement('button');
-      bead.type = 'button';
-      bead.className = 'bead';
-      bead.setAttribute('aria-label', 'Dot ' + (i + 1));
-      bead.setAttribute('aria-pressed', 'false');
-      bead.addEventListener('click', () => {
-        bead.classList.toggle('is-on');
-        bead.setAttribute('aria-pressed', bead.classList.contains('is-on') ? 'true' : 'false');
-      });
-      field.appendChild(bead);
+  const canvas = document.getElementById('form');
+  const ctx = canvas.getContext('2d', { alpha: false });
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  let width = 0;
+  let height = 0;
+  let dpr = 1;
+  let radius = 120;
+  let x = 0;
+  let y = 0;
+  let vx = 0;
+  let vy = 0;
+  let homeX = 0;
+  let homeY = 0;
+  let targetX = 0;
+  let targetY = 0;
+  let grabX = 0;
+  let grabY = 0;
+  let activePointer = null;
+  let moved = false;
+  let pulse = 0;
+  let phase = 0;
+  let previousTime = 0;
+  let points = [];
+
+  function resize() {
+    const oldHomeX = homeX;
+    const oldHomeY = homeY;
+    width = window.innerWidth;
+    height = window.innerHeight;
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.round(width * dpr);
+    canvas.height = Math.round(height * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    homeX = width / 2;
+    homeY = height / 2;
+    radius = Math.min(176, Math.max(74, Math.min(width, height) * 0.205));
+    if (!oldHomeX && !oldHomeY) {
+      x = homeX;
+      y = homeY;
+    } else if (activePointer === null) {
+      x = homeX;
+      y = homeY;
+    } else {
+      x += homeX - oldHomeX;
+      y += homeY - oldHomeY;
     }
-    field.addEventListener('pointermove', (event) => {
-      if (event.pointerType === 'touch') return;
-      const rect = field.getBoundingClientRect();
-      const x = event.clientX - rect.left;
-      const y = event.clientY - rect.top;
-      field.querySelectorAll('.bead').forEach((bead) => {
-        const r = bead.getBoundingClientRect();
-        const bx = r.left + r.width / 2 - rect.left;
-        const by = r.top + r.height / 2 - rect.top;
-        const dx = bx - x;
-        const dy = by - y;
-        const distance = Math.max(1, Math.hypot(dx, dy));
-        const force = Math.max(0, 1 - distance / 100);
-        bead.style.transform = 'translate(' + (dx / distance * force * 13) + 'px,' + (dy / distance * force * 13) + 'px) scale(' + (1 + force * .35) + ')';
-      });
-    });
-    field.addEventListener('pointerleave', () => {
-      field.querySelectorAll('.bead').forEach((bead) => {
-        bead.style.transform = '';
-      });
-    });
-  });
+    targetX = activePointer === null ? homeX : targetX + homeX - oldHomeX;
+    targetY = activePointer === null ? homeY : targetY + homeY - oldHomeY;
+    drawShape(0, 0);
+  }
 
-  document.querySelectorAll('[data-kind="tiles"] .tile-field').forEach((field) => {
-    for (let i = 0; i < 9; i++) {
-      const cell = document.createElement('button');
-      cell.type = 'button';
-      cell.className = 'tile-cell' + ([0, 2, 4, 6, 8].includes(i) ? ' is-on' : '');
-      cell.setAttribute('aria-label', 'Tile ' + (i + 1));
-      cell.setAttribute('aria-pressed', [0, 2, 4, 6, 8].includes(i) ? 'true' : 'false');
-      cell.addEventListener('click', () => {
-        cell.classList.toggle('is-on');
-        cell.setAttribute('aria-pressed', cell.classList.contains('is-on') ? 'true' : 'false');
-      });
-      field.appendChild(cell);
-    }
-  });
+  function roundedBlob(cx, cy, stretchX, stretchY, t) {
+    const velocity = Math.hypot(vx, vy);
+    const direction = Math.atan2(stretchY, stretchX);
+    const pull = Math.min(0.72, Math.hypot(stretchX, stretchY) / Math.max(radius, 1) * 0.85);
+    const speedPull = Math.min(0.24, velocity / 1050);
+    const elongation = Math.max(pull, speedPull);
+    const breathe = reduceMotion ? 0 : Math.sin(t * 0.00115) * 0.014;
+    const throb = pulse * 0.12;
+    const rx = radius * (1 + breathe + throb + elongation * 0.48);
+    const ry = radius * (1 + breathe + throb - elongation * 0.27);
 
-  const orbitToy = document.querySelector('[data-kind="orbit"]');
-  const orbit = orbitToy.querySelector('.orbit-system');
-  let rotation = 0;
-  let orbitPointer = null;
-  let lastX = 0;
-  let movedOrbit = false;
-  orbit.addEventListener('pointerdown', (event) => {
-    orbitPointer = event.pointerId;
-    lastX = event.clientX;
-    movedOrbit = false;
-    orbit.classList.remove('running');
-    orbit.setPointerCapture(event.pointerId);
-  });
-  orbit.addEventListener('pointermove', (event) => {
-    if (orbitPointer !== event.pointerId) return;
-    const delta = event.clientX - lastX;
-    if (Math.abs(event.clientX - lastX) > 1) movedOrbit = true;
-    rotation += delta * 1.25;
-    orbit.style.transform = 'rotate(' + rotation + 'deg)';
-    lastX = event.clientX;
-  });
-  const finishOrbit = (event) => {
-    if (orbitPointer !== event.pointerId) return;
-    orbitPointer = null;
-  };
-  orbit.addEventListener('pointerup', finishOrbit);
-  orbit.addEventListener('pointercancel', finishOrbit);
-
-  toys.forEach((toy) => {
-    const kind = toy.dataset.kind;
-    if (kind === 'beads' || kind === 'tiles' || kind === 'marble' || kind === 'switch' || kind === 'slider') return;
-    toy.addEventListener('click', (event) => {
-      if (event.detail !== 0 && kind === 'squish') return;
-      if (kind === 'orbit') {
-        if (movedOrbit) { movedOrbit = false; return; }
-        orbit.classList.toggle('running');
-        orbitToy.setAttribute('aria-pressed', orbit.classList.contains('running') ? 'true' : 'false');
-      }
-      if (kind === 'pulse') {
-        const pulse = toy.querySelector('.pulse-stack');
-        pulse.classList.toggle('active');
-        toy.setAttribute('aria-pressed', pulse.classList.contains('active') ? 'true' : 'false');
-      }
-      if (kind === 'squish' && event.detail === 0) {
-        toy.querySelector('.squish-shape').classList.toggle('squeezed');
-      }
-      if (kind === 'spinner') {
-        const disc = toy.querySelector('.spinner-disc');
-        disc.classList.toggle('spinning');
-        toy.setAttribute('aria-pressed', disc.classList.contains('spinning') ? 'true' : 'false');
-      }
-      if (kind === 'stack') {
-        const stack = toy.querySelector('.stack-shapes');
-        stack.classList.remove('bouncing');
-        void stack.offsetWidth;
-        stack.classList.add('bouncing');
-        window.setTimeout(() => stack.classList.remove('bouncing'), reducedMotion ? 20 : 1600);
-      }
-      if (kind === 'ripple') {
-        const stage = toy.querySelector('.ripple-stage');
-        const rect = stage.getBoundingClientRect();
-        const x = event.detail === 0 ? rect.width / 2 : event.clientX - rect.left;
-        const y = event.detail === 0 ? rect.height / 2 : event.clientY - rect.top;
-        for (let i = 0; i < 3; i++) {
-          const wave = document.createElement('span');
-          wave.className = 'ripple-wave';
-          wave.style.left = x + 'px';
-          wave.style.top = y + 'px';
-          stage.appendChild(wave);
-          wave.addEventListener('animationend', () => wave.remove(), { once: true });
-        }
-        while (stage.children.length > 12) stage.firstElementChild.remove();
-      }
-      if (kind === 'pendulum') {
-        const pendulum = toy.querySelector('.pendulum');
-        pendulum.classList.remove('swing');
-        void pendulum.offsetWidth;
-        pendulum.classList.add('swing');
-        window.setTimeout(() => pendulum.classList.remove('swing'), reducedMotion ? 20 : 4100);
-      }
-    });
-
-    if (toy.getAttribute('role') === 'button') {
-      toy.addEventListener('keydown', (event) => {
-        if (event.target !== toy) return;
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          toy.click();
-        }
+    points.length = 0;
+    const count = 72;
+    for (let i = 0; i < count; i++) {
+      const a = i / count * Math.PI * 2;
+      const relative = a - direction;
+      const toward = (1 + Math.cos(relative)) / 2;
+      const across = Math.sin(relative);
+      const organic = 1
+        + 0.042 * Math.sin(a * 3 + 0.55)
+        + 0.025 * Math.cos(a * 5 - 0.8)
+        + (reduceMotion ? 0 : 0.009 * Math.sin(a * 2 + t * 0.0007));
+      const dragWarp = 1 + elongation * (toward * 0.48 - across * across * 0.12);
+      points.push({
+        x: cx + Math.cos(a) * rx * organic * dragWarp,
+        y: cy + Math.sin(a) * ry * organic * dragWarp
       });
     }
-  });
 
-  const squishToy = document.querySelector('[data-kind="squish"]');
-  const squishShape = squishToy.querySelector('.squish-shape');
-  squishToy.addEventListener('pointerdown', () => squishShape.classList.add('squeezed'));
-  ['pointerup', 'pointercancel', 'pointerleave'].forEach((name) => {
-    squishToy.addEventListener(name, () => squishShape.classList.remove('squeezed'));
-  });
-
-  const range = document.querySelector('.range');
-  range.addEventListener('input', () => {
-    range.style.setProperty('--position', range.value + '%');
-  });
-
-  const toggle = document.querySelector('.switch');
-  toggle.addEventListener('click', () => {
-    toggle.classList.toggle('on');
-    toggle.setAttribute('aria-pressed', toggle.classList.contains('on') ? 'true' : 'false');
-  });
-
-  const well = document.querySelector('.well');
-  const marble = document.querySelector('.marble');
-  let marbleActive = false;
-  let marbleRect;
-  const setMarble = (event) => {
-    const radius = marbleRect.width / 2;
-    const bound = (marbleRect.width - marble.offsetWidth) / 2;
-    const cx = marbleRect.left + marbleRect.width / 2;
-    const cy = marbleRect.top + marbleRect.height / 2;
-    let x = event.clientX - cx;
-    let y = event.clientY - cy;
-    const length = Math.hypot(x, y);
-    if (length > bound) {
-      x = x / length * bound;
-      y = y / length * bound;
+    const path = new Path2D();
+    const firstMid = midpoint(points[count - 1], points[0]);
+    path.moveTo(firstMid.x, firstMid.y);
+    for (let i = 0; i < count; i++) {
+      const current = points[i];
+      const next = points[(i + 1) % count];
+      const mid = midpoint(current, next);
+      path.quadraticCurveTo(current.x, current.y, mid.x, mid.y);
     }
-    marble.style.setProperty('--x', x + 'px');
-    marble.style.setProperty('--y', y + 'px');
-    marble.setAttribute('aria-valuenow', String(Math.round(x / Math.max(1, bound) * 100)));
-  };
-  marble.addEventListener('pointerdown', (event) => {
-    marbleActive = true;
-    marbleRect = well.getBoundingClientRect();
-    marble.classList.remove('returning');
-    marble.setPointerCapture(event.pointerId);
-    setMarble(event);
+    path.closePath();
+    return path;
+  }
+
+  function midpoint(a, b) {
+    return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+  }
+
+  function drawShape(stretchX, stretchY, time = 0) {
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(0, 0, width, height);
+    const path = roundedBlob(x, y, stretchX, stretchY, time);
+    ctx.fillStyle = '#000';
+    ctx.fill(path);
+  }
+
+  function animate(time) {
+    if (!width || !height) {
+      requestAnimationFrame(animate);
+      return;
+    }
+    const dt = previousTime ? Math.min((time - previousTime) / 16.667, 2) : 1;
+    previousTime = time;
+
+    if (reduceMotion) {
+      const targetXNow = activePointer === null ? homeX : targetX;
+      const targetYNow = activePointer === null ? homeY : targetY;
+      x += (targetXNow - x) * 0.34;
+      y += (targetYNow - y) * 0.34;
+      vx *= 0.65;
+      vy *= 0.65;
+    } else {
+      const destinationX = activePointer === null ? homeX : targetX;
+      const destinationY = activePointer === null ? homeY : targetY;
+      const stiffness = activePointer === null ? 0.105 : 0.15;
+      vx += (destinationX - x) * stiffness * dt;
+      vy += (destinationY - y) * stiffness * dt;
+      const damping = Math.pow(activePointer === null ? 0.79 : 0.76, dt);
+      vx *= damping;
+      vy *= damping;
+      x += vx * dt;
+      y += vy * dt;
+    }
+
+    pulse *= reduceMotion ? 0.7 : Math.pow(0.88, dt);
+    if (pulse < 0.001) pulse = 0;
+
+    const stretchX = activePointer === null ? homeX - x : targetX - x;
+    const stretchY = activePointer === null ? homeY - y : targetY - y;
+    drawShape(stretchX, stretchY, time);
+    requestAnimationFrame(animate);
+  }
+
+  function localPoint(event) {
+    const rect = canvas.getBoundingClientRect();
+    return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+  }
+
+  canvas.addEventListener('pointerdown', (event) => {
+    if (activePointer !== null) return;
+    const p = localPoint(event);
+    if (Math.hypot(p.x - x, p.y - y) > radius * 1.28) return;
+    activePointer = event.pointerId;
+    grabX = p.x - x;
+    grabY = p.y - y;
+    targetX = p.x - grabX;
+    targetY = p.y - grabY;
+    moved = false;
+    pulse = Math.max(pulse, 0.18);
+    canvas.setPointerCapture(event.pointerId);
     event.preventDefault();
   });
-  marble.addEventListener('pointermove', (event) => {
-    if (marbleActive) setMarble(event);
+
+  canvas.addEventListener('pointermove', (event) => {
+    if (activePointer !== event.pointerId) return;
+    const p = localPoint(event);
+    targetX = p.x - grabX;
+    targetY = p.y - grabY;
+    if (Math.hypot(targetX - homeX, targetY - homeY) > 5) moved = true;
   });
-  const returnMarble = () => {
-    if (!marbleActive) return;
-    marbleActive = false;
-    marble.classList.add('returning');
-    marble.style.setProperty('--x', '0px');
-    marble.style.setProperty('--y', '0px');
-    marble.setAttribute('aria-valuenow', '0');
-  };
-  marble.addEventListener('pointerup', returnMarble);
-  marble.addEventListener('pointercancel', returnMarble);
-  marble.addEventListener('keydown', (event) => {
-    if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home'].includes(event.key)) return;
-    event.preventDefault();
-    marble.classList.remove('returning');
-    const currentX = parseFloat(marble.style.getPropertyValue('--x')) || 0;
-    const currentY = parseFloat(marble.style.getPropertyValue('--y')) || 0;
-    const bound = (well.getBoundingClientRect().width - marble.offsetWidth) / 2;
-    let x = currentX;
-    let y = currentY;
-    if (event.key === 'ArrowLeft') x -= 12;
-    if (event.key === 'ArrowRight') x += 12;
-    if (event.key === 'ArrowUp') y -= 12;
-    if (event.key === 'ArrowDown') y += 12;
-    if (event.key === 'Home') { x = 0; y = 0; }
-    const length = Math.hypot(x, y);
-    if (length > bound) { x = x / length * bound; y = y / length * bound; }
-    marble.style.setProperty('--x', x + 'px');
-    marble.style.setProperty('--y', y + 'px');
-    marble.setAttribute('aria-valuenow', String(Math.round(x / Math.max(1, bound) * 100)));
+
+  function release(event) {
+    if (activePointer !== event.pointerId) return;
+    activePointer = null;
+    pulse = moved ? 0.5 : 0.28;
+    moved = false;
+  }
+  canvas.addEventListener('pointerup', release);
+  canvas.addEventListener('pointercancel', release);
+  canvas.addEventListener('lostpointercapture', (event) => {
+    if (activePointer === event.pointerId) {
+      activePointer = null;
+      pulse = 0.3;
+    }
   });
+
+  function bounce() {
+    pulse = 0.62;
+    vy -= reduceMotion ? 0 : 5;
+  }
+  canvas.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      bounce();
+    }
+  });
+
+  window.addEventListener('resize', resize, { passive: true });
+  resize();
+  requestAnimationFrame(animate);
 })();
 </script>
 </body>
