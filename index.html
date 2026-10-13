@@ -3,116 +3,367 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#05090f">
-<meta name="description" content="Abyssal Bar. Stop for a drink? A little constellation of sensory escapes.">
-<title>Abyssal Bar · Stop for a drink?</title>
+<meta name="theme-color" content="#000000">
+<meta name="description" content="A quiet collection of tactile, black-and-white fidget interactions.">
+<title>Still</title>
 <style>
-:root{color-scheme:dark;--bg:#05090f;--ink:#e8fbff;--muted:#89a7b9;--teal:#00ffc8;--blue:#46c9ff;--violet:#a78bfa;--pink:#ff85d5;--gold:#ffd89b;--line:#163746;--panel:rgba(8,19,30,.86)}
-*{box-sizing:border-box}html{min-height:100%;background:var(--bg)}body{margin:0;min-height:100vh;color:var(--ink);font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:radial-gradient(ellipse at 16% 24%,#092431 0,transparent 37%),radial-gradient(ellipse at 83% 78%,#21132f 0,transparent 36%),#05090f;overflow-x:hidden}button{font:inherit;color:inherit}button:focus-visible{outline:2px solid var(--teal);outline-offset:4px}.grain{position:fixed;inset:0;pointer-events:none;opacity:.14;background-image:radial-gradient(#a8e8ff 0.55px,transparent .7px);background-size:31px 31px;mask-image:linear-gradient(90deg,#000,transparent 85%);z-index:0}.app{position:relative;z-index:1;max-width:1500px;margin:auto;padding:28px clamp(18px,4vw,62px) 22px;min-height:100vh;display:flex;flex-direction:column}.topbar{display:flex;align-items:flex-start;justify-content:space-between;gap:22px}.brand{position:relative;border:0;background:none;text-align:left;padding:0;cursor:pointer}.brand:before{content:"✦";position:absolute;left:-18px;top:3px;color:var(--teal);font-size:18px;filter:drop-shadow(0 0 9px var(--teal))}.brand h1{font-family:Georgia,"Times New Roman",serif;font-weight:400;font-size:clamp(35px,4.5vw,61px);letter-spacing:.025em;line-height:1;margin:0;color:#b8ffff;text-shadow:0 0 24px #00d9e855}.brand p{margin:10px 0 0 3px;color:#9ee9f3;font-size:clamp(12px,1.3vw,16px);letter-spacing:.23em}.nav{display:flex;gap:9px;align-items:center;flex-wrap:wrap;justify-content:flex-end}.nav button,.small-btn{border:1px solid transparent;background:transparent;color:#a4c7d7;border-radius:999px;padding:10px 14px;cursor:pointer;transition:.2s}.nav button:hover,.small-btn:hover{border-color:#23566b;background:#0c1e2a;color:white}.nav .active{border-color:#126477;color:var(--teal);background:#07212a}.intro{display:flex;justify-content:space-between;align-items:end;gap:20px;margin:38px 0 18px}.eyebrow{color:var(--teal);font-size:11px;text-transform:uppercase;letter-spacing:.24em}.intro h2{font-family:Georgia,serif;font-size:clamp(23px,3vw,34px);font-weight:400;margin:8px 0 5px}.intro p{color:var(--muted);font-size:14px;margin:0;max-width:550px;line-height:1.7}.shuffle{white-space:nowrap;border:1px solid #236273;background:linear-gradient(110deg,#062a34,#11152b);border-radius:999px;padding:12px 18px;cursor:pointer;color:#c7fbff;box-shadow:0 0 25px #00e6c40c}.shuffle:hover{border-color:var(--teal);box-shadow:0 0 22px #00e6c422}.main{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(310px,.8fr);gap:clamp(22px,4vw,64px);align-items:center;flex:1}.map-wrap{position:relative;min-width:0}.map-head{display:flex;align-items:center;justify-content:space-between;margin:0 0 17px;color:#7296a8;font-size:11px;letter-spacing:.15em;text-transform:uppercase}.live{display:flex;align-items:center;gap:8px}.live i{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--teal);box-shadow:0 0 10px var(--teal)}.dot-grid{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:clamp(10px,1.8vw,22px);padding:16px 5px 22px;min-height:340px;align-items:center;justify-items:center}.dot{--c:var(--teal);position:relative;width:clamp(12px,1.4vw,17px);aspect-ratio:1;border:0;border-radius:50%;padding:0;background:radial-gradient(circle at 35% 30%,#fff 0 5%,var(--c) 16%,color-mix(in srgb,var(--c),transparent 65%) 39%,transparent 73%);box-shadow:0 0 7px color-mix(in srgb,var(--c),transparent 20%),0 0 19px color-mix(in srgb,var(--c),transparent 68%);cursor:pointer;transition:transform .35s cubic-bezier(.2,.9,.2,1),opacity .3s,filter .3s;animation:twinkle var(--tw,4s) ease-in-out infinite alternate;animation-delay:var(--delay,0s)}.dot:after{content:"";position:absolute;inset:-9px;border-radius:50%;border:1px solid transparent;transition:.3s}.dot:hover{transform:scale(1.8);filter:brightness(1.4)}.dot:hover:after,.dot:focus-visible:after{border-color:color-mix(in srgb,var(--c),transparent 35%)}.dot.selected{z-index:2;transform:scale(2.25);animation:none;box-shadow:0 0 0 1px var(--c),0 0 0 8px #00ffc822,0 0 26px var(--c),0 0 54px color-mix(in srgb,var(--c),transparent 40%)}.dot.selected:after{inset:-13px;border-color:var(--c);box-shadow:0 0 18px color-mix(in srgb,var(--c),transparent 40%)}.dot.dim{opacity:.2;transform:scale(.7)}@keyframes twinkle{from{opacity:.45}to{opacity:1}}.grid-foot{display:flex;align-items:center;justify-content:space-between;gap:12px;color:#7397a9;font-size:12px}.counter{border:1px solid #174557;border-radius:999px;padding:10px 14px;display:flex;align-items:center;gap:10px}.counter b{width:8px;height:8px;background:var(--teal);border-radius:50%;box-shadow:0 0 12px var(--teal)}.hint{font-size:12px;letter-spacing:.05em}.experience{position:relative;min-height:430px;padding:28px 0 22px 30px;display:flex;flex-direction:column;justify-content:center;isolation:isolate}.experience:before{content:"";position:absolute;z-index:-1;inset:12px 0 0 0;border:1px solid #153b4d;border-radius:46% 42% 36% 28% / 13% 18% 13% 17%;background:linear-gradient(145deg,#061724aa,#0a1020b8 65%,#150e21aa);box-shadow:inset 0 0 55px #00c9ff06,0 0 65px #008ba30a;transition:border-color .5s}.experience:after{content:"";position:absolute;z-index:-1;width:210px;height:210px;border-radius:50%;right:7%;top:-3%;background:var(--glow,var(--teal));filter:blur(100px);opacity:.13;transition:background .5s}.connector{position:absolute;left:-10%;top:29%;width:32%;height:20%;border-top:1px solid var(--active,var(--teal));border-radius:60% 0 0 0;transform:rotate(-12deg);opacity:.8;pointer-events:none}.orb{width:min(190px,53%);aspect-ratio:1;margin:0 auto 27px;position:relative;border-radius:50%;display:grid;place-items:center;border:1px solid var(--active,var(--teal));box-shadow:0 0 0 7px color-mix(in srgb,var(--active,var(--teal)),transparent 93%),0 0 35px color-mix(in srgb,var(--active,var(--teal)),transparent 65%),inset 0 0 30px #fff1;overflow:hidden;background:radial-gradient(circle at 36% 28%,#fff 0 1%,color-mix(in srgb,var(--active,var(--teal)),white 15%) 2%,transparent 9%),radial-gradient(ellipse at 48% 105%,#102f55 0 23%,#0a839c 24% 27%,transparent 29%),radial-gradient(ellipse at 30% 80%,#0b385b 0 23%,transparent 50%),radial-gradient(circle at 62% 37%,color-mix(in srgb,var(--active,var(--teal)),transparent 25%),#091323 65%);transition:transform .5s,border-color .5s}.orb:before,.orb:after{content:"";position:absolute;border:1px solid #d6fbff66;border-radius:50%;width:135%;height:42%;transform:rotate(-27deg);box-shadow:0 0 15px #7efcff22}.orb:after{transform:rotate(35deg);width:120%;height:67%;border-color:#ffffff24}.orb-icon{font-size:44px;filter:drop-shadow(0 0 16px white);animation:float 5s ease-in-out infinite}.orb-ring{position:absolute;inset:-12px;border:1px dashed color-mix(in srgb,var(--active,var(--teal)),transparent 45%);border-radius:50%;animation:spin 32s linear infinite}.experience.opening .orb{transform:scale(1.12)}@keyframes spin{to{transform:rotate(360deg)}}@keyframes float{50%{transform:translateY(-6px)}}.detail{text-align:center;max-width:390px;margin:0 auto;width:100%}.detail .eyebrow{margin-bottom:10px}.detail h3{font:400 clamp(28px,3vw,39px) Georgia,serif;margin:0 0 9px;color:var(--active,var(--teal));text-shadow:0 0 22px color-mix(in srgb,var(--active,var(--teal)),transparent 70%);transition:color .4s}.tagline{color:#a5c7d5;font-size:11px;letter-spacing:.22em;text-transform:uppercase}.description{font-size:14px;line-height:1.8;color:#a8c3d1;margin:18px auto 22px;max-width:330px}.actions{display:grid;gap:9px;max-width:285px;margin:auto}.action{padding:12px 15px;border:1px solid #1a5365;border-radius:999px;background:#071923a8;cursor:pointer;color:#b9f6ff;transition:.2s}.action.primary{background:linear-gradient(110deg,#05313a,#10233c);border-color:var(--active,var(--teal));box-shadow:inset 0 0 22px #00c9ff0b}.action:hover{transform:translateY(-2px);border-color:var(--active,var(--teal));box-shadow:0 0 20px #00e6c415}.action:disabled{opacity:.5;cursor:default}.sound-note{min-height:17px;margin-top:12px;color:#7194a5;font-size:11px}.bottom{display:flex;justify-content:space-between;align-items:center;margin-top:20px;color:#638698;font-size:11px;letter-spacing:.06em}.bottom span:last-child{color:#8ba9ba}.toast{position:fixed;bottom:22px;left:50%;transform:translate(-50%,20px);opacity:0;pointer-events:none;border:1px solid #246075;background:#071721f2;padding:12px 17px;border-radius:999px;color:#c5faff;font-size:13px;transition:.3s;z-index:10}.toast.show{opacity:1;transform:translate(-50%,0)}.modal-backdrop{position:fixed;inset:0;background:#02060bd9;backdrop-filter:blur(12px);z-index:20;display:none;place-items:center;padding:20px}.modal-backdrop.show{display:grid}.modal{width:min(520px,100%);border:1px solid #205368;border-radius:26px;padding:25px;background:linear-gradient(145deg,#091b28,#0b0c1a);box-shadow:0 25px 100px #0009}.modal-head{display:flex;justify-content:space-between;align-items:center}.modal h3{font:400 27px Georgia,serif;margin:0}.modal p{color:#91b0c1;line-height:1.7;font-size:14px}.setting{display:flex;justify-content:space-between;align-items:center;gap:20px;padding:13px 0;border-bottom:1px solid #153342;color:#b9d3df;font-size:14px}.setting input{accent-color:var(--teal);width:18px;height:18px}.close{border:1px solid #24495b;border-radius:50%;width:36px;height:36px;background:#0a1c28;cursor:pointer}.empty{color:#89a7b9;text-align:center;grid-column:1/-1;padding:45px}
-@media(min-width:1100px){.dot-grid{grid-template-columns:repeat(9,minmax(0,1fr));gap:clamp(13px,1.7vw,23px)}}
-@media(max-width:850px){.app{padding-top:22px}.topbar{align-items:center}.nav button{padding:8px 10px;font-size:12px}.main{grid-template-columns:1fr;gap:18px}.intro{margin-top:29px}.dot-grid{grid-template-columns:repeat(9,minmax(0,1fr));gap:clamp(10px,3vw,22px);min-height:0;padding:16px 5px 23px}.experience{min-height:390px;padding:30px 22px}.experience:before{inset:0 0 0 0;border-radius:30px}.connector{display:none}.orb{width:145px}.bottom{margin-top:24px}}
-@media(max-width:520px){.topbar{display:block}.nav{justify-content:flex-start;margin-top:22px}.brand h1{font-size:42px}.brand p{font-size:12px}.intro{align-items:flex-start;flex-direction:column}.shuffle{padding:10px 15px}.dot-grid{gap:clamp(8px,2.5vw,14px)}.dot{width:clamp(10px,2.8vw,14px)}.grid-foot{align-items:flex-start;flex-direction:column}.experience{padding:24px 16px;min-height:370px}.orb{width:125px;margin-bottom:21px}.detail h3{font-size:30px}.bottom{gap:10px;line-height:1.6}.bottom span:last-child{text-align:right}}
+:root{color-scheme:light;--black:#000;--white:#fff}
+*{box-sizing:border-box}
+html,body{margin:0;min-width:280px;min-height:100%;background:var(--black)}
+body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;overflow-x:hidden;overscroll-behavior-x:none;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+button,input{font:inherit}
+button{color:inherit}
+button:focus-visible,.toy:focus-visible{outline:3px solid currentColor;outline-offset:-7px}
+.wall{width:100%;min-height:100svh;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:repeat(3,minmax(190px,1fr));gap:9px;padding:9px;background:var(--black)}
+.toy{--surface:var(--white);--ink:var(--black);position:relative;display:grid;place-items:center;min-width:0;min-height:0;overflow:hidden;margin:0;padding:0;border:0;border-radius:2px;background:var(--surface);color:var(--ink);touch-action:manipulation;cursor:pointer;isolation:isolate}
+.toy.dark{--surface:var(--black);--ink:var(--white)}
+.toy:focus{outline:none}
+.toy:focus-visible{outline:3px solid var(--surface);outline-offset:-7px;box-shadow:inset 0 0 0 5px var(--ink)}
+.stage{position:absolute;inset:0;display:grid;place-items:center;overflow:hidden}
+.orbit-system{position:relative;display:block;width:clamp(96px,10vw,148px);max-width:58%;aspect-ratio:1;touch-action:none;transform:rotate(0deg);cursor:grab}
+.orbit-system:active{cursor:grabbing}
+.orbit-ring{position:absolute;inset:0;border:2px solid var(--ink);border-radius:50%;display:block}
+.orbit-ring.ring-b{inset:14%;transform:rotate(52deg) scaleX(.73)}
+.orbit-ring.ring-c{inset:27%;transform:rotate(-52deg) scaleX(.72)}
+.orbit-ring i{position:absolute;left:50%;top:-7px;width:14px;height:14px;transform:translateX(-50%);border:3px solid var(--surface);border-radius:50%;background:var(--ink)}
+.orbit-ring.ring-b i{top:auto;bottom:-7px;left:25%}
+.orbit-ring.ring-c i{top:50%;left:auto;right:-7px;transform:translateY(-50%)}
+.orbit-core{position:absolute;left:50%;top:50%;width:15%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;background:var(--ink)}
+.orbit-system.running{animation:orbit-turn 13s linear infinite}
+@keyframes orbit-turn{to{transform:rotate(360deg)}}
+.pulse-stack{position:relative;display:block;width:clamp(86px,9vw,130px);aspect-ratio:1}
+.pulse-ring{position:absolute;inset:0;border:2px solid var(--ink);border-radius:50%;transform:scale(.76)}
+.pulse-ring:nth-child(2){inset:12%;transform:scale(.76)}
+.pulse-ring:nth-child(3){inset:24%;transform:scale(.76)}
+.pulse-core{position:absolute;inset:38%;border-radius:50%;background:var(--ink)}
+.pulse-stack.active .pulse-ring{animation:pulse-out 1.3s cubic-bezier(.15,.65,.25,1) infinite}
+.pulse-stack.active .pulse-ring:nth-child(2){animation-delay:.22s}
+.pulse-stack.active .pulse-ring:nth-child(3){animation-delay:.44s}
+@keyframes pulse-out{0%{transform:scale(.56);border-width:2px}100%{transform:scale(1.2);border-width:0}}
+.bead-field{position:absolute;inset:0;display:grid;place-content:center;grid-template-columns:repeat(7,clamp(7px,1.05vw,13px));grid-auto-rows:clamp(7px,1.05vw,13px);gap:clamp(8px,1.12vw,16px);touch-action:pan-y}
+.bead{appearance:none;-webkit-appearance:none;display:block;width:100%;height:100%;min-width:0;min-height:0;padding:0;border:1px solid var(--ink);border-radius:50%;background:var(--ink);cursor:pointer;transition:transform .22s cubic-bezier(.2,.8,.2,1),border-radius .22s}
+.bead.is-on{background:var(--surface);border-radius:2px;transform:scale(.82)}
+.bead:focus-visible{outline:2px solid var(--ink);outline-offset:4px}
+.squish-shape{display:block;width:clamp(86px,9vw,132px);aspect-ratio:1;border-radius:56% 44% 62% 38% / 45% 54% 46% 55%;background:var(--ink);transform:rotate(-8deg);transition:transform .25s cubic-bezier(.2,.85,.25,1),border-radius .25s}
+.squish-shape:before{content:"";position:absolute;inset:15%;border:2px solid var(--surface);border-radius:50%}
+.squish-shape.squeezed{transform:scaleX(1.32) scaleY(.68) rotate(9deg);border-radius:43% 57% 37% 63% / 57% 42% 58% 43%}
+.slider-wrap{width:min(72%,250px);display:grid;place-items:center;position:relative}
+.slider-wrap:before{content:"";position:absolute;left:0;right:0;height:3px;background:var(--ink)}
+.range{appearance:none;-webkit-appearance:none;position:relative;z-index:1;width:100%;height:42px;margin:0;background:transparent;cursor:ew-resize;touch-action:pan-y}
+.range::-webkit-slider-runnable-track{height:3px;background:transparent}
+.range::-moz-range-track{height:3px;background:transparent}
+.range::-webkit-slider-thumb{appearance:none;-webkit-appearance:none;width:33px;height:33px;margin-top:-15px;border:4px solid var(--surface);border-radius:50%;background:var(--ink);box-shadow:0 0 0 2px var(--ink)}
+.range::-moz-range-thumb{width:25px;height:25px;border:4px solid var(--surface);border-radius:50%;background:var(--ink);box-shadow:0 0 0 2px var(--ink)}
+.spinner-disc{position:relative;display:block;width:clamp(88px,9vw,132px);aspect-ratio:1;border:2px solid var(--ink);border-radius:50%;background:conic-gradient(var(--ink) 0 25%,var(--surface) 25% 50%,var(--ink) 50% 75%,var(--surface) 75% 100%);transform:rotate(0deg)}
+.spinner-disc:before{content:"";position:absolute;inset:35%;border:2px solid var(--ink);border-radius:50%;background:var(--surface)}
+.spinner-disc.spinning{animation:spinner-turn 2.2s cubic-bezier(.18,.7,.2,1) infinite}
+@keyframes spinner-turn{to{transform:rotate(360deg)}}
+.stack-shapes{position:relative;width:clamp(90px,10vw,142px);height:clamp(82px,8vw,120px)}
+.stack-shape{position:absolute;left:50%;top:50%;width:66%;height:23%;border:2px solid var(--surface);border-radius:999px;background:var(--ink);transform:translate(-50%,-50%) rotate(-26deg)}
+.stack-shape:nth-child(1){margin-top:-34px;margin-left:-7px;transform:translate(-50%,-50%) rotate(25deg)}
+.stack-shape:nth-child(2){margin-top:-12px;margin-left:8px;transform:translate(-50%,-50%) rotate(-18deg)}
+.stack-shape:nth-child(3){margin-top:12px;margin-left:-7px;transform:translate(-50%,-50%) rotate(22deg)}
+.stack-shape:nth-child(4){margin-top:34px;margin-left:8px;transform:translate(-50%,-50%) rotate(-22deg)}
+.stack-shapes.bouncing .stack-shape{animation:stack-hop .7s cubic-bezier(.3,.1,.2,1) 2}
+.stack-shapes.bouncing .stack-shape:nth-child(2){animation-delay:.05s}
+.stack-shapes.bouncing .stack-shape:nth-child(3){animation-delay:.1s}
+.stack-shapes.bouncing .stack-shape:nth-child(4){animation-delay:.15s}
+@keyframes stack-hop{0%,100%{translate:0 0}50%{translate:0 -16px}}
+.tile-field{position:relative;display:grid;grid-template-columns:repeat(3,clamp(26px,3vw,43px));grid-template-rows:repeat(3,clamp(26px,3vw,43px));gap:7px}
+.tile-cell{appearance:none;-webkit-appearance:none;display:block;padding:0;border:2px solid var(--ink);background:var(--ink);cursor:pointer;transition:transform .2s}
+.tile-cell.is-on{background:var(--surface);transform:scale(.86)}
+.tile-cell:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.well{position:relative;display:block;width:clamp(112px,11vw,158px);aspect-ratio:1;border:2px solid var(--ink);border-radius:50%;touch-action:none}
+.marble{position:absolute;left:50%;top:50%;width:clamp(22px,2.4vw,32px);aspect-ratio:1;border:3px solid var(--surface);border-radius:50%;background:var(--ink);transform:translate(calc(-50% + var(--x,0px)),calc(-50% + var(--y,0px)));cursor:grab;touch-action:none}
+.marble.returning{transition:transform .68s cubic-bezier(.16,1,.3,1)}
+.marble:active{cursor:grabbing}
+.switch{appearance:none;-webkit-appearance:none;position:relative;display:block;width:clamp(108px,11vw,146px);height:clamp(52px,5.4vw,66px);padding:5px;border:2px solid var(--ink);border-radius:999px;background:var(--surface);cursor:pointer;transition:background .2s}
+.switch span{position:absolute;left:5px;top:50%;width:calc(clamp(52px,5.4vw,66px) - 14px);aspect-ratio:1;transform:translateY(-50%);border-radius:50%;background:var(--ink);border:2px solid var(--surface);transition:transform .32s cubic-bezier(.2,.8,.2,1),background .2s}
+.switch.on{background:var(--ink)}
+.switch.on span{background:var(--surface);border-color:var(--ink);transform:translate(clamp(48px,5.1vw,70px),-50%)}
+.ripple-stage{position:absolute;inset:0;overflow:hidden;touch-action:manipulation}
+.ripple-wave{position:absolute;width:12px;height:12px;border:2px solid var(--ink);border-radius:50%;pointer-events:none;transform:translate(-50%,-50%) scale(.2);animation:ripple-spread 1.15s cubic-bezier(.1,.5,.2,1) forwards}
+.ripple-wave:nth-child(2){animation-delay:.12s}
+.ripple-wave:nth-child(3){animation-delay:.24s}
+@keyframes ripple-spread{0%{transform:translate(-50%,-50%) scale(.2);border-width:2px}100%{transform:translate(-50%,-50%) scale(11);border-width:0}}
+.pendulum{position:relative;display:block;width:clamp(85px,9vw,128px);height:clamp(126px,13vw,180px);transform-origin:50% 0;transform:rotate(0deg)}
+.pendulum:before{content:"";position:absolute;top:0;left:50%;width:2px;height:74%;background:var(--ink);transform:translateX(-50%)}
+.pendulum:after{content:"";position:absolute;top:68%;left:50%;width:clamp(24px,2.8vw,38px);aspect-ratio:1;border-radius:50%;border:3px solid var(--surface);background:var(--ink);transform:translate(-50%,-50%)}
+.pendulum.swing{animation:pendulum-swing 1.35s ease-in-out 3}
+@keyframes pendulum-swing{0%,100%{transform:rotate(0deg)}22%{transform:rotate(38deg)}50%{transform:rotate(0deg)}76%{transform:rotate(-38deg)}}
+.sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+@media(max-width:800px){.wall{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:none;grid-auto-rows:clamp(166px,42vw,260px);gap:7px;padding:7px}.bead-field{grid-template-columns:repeat(7,clamp(7px,1.7vw,13px));grid-auto-rows:clamp(7px,1.7vw,13px);gap:clamp(8px,2vw,15px)}.tile-field{grid-template-columns:repeat(3,clamp(26px,6vw,43px));grid-template-rows:repeat(3,clamp(26px,6vw,43px))}}
+@media(max-width:360px){.wall{grid-auto-rows:165px;gap:5px;padding:5px}.tile-field{gap:5px}.bead-field{gap:7px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;scroll-behavior:auto!important;transition-duration:.01ms!important}}
 </style>
 </head>
 <body>
-<div class="grain" aria-hidden="true"></div>
-<div class="app">
-<header class="topbar">
-<button class="brand" id="home" aria-label="Return to the full constellation"><h1>Abyssal Bar</h1><p>Stop for a drink?</p></button>
-<nav class="nav" aria-label="Main navigation">
-<button id="homeNav" class="active">⌂ &nbsp;Constellation</button>
-<button id="soundNav">≋ &nbsp;Sound</button>
-<button id="settingsNav">⚙ &nbsp;Settings</button>
-</nav>
-</header>
-<section class="intro">
-<div><div class="eyebrow">A tiny universe of feelings</div><h2>Choose a little somewhere.</h2><p>Every light is a doorway. Tap one, follow its thread, and see where your mind wants to wander.</p></div>
-<button class="shuffle" id="surprise">✧ Surprise me</button>
-</section>
-<main class="main">
-<section class="map-wrap" aria-label="Sensory experience constellation">
-<div class="map-head"><span>01 / The constellation</span><span class="live"><i></i> all yours to explore</span></div>
-<div class="dot-grid" id="dotGrid" role="group" aria-label="Choose a sensory experience"></div>
-<div class="grid-foot"><div class="counter"><b></b><span id="count">36 little doorways</span></div><span class="hint">Choose a dot. Take your time.</span></div>
-</section>
-<aside class="experience" id="experience" aria-live="polite" style="--active:#00ffc8;--glow:#00ffc8">
-<div class="connector"></div>
-<div class="orb" id="orb" aria-hidden="true"><div class="orb-ring"></div><span class="orb-icon" id="orbIcon">✧</span></div>
-<div class="detail">
-<div class="eyebrow" id="number">A quiet place · 01</div>
-<h3 id="title">Ocean Breeze</h3>
-<div class="tagline" id="tagline">Breathe · Listen · Feel</div>
-<p class="description" id="description">The salty air. The steady waves. A quiet kind of peace. Let this calm wash over you.</p>
-<div class="actions"><button class="action primary" id="enter">↗ &nbsp; Open this experience</button><button class="action" id="soundButton">♫ &nbsp; Play ambient sound</button></div>
-<div class="sound-note" id="soundNote">A small pause, just for you.</div>
-</div>
-</aside>
+<main class="wall" aria-label="Monochrome tactile playground">
+  <div class="toy light" data-kind="orbit" role="button" tabindex="0" aria-label="Drag the orbiting rings or tap to spin">
+    <div class="stage"><span class="orbit-system"><span class="orbit-ring ring-a"><i></i></span><span class="orbit-ring ring-b"><i></i></span><span class="orbit-ring ring-c"><i></i></span><span class="orbit-core"></span></span></div>
+  </div>
+  <div class="toy dark" data-kind="pulse" role="button" tabindex="0" aria-label="Toggle the pulsing rings">
+    <div class="stage"><span class="pulse-stack"><span class="pulse-ring"></span><span class="pulse-ring"></span><span class="pulse-ring"></span><span class="pulse-core"></span></span></div>
+  </div>
+  <div class="toy light" data-kind="beads" role="group" aria-label="Move through and toggle the dots">
+    <div class="bead-field"></div>
+  </div>
+  <div class="toy dark" data-kind="squish" role="button" tabindex="0" aria-label="Press and reshape the soft form">
+    <div class="stage"><span class="squish-shape"></span></div>
+  </div>
+  <div class="toy dark" data-kind="slider" role="group" aria-label="Slide the control">
+    <div class="stage"><div class="slider-wrap"><input class="range" type="range" min="0" max="100" value="50" aria-label="Move the slider"></div></div>
+  </div>
+  <div class="toy light" data-kind="spinner" role="button" tabindex="0" aria-label="Spin the black and white disc">
+    <div class="stage"><span class="spinner-disc"></span></div>
+  </div>
+  <div class="toy light" data-kind="stack" role="button" tabindex="0" aria-label="Bounce the stacked shapes">
+    <div class="stage"><span class="stack-shapes"><span class="stack-shape"></span><span class="stack-shape"></span><span class="stack-shape"></span><span class="stack-shape"></span></span></div>
+  </div>
+  <div class="toy dark" data-kind="tiles" role="group" aria-label="Invert the small tiles">
+    <div class="stage"><div class="tile-field"></div></div>
+  </div>
+  <div class="toy dark" data-kind="marble" role="group" aria-label="Drag the marble and release it">
+    <div class="stage"><span class="well"><span class="marble" role="slider" aria-label="Drag marble" aria-valuemin="-100" aria-valuemax="100" aria-valuenow="0" tabindex="0"></span></span></div>
+  </div>
+  <div class="toy light" data-kind="switch" role="group" aria-label="Flip the switch">
+    <div class="stage"><button class="switch" type="button" aria-label="Toggle switch" aria-pressed="false"><span></span></button></div>
+  </div>
+  <div class="toy light" data-kind="ripple" role="button" tabindex="0" aria-label="Tap to create expanding ripples">
+    <div class="ripple-stage"></div>
+  </div>
+  <div class="toy dark" data-kind="pendulum" role="button" tabindex="0" aria-label="Set the pendulum swinging">
+    <div class="stage"><span class="pendulum"></span></div>
+  </div>
 </main>
-<footer class="bottom"><span>✦ &nbsp; SMALL MOMENTS. BIG FEELINGS.</span><span>Made for wandering, never rushing.</span></footer>
-</div>
-<div class="toast" id="toast" role="status"></div>
-<div class="modal-backdrop" id="settingsModal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
-<div class="modal"><div class="modal-head"><h3 id="settingsTitle">Make it yours</h3><button class="close" id="closeSettings" aria-label="Close settings">×</button></div><p>A little control over the atmosphere. Your choices stay right here in this page.</p>
-<label class="setting"><span>Reduce motion</span><input type="checkbox" id="reduceMotion"></label>
-<label class="setting"><span>Dim the constellation</span><input type="checkbox" id="dimStars"></label>
-<label class="setting"><span>Show experience names</span><input type="checkbox" id="showNames" checked></label>
-<label class="setting"><span>Ambient sound available</span><input type="checkbox" id="soundAllowed" checked></label>
-<p>Sound is generated by your browser only when you press play. Nothing is recorded or sent anywhere.</p>
-<button class="action primary" id="doneSettings" style="width:100%">All set</button></div></div>
 <script>
 (() => {
-const experiences = [
-{title:"Ocean Breeze",icon:"≈",color:"#00ffc8",tag:"Breathe · Listen · Feel",desc:"The salty air. The steady waves. A quiet kind of peace. Let this calm wash over you.",sound:"soft ocean hush"},
-{title:"Velvet Rain",icon:"☂",color:"#65bfff",tag:"Drift · Watch · Unwind",desc:"Rain draws silver lines across a midnight window. Nothing needs your attention right now.",sound:"gentle rain"},
-{title:"Aurora Bloom",icon:"✺",color:"#a78bfa",tag:"Glow · Float · Wonder",desc:"Ribbons of color stretch across a dark sky, slowly changing their minds about where to go.",sound:"soft shimmering tones"},
-{title:"Cloud Pillow",icon:"☁",color:"#b5dfff",tag:"Soften · Rest · Float",desc:"A room made of cloudlight, where the edges of the day grow fluffy and quiet.",sound:"airy ambient hum"},
-{title:"Stardust",icon:"✦",color:"#ffd89b",tag:"Look · Imagine · Wander",desc:"Tiny suns scattered in an endless dark. Pick one and make up a story about it.",sound:"tiny celestial chimes"},
-{title:"Rosewater",icon:"❀",color:"#ff85d5",tag:"Bloom · Pause · Breathe",desc:"Petals turn lazily in warm water, painting circles that fade into one another.",sound:"slow glassy notes"},
-{title:"Lava Lamp",icon:"◉",color:"#ff9b72",tag:"Melt · Watch · Loosen",desc:"Slow glowing shapes rise and fall, meeting and parting in their own unhurried rhythm.",sound:"warm low drone"},
-{title:"Moss Garden",icon:"❋",color:"#a6ed9a",tag:"Ground · Notice · Grow",desc:"Soft green moss, tiny droplets, and the feeling of a forest keeping a peaceful secret.",sound:"forest hush"},
-{title:"Glass Lake",icon:"◇",color:"#83e8ff",tag:"Reflect · Rest · Release",desc:"A lake so still the sky seems to have left a piece of itself on the water.",sound:"quiet water"},
-{title:"Neon Drifter",icon:"⌁",color:"#ff7ce7",tag:"Wander · Glow · Play",desc:"A little night-city color, reflected in puddles and passing by at a dreamy pace.",sound:"distant synth tones"},
-{title:"Paper Stars",icon:"✧",color:"#ffe7a6",tag:"Make · Imagine · Smile",desc:"Fold an ordinary moment into something lovely. There is no wrong way to make a star.",sound:"soft plucks"},
-{title:"Blue Hour",icon:"☾",color:"#789bff",tag:"Ease · Settle · Exhale",desc:"That in-between blue when the world seems to lower its voice and the lights come on.",sound:"deep ambient waves"},
-{title:"Prism Room",icon:"◈",color:"#ff91b8",tag:"Shift · Sparkle · Explore",desc:"A beam of light breaks into color, and suddenly the plainest wall is full of tiny rainbows.",sound:"bright glass tones"},
-{title:"Snow Globe",icon:"❄",color:"#c3eaff",tag:"Shake · Watch · Settle",desc:"A miniature winter world swirls gently, then slowly returns to stillness.",sound:"icy soft chimes"},
-{title:"Honey Glow",icon:"✺",color:"#ffc46b",tag:"Warm · Rest · Stay",desc:"Golden light pools on a quiet afternoon, warm enough to make time feel softer.",sound:"warm mellow tone"},
-{title:"Moon Garden",icon:"☾",color:"#c4b5fd",tag:"Bloom · Dream · Wander",desc:"Pale flowers open beneath a silver moon, luminous in a garden that asks nothing of you.",sound:"night garden hush"},
-{title:"Bubble Orbit",icon:"○",color:"#70f5ed",tag:"Pop · Float · Play",desc:"Weightless bubbles wander through a tiny galaxy, catching colors as they pass.",sound:"rounded soft notes"},
-{title:"Candle Cove",icon:"♨",color:"#ffb58c",tag:"Glow · Gather · Pause",desc:"Small candlelight flickers against the dark. Stay for a moment in its golden circle.",sound:"warm room tone"},
-{title:"Coral Dream",icon:"❋",color:"#ff8dba",tag:"Drift · Discover · Wonder",desc:"A bright underwater garden sways in a current that moves at the speed of a lullaby.",sound:"underwater hush"},
-{title:"Wind Chimes",icon:"♬",color:"#9bd8ff",tag:"Listen · Notice · Breathe",desc:"Imagine a breeze passing through delicate chimes, each note hanging in the air for a second.",sound:"light chime tones"},
-{title:"Ink in Water",icon:"◌",color:"#b6a0ff",tag:"Spread · Swirl · Let go",desc:"Clouds of color unfurl into clear water, making slow, unpredictable galaxies.",sound:"slow evolving tone"},
-{title:"Sun Shower",icon:"☼",color:"#ffe28b",tag:"Shimmer · Warm · Begin",desc:"Sunlight slips through a passing shower and leaves every surface glittering.",sound:"light rain and tone"},
-{title:"Deep Space",icon:"✦",color:"#8e9bff",tag:"Expand · Wonder · Rest",desc:"A quiet black sky with no edges. You can simply look, with no need to find anything.",sound:"deep space drone"},
-{title:"Lemon Fizz",icon:"✧",color:"#d8f879",tag:"Tingle · Brighten · Play",desc:"Tiny bright bubbles rise through a citrus-colored day, crisp and cheerful without being loud.",sound:"tiny bright plucks"},
-{title:"Silk Ribbon",icon:"〰",color:"#ff9ed6",tag:"Flow · Sway · Ease",desc:"A ribbon of satin curls through the air, following a path that never needs to be straight.",sound:"silky airy tone"},
-{title:"Pebble Beach",icon:"◦",color:"#a7d9e9",tag:"Sort · Touch · Settle",desc:"Smooth little stones rest along the tide line, each one with its own quiet shape.",sound:"soft pebble clicks"},
-{title:"Firefly Field",icon:"✴",color:"#b4f69a",tag:"Follow · Glow · Explore",desc:"Small lights appear in the grass, blinking hello before drifting off into the dark.",sound:"gentle night tones"},
-{title:"Opal Cave",icon:"◇",color:"#83ddf5",tag:"Discover · Shine · Pause",desc:"A hidden cave catches light in a hundred colors, glowing from within like a secret.",sound:"cave-like soft drone"},
-{title:"Dusk Meadow",icon:"❀",color:"#e3a5ff",tag:"Rest · Notice · Dream",desc:"Tall grasses sway under a lavender sky. The day is done asking you to hurry.",sound:"meadow hush"},
-{title:"Tidepool",icon:"✺",color:"#54e6d4",tag:"Peek · Discover · Wonder",desc:"A tiny world between the waves: shimmering water, miniature reflections, and hidden colors.",sound:"tiny water ripples"},
-{title:"Soft Static",icon:"⁙",color:"#a7b9ff",tag:"Focus · Listen · Float",desc:"A gentle field of distant little lights, with no pattern you have to solve.",sound:"soft filtered noise"},
-{title:"Daydream",icon:"☁",color:"#ffb5db",tag:"Imagine · Drift · Begin",desc:"Let a thought wander past the window of your mind. You do not have to follow it.",sound:"floating ambient notes"},
-{title:"Mint Mist",icon:"❋",color:"#8dfbd5",tag:"Cool · Breathe · Reset",desc:"A cool, clean mist curls through a green-lit garden, fresh as a new page.",sound:"cool airy tones"},
-{title:"Pearl Diver",icon:"◉",color:"#a9d9ff",tag:"Sink · Find · Rise",desc:"A pearl catches one quiet glimmer in the deep, and gives it back to you.",sound:"underwater soft tone"},
-{title:"Cosmic Tea",icon:"♨",color:"#d4b5ff",tag:"Sip · Pause · Stay",desc:"Imagine a warm cup between your hands while distant galaxies turn beyond the window.",sound:"warm low chimes"},
-{title:"Quiet Orbit",icon:"◎",color:"#7fe6ff",tag:"Circle · Settle · Rest",desc:"A small moon circles a sleepy planet, returning again and again without effort.",sound:"slow rounded tones"}
-];
-const grid=document.getElementById('dotGrid'), experience=document.getElementById('experience');
-const $=id=>document.getElementById(id); let current=0, audioCtx=null, oscillator=null, gain=null, toastTimer=null;
-const reduceMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-function makeGrid(){grid.innerHTML='';experiences.forEach((e,i)=>{const b=document.createElement('button');b.className='dot';b.type='button';b.style.setProperty('--c',e.color);b.style.setProperty('--delay',((i*37)%17)/-3+'s');b.style.setProperty('--tw',(3+(i%5))+'s');b.setAttribute('aria-label','Explore '+e.title);b.title=e.title;b.addEventListener('click',()=>select(i));grid.appendChild(b)});select(0,false)}
-function select(i,animate=true){current=(i+experiences.length)%experiences.length;const e=experiences[current];[...grid.children].forEach((b,j)=>{b.classList.toggle('selected',j===current);b.classList.toggle('dim', $('dimStars').checked&&j!==current);b.setAttribute('aria-pressed',j===current?'true':'false')});$('number').textContent='A quiet place · '+String(current+1).padStart(2,'0');$('title').textContent=e.title;$('tagline').textContent=e.tag;$('description').textContent=e.desc;$('orbIcon').textContent=e.icon;experience.style.setProperty('--active',e.color);experience.style.setProperty('--glow',e.color);$('count').textContent=experiences.length+' little doorways';if(animate&&!reduceMotion&& !$('reduceMotion').checked){experience.classList.remove('opening');void experience.offsetWidth;experience.classList.add('opening');setTimeout(()=>experience.classList.remove('opening'),550)}$('soundNote').textContent='A small pause, just for you.';if(oscillator)stopSound(false);$('soundButton').textContent='♫  Play ambient sound';$('soundButton').disabled=!$('soundAllowed').checked}
-function toast(msg){const t=$('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>t.classList.remove('show'),2400)}
-function surprise(){let n=Math.floor(Math.random()*experiences.length);if(experiences.length>1&&n===current)n=(n+1+Math.floor(Math.random()*(experiences.length-1)))%experiences.length;select(n);toast('A new little somewhere: '+experiences[n].title)}
-function startSound(){if(!$('soundAllowed').checked){toast('Ambient sound is turned off in settings.');return}try{const AC=window.AudioContext||window.webkitAudioContext;if(!AC){$('soundNote').textContent='This browser does not support generated sound.';return}audioCtx=audioCtx||new AC();if(audioCtx.state==='suspended')audioCtx.resume();gain=audioCtx.createGain();gain.gain.setValueAtTime(.0001,audioCtx.currentTime);gain.gain.exponentialRampToValueAtTime(.035,audioCtx.currentTime+.8);gain.connect(audioCtx.destination);oscillator=audioCtx.createOscillator();const e=experiences[current];const base=180+(current*23)%240;oscillator.type=current%3===0?'sine':current%3===1?'triangle':'sine';oscillator.frequency.setValueAtTime(base,audioCtx.currentTime);oscillator.connect(gain);oscillator.start();const osc2=audioCtx.createOscillator();osc2.type='sine';osc2.frequency.value=base*1.5;const g2=audioCtx.createGain();g2.gain.value=.24;osc2.connect(g2);g2.connect(gain);osc2.start();oscillator._second=osc2;oscillator._secondGain=g2;$('soundButton').textContent='Ⅱ  Stop ambient sound';$('soundNote').textContent='Now playing a soft, browser-generated tone.'}catch(err){$('soundNote').textContent='Sound could not start. Try tapping play again.'}}
-function stopSound(update=true){if(oscillator){try{oscillator.stop();if(oscillator._second)oscillator._second.stop()}catch(e){}oscillator=null}if(gain){try{gain.disconnect()}catch(e){}gain=null}if(update){$('soundButton').textContent='♫  Play ambient sound';$('soundNote').textContent='Sound paused. The quiet is yours again.'}}
-function openSettings(){$('settingsModal').classList.add('show');$('closeSettings').focus()}
-function closeSettings(){$('settingsModal').classList.remove('show');$('settingsNav').focus()}
-$('home').addEventListener('click',()=>{select(0);window.scrollTo({top:0,behavior:reduceMotion?'auto':'smooth'})});$('homeNav').addEventListener('click',()=>{select(0);toast('Back to the whole constellation')});$('surprise').addEventListener('click',surprise);$('enter').addEventListener('click',()=>{const e=experiences[current];toast('You found '+e.title+'. Stay as long as you like.');$('description').textContent=e.desc+' Let your eyes rest here for a moment, and leave whenever you are ready.';experience.scrollIntoView({behavior:reduceMotion?'auto':'smooth',block:'nearest'})});$('soundButton').addEventListener('click',()=>oscillator?stopSound():startSound());$('soundNav').addEventListener('click',()=>oscillator?stopSound():startSound());$('settingsNav').addEventListener('click',openSettings);$('closeSettings').addEventListener('click',closeSettings);$('doneSettings').addEventListener('click',closeSettings);$('settingsModal').addEventListener('click',e=>{if(e.target===$('settingsModal'))closeSettings()});document.addEventListener('keydown',e=>{if(e.key==='Escape')closeSettings();if(e.key==='ArrowRight'&&document.activeElement.classList.contains('dot'))select(current+1);if(e.key==='ArrowLeft'&&document.activeElement.classList.contains('dot'))select(current-1)});$('dimStars').addEventListener('change',()=>select(current,false));$('showNames').addEventListener('change',e=>{[...grid.children].forEach((b,i)=>b.title=e.target.checked?experiences[i].title:'Sensory experience');toast(e.target.checked?'Names are visible on hover':'Hover labels hidden')});$('soundAllowed').addEventListener('change',e=>{if(!e.target.checked)stopSound();$('soundButton').disabled=!e.target.checked;toast(e.target.checked?'Ambient sound enabled':'Ambient sound disabled')});$('reduceMotion').addEventListener('change',e=>{document.documentElement.style.scrollBehavior=e.target.checked?'auto':'';toast(e.target.checked?'Motion reduced':'Motion restored')});
-makeGrid();
+  const toys = Array.from(document.querySelectorAll('.toy'));
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  document.querySelectorAll('[data-kind="beads"] .bead-field').forEach((field) => {
+    for (let i = 0; i < 49; i++) {
+      const bead = document.createElement('button');
+      bead.type = 'button';
+      bead.className = 'bead';
+      bead.setAttribute('aria-label', 'Dot ' + (i + 1));
+      bead.setAttribute('aria-pressed', 'false');
+      bead.addEventListener('click', () => {
+        bead.classList.toggle('is-on');
+        bead.setAttribute('aria-pressed', bead.classList.contains('is-on') ? 'true' : 'false');
+      });
+      field.appendChild(bead);
+    }
+    field.addEventListener('pointermove', (event) => {
+      if (event.pointerType === 'touch') return;
+      const rect = field.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+      field.querySelectorAll('.bead').forEach((bead) => {
+        const r = bead.getBoundingClientRect();
+        const bx = r.left + r.width / 2 - rect.left;
+        const by = r.top + r.height / 2 - rect.top;
+        const dx = bx - x;
+        const dy = by - y;
+        const distance = Math.max(1, Math.hypot(dx, dy));
+        const force = Math.max(0, 1 - distance / 100);
+        bead.style.transform = 'translate(' + (dx / distance * force * 13) + 'px,' + (dy / distance * force * 13) + 'px) scale(' + (1 + force * .35) + ')';
+      });
+    });
+    field.addEventListener('pointerleave', () => {
+      field.querySelectorAll('.bead').forEach((bead) => {
+        bead.style.transform = '';
+      });
+    });
+  });
+
+  document.querySelectorAll('[data-kind="tiles"] .tile-field').forEach((field) => {
+    for (let i = 0; i < 9; i++) {
+      const cell = document.createElement('button');
+      cell.type = 'button';
+      cell.className = 'tile-cell' + ([0, 2, 4, 6, 8].includes(i) ? ' is-on' : '');
+      cell.setAttribute('aria-label', 'Tile ' + (i + 1));
+      cell.setAttribute('aria-pressed', [0, 2, 4, 6, 8].includes(i) ? 'true' : 'false');
+      cell.addEventListener('click', () => {
+        cell.classList.toggle('is-on');
+        cell.setAttribute('aria-pressed', cell.classList.contains('is-on') ? 'true' : 'false');
+      });
+      field.appendChild(cell);
+    }
+  });
+
+  const orbitToy = document.querySelector('[data-kind="orbit"]');
+  const orbit = orbitToy.querySelector('.orbit-system');
+  let rotation = 0;
+  let orbitPointer = null;
+  let lastX = 0;
+  let movedOrbit = false;
+  orbit.addEventListener('pointerdown', (event) => {
+    orbitPointer = event.pointerId;
+    lastX = event.clientX;
+    movedOrbit = false;
+    orbit.classList.remove('running');
+    orbit.setPointerCapture(event.pointerId);
+  });
+  orbit.addEventListener('pointermove', (event) => {
+    if (orbitPointer !== event.pointerId) return;
+    const delta = event.clientX - lastX;
+    if (Math.abs(event.clientX - lastX) > 1) movedOrbit = true;
+    rotation += delta * 1.25;
+    orbit.style.transform = 'rotate(' + rotation + 'deg)';
+    lastX = event.clientX;
+  });
+  const finishOrbit = (event) => {
+    if (orbitPointer !== event.pointerId) return;
+    orbitPointer = null;
+  };
+  orbit.addEventListener('pointerup', finishOrbit);
+  orbit.addEventListener('pointercancel', finishOrbit);
+
+  toys.forEach((toy) => {
+    const kind = toy.dataset.kind;
+    if (kind === 'beads' || kind === 'tiles' || kind === 'marble' || kind === 'switch' || kind === 'slider') return;
+    toy.addEventListener('click', (event) => {
+      if (event.detail !== 0 && kind === 'squish') return;
+      if (kind === 'orbit') {
+        if (movedOrbit) { movedOrbit = false; return; }
+        orbit.classList.toggle('running');
+        orbitToy.setAttribute('aria-pressed', orbit.classList.contains('running') ? 'true' : 'false');
+      }
+      if (kind === 'pulse') {
+        const pulse = toy.querySelector('.pulse-stack');
+        pulse.classList.toggle('active');
+        toy.setAttribute('aria-pressed', pulse.classList.contains('active') ? 'true' : 'false');
+      }
+      if (kind === 'squish' && event.detail === 0) {
+        toy.querySelector('.squish-shape').classList.toggle('squeezed');
+      }
+      if (kind === 'spinner') {
+        const disc = toy.querySelector('.spinner-disc');
+        disc.classList.toggle('spinning');
+        toy.setAttribute('aria-pressed', disc.classList.contains('spinning') ? 'true' : 'false');
+      }
+      if (kind === 'stack') {
+        const stack = toy.querySelector('.stack-shapes');
+        stack.classList.remove('bouncing');
+        void stack.offsetWidth;
+        stack.classList.add('bouncing');
+        window.setTimeout(() => stack.classList.remove('bouncing'), reducedMotion ? 20 : 1600);
+      }
+      if (kind === 'ripple') {
+        const stage = toy.querySelector('.ripple-stage');
+        const rect = stage.getBoundingClientRect();
+        const x = event.detail === 0 ? rect.width / 2 : event.clientX - rect.left;
+        const y = event.detail === 0 ? rect.height / 2 : event.clientY - rect.top;
+        for (let i = 0; i < 3; i++) {
+          const wave = document.createElement('span');
+          wave.className = 'ripple-wave';
+          wave.style.left = x + 'px';
+          wave.style.top = y + 'px';
+          stage.appendChild(wave);
+          wave.addEventListener('animationend', () => wave.remove(), { once: true });
+        }
+        while (stage.children.length > 12) stage.firstElementChild.remove();
+      }
+      if (kind === 'pendulum') {
+        const pendulum = toy.querySelector('.pendulum');
+        pendulum.classList.remove('swing');
+        void pendulum.offsetWidth;
+        pendulum.classList.add('swing');
+        window.setTimeout(() => pendulum.classList.remove('swing'), reducedMotion ? 20 : 4100);
+      }
+    });
+
+    if (toy.getAttribute('role') === 'button') {
+      toy.addEventListener('keydown', (event) => {
+        if (event.target !== toy) return;
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          toy.click();
+        }
+      });
+    }
+  });
+
+  const squishToy = document.querySelector('[data-kind="squish"]');
+  const squishShape = squishToy.querySelector('.squish-shape');
+  squishToy.addEventListener('pointerdown', () => squishShape.classList.add('squeezed'));
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach((name) => {
+    squishToy.addEventListener(name, () => squishShape.classList.remove('squeezed'));
+  });
+
+  const range = document.querySelector('.range');
+  range.addEventListener('input', () => {
+    range.style.setProperty('--position', range.value + '%');
+  });
+
+  const toggle = document.querySelector('.switch');
+  toggle.addEventListener('click', () => {
+    toggle.classList.toggle('on');
+    toggle.setAttribute('aria-pressed', toggle.classList.contains('on') ? 'true' : 'false');
+  });
+
+  const well = document.querySelector('.well');
+  const marble = document.querySelector('.marble');
+  let marbleActive = false;
+  let marbleRect;
+  const setMarble = (event) => {
+    const radius = marbleRect.width / 2;
+    const bound = (marbleRect.width - marble.offsetWidth) / 2;
+    const cx = marbleRect.left + marbleRect.width / 2;
+    const cy = marbleRect.top + marbleRect.height / 2;
+    let x = event.clientX - cx;
+    let y = event.clientY - cy;
+    const length = Math.hypot(x, y);
+    if (length > bound) {
+      x = x / length * bound;
+      y = y / length * bound;
+    }
+    marble.style.setProperty('--x', x + 'px');
+    marble.style.setProperty('--y', y + 'px');
+    marble.setAttribute('aria-valuenow', String(Math.round(x / Math.max(1, bound) * 100)));
+  };
+  marble.addEventListener('pointerdown', (event) => {
+    marbleActive = true;
+    marbleRect = well.getBoundingClientRect();
+    marble.classList.remove('returning');
+    marble.setPointerCapture(event.pointerId);
+    setMarble(event);
+    event.preventDefault();
+  });
+  marble.addEventListener('pointermove', (event) => {
+    if (marbleActive) setMarble(event);
+  });
+  const returnMarble = () => {
+    if (!marbleActive) return;
+    marbleActive = false;
+    marble.classList.add('returning');
+    marble.style.setProperty('--x', '0px');
+    marble.style.setProperty('--y', '0px');
+    marble.setAttribute('aria-valuenow', '0');
+  };
+  marble.addEventListener('pointerup', returnMarble);
+  marble.addEventListener('pointercancel', returnMarble);
+  marble.addEventListener('keydown', (event) => {
+    if (!['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home'].includes(event.key)) return;
+    event.preventDefault();
+    marble.classList.remove('returning');
+    const currentX = parseFloat(marble.style.getPropertyValue('--x')) || 0;
+    const currentY = parseFloat(marble.style.getPropertyValue('--y')) || 0;
+    const bound = (well.getBoundingClientRect().width - marble.offsetWidth) / 2;
+    let x = currentX;
+    let y = currentY;
+    if (event.key === 'ArrowLeft') x -= 12;
+    if (event.key === 'ArrowRight') x += 12;
+    if (event.key === 'ArrowUp') y -= 12;
+    if (event.key === 'ArrowDown') y += 12;
+    if (event.key === 'Home') { x = 0; y = 0; }
+    const length = Math.hypot(x, y);
+    if (length > bound) { x = x / length * bound; y = y / length * bound; }
+    marble.style.setProperty('--x', x + 'px');
+    marble.style.setProperty('--y', y + 'px');
+    marble.setAttribute('aria-valuenow', String(Math.round(x / Math.max(1, bound) * 100)));
+  });
 })();
 </script>
 </body>
