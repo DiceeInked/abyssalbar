@@ -266,8 +266,8 @@ function init(){
   canvas.width=Math.round(width*pixelRatio);canvas.height=Math.round(height*pixelRatio);
   gl.viewport(0,0,canvas.width,canvas.height);
   projection=perspective(Math.PI/4,width/height,.1,60);
-  sceneScale=Math.min(1.08,Math.max(.4,width/height*1.03));
-  if(render&&(reducedMotion||!raf))render(lastTime);
+  sceneScale=Math.min(1.08,Math.max(.4,width/height*1.16));
+  if(render&&fromGeometry&&(reducedMotion||!raf))render(lastTime);
  }
  function uniformsColor(loc,p){gl.uniform3fv(loc.ca,rgb(p.a));gl.uniform3fv(loc.cb,rgb(p.b))}
  function drawStars(t){
