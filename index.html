@@ -1,339 +1,449 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#000000">
-<meta name="description" content="A minimalist field of dots hiding a tactile little world.">
-<title>Still</title>
-<style>
-:root{color-scheme:dark;--paper:#000;--ink:#fff}
-*{box-sizing:border-box}
-html,body{width:100%;height:100%;min-height:100%;margin:0;overflow:hidden;background:var(--paper)}
-@supports(height:100dvh){html,body{height:100dvh;min-height:100dvh}}
-body{overscroll-behavior:none;overscroll-behavior-y:none;font-family:system-ui,-apple-system,sans-serif;-webkit-tap-highlight-color:transparent;touch-action:pan-x pan-y}
-button{font:inherit}
-#menu{position:fixed;inset:0;display:grid;place-items:center;background:#fff;opacity:1;transition:opacity .45s ease;z-index:2}
-.grid{display:grid;grid-template-columns:repeat(5,clamp(18px,5.2vw,36px));grid-template-rows:repeat(5,clamp(18px,5.2vw,36px));gap:clamp(16px,4.2vw,34px)}
-.dot{width:100%;height:100%;padding:0;border:0;border-radius:50%;background:#000;cursor:pointer;transform:scale(1);transition:transform .25s cubic-bezier(.2,.8,.2,1),opacity .25s;touch-action:manipulation}
-.dot:not(.active):hover{transform:scale(1.2)}
-.dot:focus-visible{outline:2px solid #000;outline-offset:5px}
-#menu.leaving{pointer-events:none;opacity:0}
-#zoom{position:fixed;z-index:3;left:0;top:0;width:0;height:0;border-radius:50%;background:#000;transform:translate(-50%,-50%) scale(0);pointer-events:none;will-change:transform}
-#zoom.grow{animation:zoom-in .8s cubic-bezier(.65,0,.25,1) forwards}
-@keyframes zoom-in{0%{transform:translate(-50%,-50%) scale(0);border-radius:50%}100%{transform:translate(-50%,-50%) scale(var(--zoom-scale,90));border-radius:50%}}
-#experience{position:fixed;inset:0;background:#000;opacity:0;pointer-events:none;transition:opacity .35s ease;z-index:1;height:100vh;height:100dvh;overflow:hidden}
-#experience.ready{opacity:1;pointer-events:auto}
-#blob{display:block;width:100%;height:100%;height:100dvh;touch-action:none;overscroll-behavior:none;cursor:grab;outline:none;background:#000;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
-#blob:active{cursor:grabbing}
-#blob:focus-visible{outline:2px solid #000;outline-offset:-7px}
-#back{position:absolute;left:18px;top:18px;width:42px;height:42px;padding:0;border:0;background:transparent;color:#fff;opacity:0;pointer-events:none;cursor:pointer;transition:opacity .2s;z-index:4}
-#back svg{display:block;width:100%;height:100%}
-#experience.ready #back{opacity:1;pointer-events:auto}
-#back:focus-visible{outline:2px solid #fff;outline-offset:2px}
-@media(prefers-reduced-motion:reduce){#menu,#experience{transition-duration:.01ms}#zoom.grow{animation-duration:.2s}.dot{transition-duration:.01ms}}
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#000000">
+  <meta name="description" content="A minimal voice visualizer. Speak, and watch each word appear in a living white circle.">
+  <title>VOICE</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --black: #000;
+      --white: #f7f7f7;
+      --muted: #777;
+      --pulse: 1;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      width: 100%;
+      min-width: 280px;
+      height: 100%;
+      min-height: 100%;
+      margin: 0;
+      background: var(--black);
+    }
+
+    body {
+      overflow: hidden;
+      color: var(--white);
+      font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      -webkit-font-smoothing: antialiased;
+      user-select: none;
+    }
+
+    .shell {
+      position: relative;
+      display: grid;
+      width: 100%;
+      height: 100%;
+      min-height: 100svh;
+      place-items: center;
+      isolation: isolate;
+      background: #000;
+    }
+
+    .topline {
+      position: absolute;
+      top: max(23px, env(safe-area-inset-top));
+      left: max(24px, env(safe-area-inset-left));
+      right: max(24px, env(safe-area-inset-right));
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      pointer-events: none;
+    }
+
+    .brand {
+      font-size: 10px;
+      font-weight: 650;
+      letter-spacing: .24em;
+      color: #858585;
+      text-transform: uppercase;
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: #777;
+      font-size: 9px;
+      font-weight: 650;
+      letter-spacing: .17em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #515151;
+      transition: background .25s ease, box-shadow .25s ease;
+    }
+
+    .status.live { color: #c7c7c7; }
+    .status.live .status-dot {
+      background: #f4f4f4;
+      box-shadow: 0 0 12px rgba(255,255,255,.65);
+    }
+
+    .stage {
+      display: grid;
+      place-items: center;
+      width: 100%;
+      padding: 28px;
+      transform: translateY(-1.5vh);
+    }
+
+    .orb {
+      --pulse: 1;
+      display: grid;
+      place-items: center;
+      width: clamp(220px, 52vmin, 390px);
+      aspect-ratio: 1;
+      padding: 12%;
+      border: 0;
+      border-radius: 50%;
+      outline: none;
+      background: var(--white);
+      color: #050505;
+      cursor: pointer;
+      transform: scale(var(--pulse));
+      transform-origin: center;
+      will-change: transform;
+      -webkit-tap-highlight-color: transparent;
+      transition: background .25s ease;
+    }
+
+    .orb:focus-visible {
+      box-shadow: 0 0 0 3px #000, 0 0 0 5px #f7f7f7;
+    }
+
+    .word {
+      display: block;
+      max-width: 100%;
+      overflow-wrap: anywhere;
+      color: #050505;
+      font-size: clamp(25px, 5vmin, 52px);
+      font-weight: 720;
+      letter-spacing: -.055em;
+      line-height: 1.05;
+      text-align: center;
+      text-transform: none;
+    }
+
+    .word.prompt {
+      font-size: clamp(10px, 1.55vmin, 13px);
+      font-weight: 750;
+      letter-spacing: .19em;
+      line-height: 1.7;
+      text-transform: uppercase;
+    }
+
+    .word.small-word { font-size: clamp(19px, 3.8vmin, 37px); }
+
+    .bottom {
+      position: absolute;
+      right: max(22px, env(safe-area-inset-right));
+      bottom: max(24px, env(safe-area-inset-bottom));
+      left: max(22px, env(safe-area-inset-left));
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      text-align: center;
+    }
+
+    .hint {
+      margin: 0;
+      color: #666;
+      font-size: 9px;
+      font-weight: 550;
+      letter-spacing: .12em;
+      line-height: 1.6;
+      text-transform: uppercase;
+    }
+
+    .hint.hidden { display: none; }
+
+    .error {
+      max-width: min(500px, 88vw);
+      color: #aaa;
+      font-size: 11px;
+      letter-spacing: .02em;
+      line-height: 1.5;
+      text-transform: none;
+    }
+
+    @media (max-height: 500px) {
+      .stage { transform: none; }
+      .orb { width: min(48vh, 290px); }
+      .topline { top: 15px; }
+      .bottom { bottom: 12px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .status-dot, .orb { transition: none; }
+    }
+  </style>
 </head>
 <body>
-<main id="menu" aria-label="Choose a dot">
-  <div class="grid" role="group" aria-label="Sensory experiences">
-    <button class="dot active" type="button" aria-label="Open elastic blob experience"></button>
-    <button class="dot active" type="button" aria-label="Open ripple rings experience"></button>
-    <button class="dot active" type="button" aria-label="Open drifting particles experience"></button>
-    <button class="dot" type="button" aria-label="Unavailable experience"></button>
-    <button class="dot" type="button" aria-label="Unavailable experience"></button>
-    <button class="dot" type="button" aria-label="Unavailable experience"></button>
-    <button class="dot" type="button" aria-label="Unavailable experience"></button>
-    <button class="dot" type="button" aria-label="Unavailable experience"></button>
-    <button class="dot" type="button" aria-label="Unavailable experience"></button>
-    <button class="dot" type="button" aria-label="Unavailable experience"></button>
-    <button class="dot" type="button" aria-label="Unavailable experience"></button>
-    <button class="dot" type="button" aria-label="Unavailable experience"></button>
-    <button class="dot" type="button" aria-label="Unavailable experience"></button>
-    <button class="dot" type="button" aria-label="Unavailable experience"></button>
-    <button class="dot" type="button" aria-label="Unavailable experience"></button>
-    <button class="dot" type="button" aria-label="Unavailable experience"></button>
-    <button class="dot" type="button" aria-label="Unavailable experience"></button>
-    <button class="dot" type="button" aria-label="Unavailable experience"></button>
-    <button class="dot" type="button" aria-label="Unavailable experience"></button>
-    <button class="dot" type="button" aria-label="Unavailable experience"></button>
-    <button class="dot" type="button" aria-label="Unavailable experience"></button>
-    <button class="dot" type="button" aria-label="Unavailable experience"></button>
-    <button class="dot" type="button" aria-label="Unavailable experience"></button>
-    <button class="dot" type="button" aria-label="Unavailable experience"></button>
-    <button class="dot" type="button" aria-label="Unavailable experience"></button>
-  </div>
-</main>
-<div id="zoom" aria-hidden="true"></div>
-<section id="experience" aria-label="Elastic blob fidget" inert>
-  <canvas id="blob" tabindex="0" role="application" aria-label="Drag the white blob to stretch it and release to let it spring back. Press Enter or Space to bounce it."></canvas>
-  <button id="back" type="button" aria-label="Back to dot grid">
-    <svg viewBox="0 0 48 48" fill="none" aria-hidden="true"><path d="M28 12L16 24L28 36" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-  </button>
-</section>
-<script>
-(() => {
-  const menu = document.getElementById('menu');
-  const dots = Array.from(document.querySelectorAll('.dot'));
-  const zoom = document.getElementById('zoom');
-  const experience = document.getElementById('experience');
-  const back = document.getElementById('back');
-  const canvas = document.getElementById('blob');
-  const ctx = canvas.getContext('2d', { alpha: false });
-  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  let opened = false;
-  let mode = "blob";
-  let particles = [];
-  let particleTouch = null;
-  let ripples = [];
-  let lastRippleAt = 0;
-  let width = 0, height = 0, dpr = 1, radius = 100;
-  let x = 0, y = 0, vx = 0, vy = 0, homeX = 0, homeY = 0;
-  let targetX = 0, targetY = 0, grabX = 0, grabY = 0;
-  let activePointer = null, pulse = 0, previousTime = 0;
-  let points = [];
-  let entrySide = 0;
-  let jelly = 0;
-  let lastPointerX = 0, lastPointerY = 0;
-  let dragStartX = 0, dragStartY = 0;
-  let dragGrowth = 0, targetDragGrowth = 0;
+  <main class="shell">
+    <header class="topline" aria-hidden="true">
+      <span class="brand">Voice / Visualizer</span>
+      <span class="status" id="status"><span class="status-dot"></span><span id="statusText">Mic off</span></span>
+    </header>
 
-  function resize() {
-    const oldX = homeX, oldY = homeY;
-    width = window.innerWidth;
-    height = window.innerHeight;
-    dpr = Math.min(window.devicePixelRatio || 1, 2);
-    canvas.width = Math.round(width * dpr);
-    canvas.height = Math.round(height * dpr);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    homeX = width / 2;
-    homeY = height / 2;
-    radius = Math.min(176, Math.max(70, Math.min(width, height) * .205));
-    if (!oldX && !oldY) { x = homeX; y = homeY; }
-    else if (activePointer === null && !opened) { x = homeX; y = homeY; }
-    else if (activePointer === null) { x += homeX - oldX; y += homeY - oldY; }
-    else { x += homeX - oldX; y += homeY - oldY; }
-    targetX = activePointer === null ? homeX : targetX + homeX - oldX;
-    targetY = activePointer === null ? homeY : targetY + homeY - oldY;
-    draw(0, 0, 0);
-  }
+    <section class="stage" aria-label="Voice visualizer">
+      <button class="orb" id="orb" type="button" aria-label="Start microphone and speech recognition">
+        <span class="word prompt" id="word" aria-live="off">Tap to<br>start</span>
+      </button>
+    </section>
 
-  function mid(a, b) { return {x:(a.x+b.x)/2,y:(a.y+b.y)/2}; }
-  function maxBlobScale() {
-    return Math.max(1.5, Math.hypot(width, height) / Math.max(radius * 1.55, 1));
-  }
-  function shape(sx, sy, time) {
-    const stretch = Math.min(.72, Math.hypot(sx,sy) / Math.max(radius,1) * .85);
-    const angle = Math.atan2(sy,sx);
-    const speed = Math.min(.32,Math.hypot(vx,vy)/760);
-    const pull = Math.max(stretch,speed);
-    const breath = reduceMotion ? 0 : Math.sin(time*.0015)*.032 + Math.sin(time*.0008+1.7)*.018;
-    const velocityAngle = Math.atan2(vy,vx);
-    const squash = reduceMotion ? 0 : Math.min(.25,Math.hypot(vx,vy)/30);
-    const size = 1 + dragGrowth * (maxBlobScale() - 1);
-    const rX = radius*size*(1+breath+pulse*.15+pull*.42+squash*Math.cos(velocityAngle)**2);
-    const rY = radius*size*(1+breath+pulse*.15-pull*.25+squash*Math.sin(velocityAngle)**2);
-    points.length = 0;
-    const n = 72;
-    for(let i=0;i<n;i++){
-      const a=i/n*Math.PI*2, rel=a-angle;
-      const wild=dragGrowth;
-      const idleWave=reduceMotion?0:
-        (.035*Math.sin(a*2-time*.0018)+.024*Math.sin(a*3+time*.0012)+.014*Math.cos(a*5-time*.0015))+
-        wild*(.12*Math.sin(a*7-time*.012)+.085*Math.cos(a*9+time*.014)+.045*Math.sin(a*11-time*.018));
-      const ripple=reduceMotion?0:jelly*(.105*Math.sin(a*2+time*.009)+.055*Math.sin(a*3-time*.007)+wild*.09*Math.sin(a*8+time*.016));
-      const organic=1+.048*Math.sin(a*3+.55+time*.0008)+.028*Math.cos(a*5-.8-time*.0006)+idleWave+ripple;
-      const warp=1+pull*((1+Math.cos(rel))*.28-Math.sin(rel)**2*.13)+wild*.11*Math.sin(a*6+time*.014);
-      const px=Math.cos(a)*rX*organic*warp, py=Math.sin(a)*rY*organic*warp;
-      const rotate=squash*.35*Math.sin(velocityAngle*2);
-      points.push({x:x+px+py*rotate,y:y+py-px*rotate});
-    }
-    const path=new Path2D(), first=mid(points[n-1],points[0]);
-    path.moveTo(first.x,first.y);
-    for(let i=0;i<n;i++){const p=points[i],m=mid(p,points[(i+1)%n]);path.quadraticCurveTo(p.x,p.y,m.x,m.y);}
-    path.closePath();
-    return path;
-  }
-  function addRipple(px, py, strength = 1) {
-    ripples.push({x:px,y:py,r:2,life:1,speed:(1.8+Math.random()*1.1)*strength,weight:strength});
-    if(ripples.length>90) ripples.splice(0,ripples.length-90);
-  }
-  function drawRipples(time) {
-    ctx.fillStyle='#000';ctx.fillRect(0,0,width,height);
-    const breathe = reduceMotion ? 0 : Math.sin(time*.0011)*5;
-    ctx.save();ctx.translate(width/2,height/2);
-    for(let layer=0;layer<7;layer++){
-      const phase=((time*.018+layer*19)%120);
-      const r=phase*2.1+layer*7+breathe;
-      ctx.beginPath();ctx.arc(0,0,Math.max(1,r),0,Math.PI*2);
-      ctx.strokeStyle='rgba(255,255,255,'+(0.28*(1-phase/120))+')';
-      ctx.lineWidth=layer%2===0?1.25:.7;ctx.stroke();
-    }
-    ctx.restore();
-    for(let i=ripples.length-1;i>=0;i--){
-      const ring=ripples[i];ring.r+=ring.speed*(reduceMotion?1:1.25);ring.life-=reduceMotion?.035:.012;
-      if(ring.life<=0){ripples.splice(i,1);continue;}
-      for(let band=0;band<3;band++){
-        const rr=ring.r-band*9;if(rr<=0)continue;
-        ctx.beginPath();ctx.arc(ring.x,ring.y,rr,0,Math.PI*2);
-        ctx.strokeStyle='rgba(255,255,255,'+(ring.life*(.65-band*.17))+')';
-        ctx.lineWidth=band===0?1.5:1;ctx.stroke();
+    <footer class="bottom">
+      <p class="hint" id="hint">Click the circle to begin · Esc to stop</p>
+      <p class="hint" id="privacy">Live words use your browser’s speech-recognition service.</p>
+      <p class="hint error" id="message" role="status" aria-live="polite"></p>
+    </footer>
+  </main>
+
+  <script>
+    (() => {
+      const orb = document.getElementById('orb');
+      const word = document.getElementById('word');
+      const status = document.getElementById('status');
+      const statusText = document.getElementById('statusText');
+      const hint = document.getElementById('hint');
+      const privacy = document.getElementById('privacy');
+      const message = document.getElementById('message');
+
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      let listening = false;
+      let starting = false;
+      let micStream = null;
+      let audioContext = null;
+      let analyser = null;
+      let timeData = null;
+      let frameId = 0;
+      let recognition = null;
+      let recognitionDisabled = false;
+      let pulse = 1;
+
+      function setStatus(label, live) {
+        statusText.textContent = label;
+        status.classList.toggle('live', Boolean(live));
       }
-    }
-  }
-  function initParticles() {
-    particles = Array.from({length:Math.min(150,Math.max(70,Math.round(width*height/9000)) )},()=>({
-      x:Math.random()*width,y:Math.random()*height,
-      vx:(Math.random()-.5)*.45,vy:(Math.random()-.5)*.45,
-      r:.6+Math.random()*1.5,phase:Math.random()*Math.PI*2
-    }));
-  }
-  function drawParticles(time) {
-    ctx.fillStyle='#000';ctx.fillRect(0,0,width,height);
-    for(const p of particles){
-      if(!reduceMotion){p.x+=p.vx;p.y+=p.vy;p.phase+=.012;}
-      if(p.x<0)p.x=width;if(p.x>width)p.x=0;
-      if(p.y<0)p.y=height;if(p.y>height)p.y=0;
-      if(particleTouch && !reduceMotion){
-        const dx=p.x-particleTouch.x,dy=p.y-particleTouch.y,dist=Math.hypot(dx,dy);
-        if(dist<150 && dist>1){const force=(150-dist)/150*.045;p.vx+=dx/dist*force;p.vy+=dy/dist*force;}
+
+      function showWord(value) {
+        const next = String(value || '').trim();
+        if (!next) return;
+        word.textContent = next;
+        word.classList.remove('prompt');
+        word.classList.toggle('small-word', next.length > 11);
+        orb.setAttribute('aria-label', 'Listening. Latest recognized word: ' + next + '. Click to stop.');
       }
-      p.vx*=.997;p.vy*=.997;
-      const glow=reduceMotion?1:(.55+.45*Math.sin(p.phase+time*.001));
-      ctx.beginPath();ctx.arc(p.x,p.y,p.r*glow,0,Math.PI*2);
-      ctx.fillStyle='rgba(255,255,255,'+(.25+glow*.75)+')';ctx.fill();
-    }
-    if(particleTouch){
-      ctx.beginPath();ctx.arc(particleTouch.x,particleTouch.y,5,0,Math.PI*2);
-      ctx.fillStyle='rgba(255,255,255,.9)';ctx.fill();
-    }
-  }
-  function draw(sx,sy,time) {
-    if(mode==='particles'){drawParticles(time);return;}
-    if(mode==='ripples'){drawRipples(time);return;}
-    ctx.fillStyle='#000';ctx.fillRect(0,0,width,height);
-    ctx.fillStyle='#fff';ctx.fill(shape(sx,sy,time));
-  }
-  function animate(time) {
-    if(!width||!height){requestAnimationFrame(animate);return;}
-    const dt=previousTime?Math.min((time-previousTime)/16.667,2):1;
-    previousTime=time;
-    const destX=homeX;
-    const destY=homeY;
-    if(reduceMotion){x+=(destX-x)*.34;y+=(destY-y)*.34;vx*=.65;vy*=.65;}
-    else {
-      const stiffness=activePointer===null?.082:.15;
-      vx+=(destX-x)*stiffness*dt;vy+=(destY-y)*stiffness*dt;
-      const damping=Math.pow(activePointer===null?.84:.76,dt);
-      vx*=damping;vy*=damping;x+=vx*dt;y+=vy*dt;
-    }
-    pulse*=reduceMotion?.7:Math.pow(.9,dt);
-    jelly*=reduceMotion?0:Math.pow(.965,dt);
-    dragGrowth += (targetDragGrowth - dragGrowth) * (reduceMotion ? .28 : Math.min(.3, .12 * dt));
-    if(pulse<.001)pulse=0;
-    if(jelly<.002)jelly=0;
-    if(dragGrowth<.001 && targetDragGrowth===0)dragGrowth=0;
-    draw(0,0,time);
-    requestAnimationFrame(animate);
-  }
-  function local(event){const r=canvas.getBoundingClientRect();return{x:event.clientX-r.left,y:event.clientY-r.top};}
 
-  dots.forEach((dot,index)=>{
-    dot.addEventListener('click',()=>{
-      if(index>2||opened)return;
-      mode=index===0?'blob':index===1?'ripples':'particles';
-      opened=true;
-      experience.setAttribute('aria-label',mode==='blob'?'Elastic blob fidget':mode==='ripples'?'Ripple ring sensory experience':'Drifting particle field');
-      canvas.setAttribute('aria-label',mode==='blob'?'Drag the white blob to stretch it and release to let it spring back. Press Enter or Space to bounce it.':mode==='ripples'?'Tap or drag anywhere to send soft rings rippling across the dark water.':'Move your finger through the floating lights to gently scatter them.');
-      const r=dot.getBoundingClientRect();
-      zoom.style.left=(r.left+r.width/2)+'px';
-      zoom.style.top=(r.top+r.height/2)+'px';
-      zoom.style.width=r.width+'px';
-      zoom.style.height=r.height+'px';
-      zoom.style.transformOrigin='center';
-      const coverScale=(Math.hypot(window.innerWidth,window.innerHeight)*1.55)/r.width;
-      zoom.style.setProperty('--zoom-scale',String(Math.ceil(coverScale)));
-      menu.classList.add('leaving');
-      zoom.classList.add('grow');
-      window.setTimeout(()=>{
-        if(mode==='blob') startBlobEntrance();
-        else if(mode==='ripples') { ripples=[]; addRipple(width/2,height/2,1.7); addRipple(width/2,height/2,1.1); }
-        else { particleTouch=null; initParticles(); }
-        experience.classList.add('ready');
-        experience.inert=false;
-        zoom.style.display='none';
-        canvas.focus({preventScroll:true});
-      },reduceMotion?200:810);
-    });
-  });
+      function latestWord(transcript) {
+        const matches = transcript.match(/[\p{L}\p{N}]+(?:['’\-][\p{L}\p{N}]+)*/gu);
+        return matches && matches.length ? matches[matches.length - 1] : '';
+      }
 
-  function startBlobEntrance(){
-    entrySide=(entrySide+1)%4;
-    x=homeX;y=homeY;vx=0;vy=0;jelly=.95;
-    const margin=radius*2.15;
-    if(reduceMotion){x=homeX;y=homeY;return;}
-    if(entrySide===0){x=-margin;y=height*.5;vx=8;}
-    else if(entrySide===1){x=width+margin;y=height*.42;vx=-8;}
-    else if(entrySide===2){x=width*.5;y=-margin;vy=8;}
-    else{x=width*.5;y=height+margin;vy=-8;}
-    targetX=homeX;targetY=homeY;activePointer=null;pulse=.24;
-  }
+      function startRecognition() {
+        if (!SpeechRecognition) {
+          setStatus('Mic live · no captions', true);
+          message.textContent = 'Your microphone is working, but this browser does not offer live speech recognition. Try a supported browser such as Chrome on desktop.';
+          return;
+        }
 
-  back.addEventListener('click',()=>{
-    experience.classList.remove('ready');
-    experience.inert=true;
-    zoom.style.display='block';
-    zoom.classList.remove('grow');
-    menu.classList.remove('leaving');
-    opened=false;
-    window.setTimeout(()=>{zoom.style.width='0';zoom.style.height='0';},20);
-  });
+        recognitionDisabled = false;
+        recognition = new SpeechRecognition();
+        recognition.lang = 'en-US';
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.maxAlternatives = 1;
 
-  canvas.addEventListener('pointerdown',event=>{
-    if(mode==='particles'){
-      const p=local(event);particleTouch=p;activePointer=event.pointerId;lastPointerX=p.x;lastPointerY=p.y;
-      canvas.setPointerCapture(event.pointerId);event.preventDefault();return;
-    }
-    if(mode==='ripples'){
-      const p=local(event);addRipple(p.x,p.y,1.25);activePointer=event.pointerId;
-      lastPointerX=p.x;lastPointerY=p.y;canvas.setPointerCapture(event.pointerId);event.preventDefault();return;
-    }
-    if(activePointer!==null)return;
-    const p=local(event);
-    const hitRadius=radius*(1+dragGrowth*(maxBlobScale()-1))*1.28;
-    if(Math.hypot(p.x-x,p.y-y)>hitRadius)return;
-    activePointer=event.pointerId;grabX=p.x-x;grabY=p.y-y;
-    dragStartX=p.x;dragStartY=p.y;targetDragGrowth=dragGrowth;
-    targetX=homeX;targetY=homeY;lastPointerX=p.x;lastPointerY=p.y;pulse=Math.max(pulse,.18);jelly=Math.max(jelly,.12);
-    canvas.setPointerCapture(event.pointerId);event.preventDefault();
-  });
-  canvas.addEventListener('pointermove',event=>{
-    if(activePointer!==event.pointerId)return;
-    const p=local(event);
-    if(mode==='particles') { particleTouch=p;lastPointerX=p.x;lastPointerY=p.y;return; }
-    if(mode==='ripples'){
-      const moved=Math.hypot(p.x-lastPointerX,p.y-lastPointerY);
-      if(moved>20 && performance.now()-lastRippleAt>22){addRipple(p.x,p.y,Math.min(1.6,moved/35));lastRippleAt=performance.now();}
-      lastPointerX=p.x;lastPointerY=p.y;return;
-    }
-    lastPointerX=p.x;lastPointerY=p.y;
-    const travel=Math.hypot(p.x-dragStartX,p.y-dragStartY);
-    const threshold=Math.max(120,Math.min(width,height)*.65);
-    targetDragGrowth=Math.min(1,travel/threshold);
-    jelly=Math.max(jelly,.06+targetDragGrowth*.12);pulse=Math.max(pulse,targetDragGrowth*.18);
-  });
-  function release(event){if(activePointer!==event.pointerId)return;activePointer=null;if(mode==='particles'){particleTouch=null;return;}if(mode==='ripples')return;targetDragGrowth=0;pulse=.72;jelly=1.15+dragGrowth*.35;}
-  canvas.addEventListener('pointerup',release);
-  canvas.addEventListener('pointercancel',release);
-  canvas.addEventListener('lostpointercapture',event=>{if(activePointer===event.pointerId){activePointer=null;targetDragGrowth=0;pulse=.3;jelly=Math.max(jelly,.8);}});
-  canvas.addEventListener('keydown',event=>{
-    if(event.key==='Enter'||event.key===' '){event.preventDefault();if(mode==='particles'){for(const p of particles){p.vx+=(Math.random()-.5)*3;p.vy+=(Math.random()-.5)*3;}return;}if(mode==='ripples'){addRipple(width/2,height/2,1.5);return;}pulse=.85;jelly=1.1;if(!reduceMotion){vy-=7;targetDragGrowth=Math.max(targetDragGrowth,.28);window.setTimeout(()=>{targetDragGrowth=0;},180);}}
-  });
-  window.addEventListener('resize',resize,{passive:true});
-  if(window.visualViewport) window.visualViewport.addEventListener('resize',resize,{passive:true});
-  resize();
-  requestAnimationFrame(animate);
-})();
-</script>
+        recognition.onstart = () => {
+          if (listening) {
+            setStatus('Listening', true);
+            message.textContent = '';
+          }
+        };
+
+        recognition.onresult = (event) => {
+          let transcript = '';
+          for (let i = event.results.length - 1; i >= 0; i--) {
+            const candidate = event.results[i][0] && event.results[i][0].transcript;
+            if (candidate && candidate.trim()) {
+              transcript = candidate.trim();
+              break;
+            }
+          }
+          const token = latestWord(transcript);
+          if (token) showWord(token);
+        };
+
+        recognition.onerror = (event) => {
+          if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+            recognitionDisabled = true;
+            setStatus('Speech blocked', true);
+            message.textContent = 'Microphone or speech-recognition permission was blocked. Check your browser permissions, then restart.';
+          } else if (event.error === 'language-not-supported') {
+            recognitionDisabled = true;
+            setStatus('Language unavailable', true);
+            message.textContent = 'English speech recognition is not available in this browser.';
+          } else if (event.error !== 'aborted' && event.error !== 'no-speech') {
+            setStatus('Mic live · captions paused', true);
+            message.textContent = 'The microphone is still active, but speech recognition reported a problem.';
+          }
+        };
+
+        recognition.onend = () => {
+          if (!listening || recognitionDisabled || !recognition) return;
+          window.setTimeout(() => {
+            if (!listening || recognitionDisabled || !recognition) return;
+            try { recognition.start(); } catch (_) { /* A restart may already be underway. */ }
+          }, 250);
+        };
+
+        try {
+          recognition.start();
+        } catch (_) {
+          setStatus('Mic live · captions paused', true);
+          message.textContent = 'The microphone is active, but this browser could not start speech recognition.';
+        }
+      }
+
+      function animate() {
+        if (!listening || !analyser || !timeData) return;
+        analyser.getByteTimeDomainData(timeData);
+        let sum = 0;
+        for (let i = 0; i < timeData.length; i++) {
+          const sample = (timeData[i] - 128) / 128;
+          sum += sample * sample;
+        }
+        const rms = Math.sqrt(sum / timeData.length);
+        const energy = Math.max(0, Math.min(0.58, (rms - 0.012) * 8.4));
+        const target = 1 + energy;
+        pulse += (target - pulse) * (target > pulse ? 0.28 : 0.11);
+        orb.style.setProperty('--pulse', pulse.toFixed(3));
+        frameId = window.requestAnimationFrame(animate);
+      }
+
+      async function startSession() {
+        if (starting || listening) return;
+        starting = true;
+        orb.disabled = true;
+        message.textContent = '';
+        setStatus('Requesting mic', false);
+
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          setStatus('Mic unavailable', false);
+          message.textContent = 'Microphone access requires a supported browser and a secure HTTPS website.';
+          starting = false;
+          orb.disabled = false;
+          return;
+        }
+
+        try {
+          micStream = await navigator.mediaDevices.getUserMedia({
+            audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+            video: false
+          });
+
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          if (AudioContextClass) {
+            audioContext = new AudioContextClass();
+            if (audioContext.state === 'suspended') await audioContext.resume();
+            analyser = audioContext.createAnalyser();
+            analyser.fftSize = 1024;
+            analyser.smoothingTimeConstant = 0.72;
+            const source = audioContext.createMediaStreamSource(micStream);
+            source.connect(analyser);
+            timeData = new Uint8Array(analyser.fftSize);
+          }
+
+          listening = true;
+          starting = false;
+          orb.disabled = false;
+          orb.classList.add('active');
+          hint.textContent = 'Click the circle or press Esc to stop';
+          privacy.classList.add('hidden');
+          setStatus(SpeechRecognition ? 'Listening' : 'Mic live', true);
+          word.textContent = '…';
+          word.classList.remove('prompt', 'small-word');
+          orb.setAttribute('aria-label', 'Microphone active. Click to stop listening.');
+          if (analyser && timeData) frameId = window.requestAnimationFrame(animate);
+          startRecognition();
+        } catch (error) {
+          if (micStream) micStream.getTracks().forEach((track) => track.stop());
+          micStream = null;
+          listening = false;
+          starting = false;
+          orb.disabled = false;
+          setStatus('Mic denied', false);
+          message.textContent = error && error.name === 'NotAllowedError'
+            ? 'Microphone access was not allowed. Allow it in your browser’s site settings, then click the circle again.'
+            : 'Could not start the microphone. Check that a microphone is connected and available to your browser.';
+        }
+      }
+
+      async function stopSession() {
+        listening = false;
+        starting = false;
+        if (frameId) window.cancelAnimationFrame(frameId);
+        frameId = 0;
+
+        if (recognition) {
+          recognitionDisabled = true;
+          try { recognition.onend = null; recognition.stop(); } catch (_) {}
+          recognition = null;
+        }
+
+        if (micStream) {
+          micStream.getTracks().forEach((track) => track.stop());
+          micStream = null;
+        }
+
+        if (audioContext) {
+          try { await audioContext.close(); } catch (_) {}
+          audioContext = null;
+        }
+
+        analyser = null;
+        timeData = null;
+        pulse = 1;
+        orb.style.setProperty('--pulse', '1');
+        orb.disabled = false;
+        orb.classList.remove('active');
+        word.textContent = 'Tap to\\nstart';
+        word.classList.add('prompt');
+        word.classList.remove('small-word');
+        orb.setAttribute('aria-label', 'Start microphone and speech recognition');
+        hint.textContent = 'Click the circle to begin · Esc to stop';
+        privacy.classList.remove('hidden');
+        setStatus('Mic off', false);
+      }
+
+      orb.addEventListener('click', () => {
+        if (listening) stopSession();
+        else startSession();
+      });
+
+      window.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && listening) stopSession();
+      });
+
+      window.addEventListener('pagehide', () => {
+        if (micStream) micStream.getTracks().forEach((track) => track.stop());
+        if (recognition) {
+          try { recognition.stop(); } catch (_) {}
+        }
+      });
+    })();
+  </script>
 </body>
 </html>
