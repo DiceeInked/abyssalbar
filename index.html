@@ -231,6 +231,9 @@
       let frameId = 0;
       let recognition = null;
       let recognitionDisabled = false;
+      let recognitionBusy = false;
+      let recognitionRestartTimer = 0;
+      let recognitionGeneration = 0;
       let pulse = 1;
 
       function setStatus(label, live) {
@@ -259,21 +262,40 @@
           return;
         }
 
-        recognitionDisabled = false;
-        recognition = new SpeechRecognition();
-        recognition.lang = 'en-US';
-        recognition.continuous = true;
-        recognition.interimResults = true;
-        recognition.maxAlternatives = 1;
+        if (!listening || recognitionDisabled) return;
+        if (recognitionRestartTimer) {
+          window.clearTimeout(recognitionRestartTimer);
+          recognitionRestartTimer = 0;
+        }
 
-        recognition.onstart = () => {
-          if (listening) {
+        // Some browsers take a moment to release their speech service after stop().
+        // Never start a second recognition instance until the previous one has ended.
+        if (recognitionBusy) {
+          recognitionRestartTimer = window.setTimeout(() => {
+            recognitionRestartTimer = 0;
+            if (listening && !recognitionDisabled) startRecognition();
+          }, 350);
+          return;
+        }
+
+        const generation = recognitionGeneration;
+        const instance = new SpeechRecognition();
+        recognition = instance;
+        recognitionBusy = true;
+        instance.lang = 'en-US';
+        instance.continuous = true;
+        instance.interimResults = true;
+        instance.maxAlternatives = 1;
+
+        instance.onstart = () => {
+          if (listening && generation === recognitionGeneration) {
             setStatus('Listening', true);
             message.textContent = '';
           }
         };
 
-        recognition.onresult = (event) => {
+        instance.onresult = (event) => {
+          if (!listening || generation !== recognitionGeneration) return;
           let transcript = '';
           for (let i = event.results.length - 1; i >= 0; i--) {
             const candidate = event.results[i][0] && event.results[i][0].transcript;
@@ -286,7 +308,8 @@
           if (token) showWord(token);
         };
 
-        recognition.onerror = (event) => {
+        instance.onerror = (event) => {
+          if (generation !== recognitionGeneration) return;
           if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
             recognitionDisabled = true;
             setStatus('Speech blocked', true);
@@ -296,24 +319,35 @@
             setStatus('Language unavailable', true);
             message.textContent = 'English speech recognition is not available in this browser.';
           } else if (event.error !== 'aborted' && event.error !== 'no-speech') {
-            setStatus('Mic live · captions paused', true);
-            message.textContent = 'The microphone is still active, but speech recognition reported a problem.';
+            setStatus('Mic live · captions retrying', true);
+            message.textContent = 'Speech recognition had a temporary problem. Trying to reconnect…';
           }
         };
 
-        recognition.onend = () => {
-          if (!listening || recognitionDisabled || !recognition) return;
-          window.setTimeout(() => {
-            if (!listening || recognitionDisabled || !recognition) return;
-            try { recognition.start(); } catch (_) { /* A restart may already be underway. */ }
-          }, 250);
+        instance.onend = () => {
+          recognitionBusy = false;
+          if (recognition === instance) recognition = null;
+
+          if (!listening || recognitionDisabled) return;
+          if (recognitionRestartTimer) window.clearTimeout(recognitionRestartTimer);
+          recognitionRestartTimer = window.setTimeout(() => {
+            recognitionRestartTimer = 0;
+            if (listening && !recognitionDisabled) startRecognition();
+          }, 350);
         };
 
         try {
-          recognition.start();
+          instance.start();
         } catch (_) {
-          setStatus('Mic live · captions paused', true);
-          message.textContent = 'The microphone is active, but this browser could not start speech recognition.';
+          // A few engines briefly reject start() while cleaning up a previous session.
+          recognitionBusy = false;
+          if (recognition === instance) recognition = null;
+          setStatus('Mic live · captions retrying', true);
+          message.textContent = 'Reconnecting speech recognition…';
+          recognitionRestartTimer = window.setTimeout(() => {
+            recognitionRestartTimer = 0;
+            if (listening && !recognitionDisabled) startRecognition();
+          }, 600);
         }
       }
 
@@ -367,6 +401,8 @@
           }
 
           listening = true;
+          recognitionGeneration++;
+          recognitionDisabled = false;
           starting = false;
           orb.disabled = false;
           orb.classList.add('active');
@@ -394,13 +430,24 @@
       async function stopSession() {
         listening = false;
         starting = false;
+        recognitionGeneration++;
+        if (recognitionRestartTimer) {
+          window.clearTimeout(recognitionRestartTimer);
+          recognitionRestartTimer = 0;
+        }
         if (frameId) window.cancelAnimationFrame(frameId);
         frameId = 0;
 
+        // Keep the instance's onend handler attached so the browser can tell us
+        // when its speech service is actually released before the next start.
         if (recognition) {
           recognitionDisabled = true;
-          try { recognition.onend = null; recognition.stop(); } catch (_) {}
-          recognition = null;
+          try { recognition.stop(); } catch (_) {
+            recognitionBusy = false;
+            recognition = null;
+          }
+        } else {
+          recognitionBusy = false;
         }
 
         if (micStream) {
