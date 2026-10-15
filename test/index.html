@@ -1,0 +1,717 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<meta name="description" content="A local voice visualizer and private dictation-to-video studio.">
+<title>Test • Voice Studio</title>
+<style>
+:root{color-scheme:dark;--bg:#000;--fg:#f8f8f8;--muted:#777;--panel:#101010;--line:#292929;--ease:cubic-bezier(.2,.75,.25,1)}
+*{box-sizing:border-box}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:var(--bg)}
+body{font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--fg);-webkit-font-smoothing:antialiased;overscroll-behavior:none}
+button,input{font:inherit}
+button{color:inherit}
+#stage{position:fixed;inset:0;overflow:hidden;background:#000;isolation:isolate}
+#stage:after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(ellipse at center,rgba(255,255,255,.025),transparent 58%)}
+.shape{position:absolute;left:50%;top:50%;pointer-events:none;will-change:transform,left,top,width,height,opacity}
+#circle{width:clamp(160px,34vmin,290px);height:auto;aspect-ratio:1;border-radius:50%;background:#f7f7f7;transform:translate(-50%,-50%) scale(1);box-shadow:0 0 80px rgba(255,255,255,.055);transition:opacity .35s ease}
+#voiceShape{width:min(92vw,1000px);height:min(58vh,460px);transform:translate(-50%,-50%);display:grid;grid-template-columns:repeat(var(--spectrum-count,49),minmax(0,1fr));grid-template-rows:minmax(0,1fr);align-items:center;justify-items:center;gap:1px}
+.spectrum-dot{display:flex;align-items:center;justify-content:center;min-width:0;width:100%;height:100%}
+.spectrum-bar{display:block;width:var(--dot-size,4px);height:3px;max-height:96%;border-radius:999px;background:#f7f7f7;opacity:.85;box-shadow:0 0 8px rgba(255,255,255,.15);transition:width .07s linear,height .07s linear,opacity .07s linear}
+#pattern{width:clamp(112px,22vmin,180px);height:auto;aspect-ratio:1;transform:translate(-50%,-50%);transition:left .12s ease-out,top .12s ease-out;z-index:2}
+.orb-layer{position:absolute;inset:0;border-radius:50%;width:100%;height:100%;background:#f8f8f8;transition:background .12s ease,box-shadow .12s ease}
+#core{z-index:1;background:#858585;box-shadow:0 0 34px rgba(255,255,255,.035)}
+.pattern-clone{position:absolute;z-index:1;border-radius:50%;background:#f8f8f8;pointer-events:none;will-change:transform,opacity;box-shadow:0 0 42px rgba(255,255,255,.045)}
+#circle[hidden],#voiceShape[hidden],#pattern[hidden]{display:none}
+#gear{position:fixed;z-index:20;top:max(16px,env(safe-area-inset-top));right:max(16px,env(safe-area-inset-right));width:44px;height:44px;display:grid;place-items:center;padding:0;border:1px solid transparent;border-radius:50%;background:rgba(255,255,255,.035);color:#bdbdbd;cursor:pointer;transition:background .2s,color .2s,border-color .2s}
+#gear:hover,#gear[aria-expanded=true]{background:#171717;color:#fff;border-color:#303030}
+#gear:focus-visible,.choice:focus-visible,.mic-button:focus-visible,.reset:focus-visible{outline:2px solid #fff;outline-offset:3px}
+#gear svg{width:20px;height:20px}
+#settings{position:fixed;z-index:19;top:max(70px,calc(env(safe-area-inset-top) + 58px));right:max(12px,env(safe-area-inset-right));width:min(352px,calc(100vw - 24px));max-height:calc(100dvh - 96px);overflow:auto;padding:22px;border:1px solid #2a2a2a;border-radius:18px;background:rgba(12,12,12,.96);box-shadow:0 22px 90px rgba(0,0,0,.6);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);opacity:0;visibility:hidden;transform:translateY(-8px) scale(.985);transform-origin:top right;transition:opacity .18s ease,transform .18s ease,visibility .18s}
+#settings.open{opacity:1;visibility:visible;transform:translateY(0) scale(1)}
+.panel-heading{display:flex;justify-content:space-between;align-items:center;gap:16px;margin:0 0 24px}
+.panel-heading h1{margin:0;font-size:15px;font-weight:600;letter-spacing:-.02em}
+.panel-heading span{color:#777;font-size:10px;letter-spacing:.16em;text-transform:uppercase}
+.group{padding:0 0 21px;margin:0 0 21px;border-bottom:1px solid #242424}
+.group:last-of-type{border-bottom:0;margin-bottom:2px;padding-bottom:6px}
+.group-title{display:block;margin:0 0 12px;color:#8b8b8b;font-size:10px;font-weight:650;letter-spacing:.16em;text-transform:uppercase}
+.choices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.choice{display:flex;min-width:0;min-height:72px;flex-direction:column;justify-content:center;align-items:center;gap:9px;padding:10px 4px;border:1px solid #2a2a2a;border-radius:11px;background:#080808;color:#8f8f8f;cursor:pointer;transition:background .18s,border-color .18s,color .18s}
+.choice[aria-pressed=true]{background:#f4f4f4;border-color:#f4f4f4;color:#090909}
+.choice-icon{width:25px;height:22px;display:grid;place-items:center}
+.choice-icon.circle:before{content:"";display:block;width:19px;height:19px;border-radius:50%;background:currentColor}
+.choice-icon.voice:before{content:"";display:block;width:23px;height:2px;border-radius:4px;background:currentColor;box-shadow:0 0 0 2px transparent}
+.choice-icon.pattern:before{content:"";display:block;width:17px;height:17px;border-radius:50%;background:currentColor;box-shadow:0 -6px 0 -1px currentColor;opacity:.95}
+.choice-name{font-size:11px;font-weight:550}
+.setting-row{display:flex;justify-content:space-between;align-items:center;gap:14px;margin:0 0 12px}
+.setting-row label,.setting-row .setting-label{font-size:12px;color:#e1e1e1}
+.setting-value{color:#8a8a8a;font-size:11px;font-variant-numeric:tabular-nums}
+input[type=range]{display:block;width:100%;height:18px;margin:0;background:transparent;accent-color:#f4f4f4;cursor:pointer}
+input[type=range]::-webkit-slider-runnable-track{height:2px;background:#363636}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;margin-top:-5.5px;background:#f4f4f4;border:0}
+input[type=range]::-moz-range-track{height:2px;background:#363636}
+input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radius:50%;background:#f4f4f4}
+.helper{margin:8px 0 0;color:#727272;font-size:10px;line-height:1.5}
+.switch-row{display:flex;align-items:center;justify-content:space-between;gap:20px}
+.switch-copy{display:grid;gap:5px}
+.switch-copy strong{font-size:12px;font-weight:500}
+.switch-copy small{font-size:10px;color:#777;line-height:1.45}
+.switch{position:relative;flex:0 0 38px;width:38px;height:22px}
+.switch input{position:absolute;width:1px;height:1px;opacity:0}
+.switch-track{position:absolute;inset:0;border-radius:99px;background:#343434;cursor:pointer;transition:background .2s}
+.switch-track:after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#ddd;transition:transform .2s}
+.switch input:checked+.switch-track{background:#f2f2f2}
+.switch input:checked+.switch-track:after{transform:translateX(16px);background:#111}
+.switch input:focus-visible+.switch-track{outline:2px solid #fff;outline-offset:3px}
+.panel-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:14px;border-top:1px solid #242424}
+#micStatus{display:flex;align-items:center;gap:7px;color:#797979;font-size:10px}
+#statusDot{width:6px;height:6px;border-radius:50%;background:#555}
+#micStatus.live #statusDot{background:#f7f7f7;box-shadow:0 0 10px rgba(255,255,255,.55)}
+.reset{padding:7px 0;border:0;background:none;color:#aaa;font-size:10px;cursor:pointer}
+.reset:hover{color:#fff}
+#micButton{position:fixed;z-index:10;bottom:max(28px,calc(env(safe-area-inset-bottom) + 16px));left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:10px;padding:12px 17px;border:1px solid #2d2d2d;border-radius:99px;background:rgba(10,10,10,.78);color:#e7e7e7;font-size:11px;letter-spacing:.015em;white-space:nowrap;cursor:pointer;box-shadow:0 10px 35px rgba(0,0,0,.28);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);transition:border-color .2s,background .2s}
+#micButton:hover{border-color:#626262;background:#151515}
+#micButton .button-dot{width:6px;height:6px;border-radius:50%;background:#858585}
+#micButton.live .button-dot{background:#f7f7f7;box-shadow:0 0 10px rgba(255,255,255,.6)}
+#micButton[disabled]{opacity:.6;cursor:wait}
+#message{position:fixed;z-index:11;bottom:max(78px,calc(env(safe-area-inset-bottom) + 66px));left:50%;transform:translateX(-50%);width:min(430px,calc(100vw - 34px));margin:0;color:#929292;text-align:center;font-size:11px;line-height:1.5;pointer-events:none;text-wrap:balance}
+
+#transcriptPanel{position:fixed;z-index:8;top:max(76px,calc(env(safe-area-inset-top) + 68px));left:max(16px,env(safe-area-inset-left));width:min(365px,calc(100vw - 86px));max-height:28vh;overflow:auto;padding:15px 16px;border:1px solid #252535;border-radius:13px;background:rgba(8,8,15,.8);box-shadow:0 12px 50px rgba(0,0,0,.25);backdrop-filter:blur(17px);-webkit-backdrop-filter:blur(17px)}
+.transcript-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:9px}.transcript-title{font-size:9px;color:#a8a5bc;font-weight:650;letter-spacing:.16em;text-transform:uppercase}
+#localBadge{color:#777488;font-size:8px;letter-spacing:.07em;text-align:right}#localBadge.ready{color:#b9e7d2}#localBadge.warning{color:#edc58f}
+#dictationText{margin:0;color:#e9e7f3;font-size:12px;line-height:1.65;white-space:pre-wrap;overflow-wrap:anywhere}#interimText{margin:5px 0 0;color:#8f8ca4;font-size:11px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}#localNote{margin:9px 0 0;color:#777489;font-size:9px;line-height:1.5}
+#setupLocal{margin-top:10px;padding:7px 10px;border:1px solid #38344b;border-radius:7px;background:#15121f;color:#ddd8f4;font-size:9px;cursor:pointer}#setupLocal[hidden]{display:none}
+#doneButton{position:fixed;z-index:16;left:50%;bottom:max(26px,calc(env(safe-area-inset-bottom) + 15px));transform:translateX(-50%);display:flex;align-items:center;justify-content:center;gap:9px;min-height:43px;padding:0 17px;border:1px solid #414151;border-radius:99px;background:rgba(15,14,24,.94);color:#f5f3ff;font-size:11px;cursor:pointer;box-shadow:0 10px 35px rgba(0,0,0,.38);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}#doneButton[hidden]{display:none}#doneButton:disabled{opacity:.55;cursor:wait}#doneButton .button-dot{width:6px;height:6px;border-radius:50%;background:#8bf8d0;box-shadow:0 0 10px rgba(139,248,208,.65)}
+#finishPanel{position:fixed;z-index:40;inset:0;overflow:auto;padding:max(22px,env(safe-area-inset-top)) 18px max(22px,env(safe-area-inset-bottom));background:rgba(3,3,8,.96);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}#finishPanel[hidden]{display:none}
+.finish-shell{width:min(850px,100%);margin:0 auto}.finish-heading{display:flex;align-items:start;justify-content:space-between;gap:16px;margin:0 0 17px}.finish-heading h2{margin:0;color:#f7f5ff;font-size:clamp(20px,4vw,28px);font-weight:580;letter-spacing:-.04em}.finish-heading p{margin:6px 0 0;color:#9692aa;font-size:11px;line-height:1.6}#finishStatus{color:#9c98b0;font-size:9px;letter-spacing:.08em;text-align:right}
+#videoPreview{display:block;width:100%;max-height:52vh;aspect-ratio:16/9;object-fit:contain;background:#020207;border:1px solid #282638;border-radius:9px}
+.finish-actions{display:flex;flex-wrap:wrap;gap:8px;margin:13px 0 19px}.finish-action{min-height:37px;padding:0 13px;border:1px solid #302d40;border-radius:7px;background:#11101a;color:#e8e5f6;font-size:10px;cursor:pointer}.finish-action.primary{border-color:#7561a2;background:#241b38}.finish-action:disabled{opacity:.45;cursor:not-allowed}
+.finish-block{margin-top:14px;padding:15px;border:1px solid #292638;border-radius:9px;background:rgba(13,12,22,.8)}.finish-block h3{margin:0 0 9px;color:#d9d5e9;font-size:10px;font-weight:600;letter-spacing:.13em;text-transform:uppercase}#finishTranscript{margin:0;color:#c7c3d8;font-size:12px;line-height:1.7;white-space:pre-wrap;overflow-wrap:anywhere;max-height:170px;overflow:auto}
+#historyDetails{margin-top:14px;border-top:1px solid #242233;padding-top:12px;color:#aaa5bf;font-size:10px}#historyDetails summary{cursor:pointer;letter-spacing:.04em}#historyList{display:grid;gap:8px;margin-top:12px}.history-item{padding:10px;border:1px solid #282538;border-radius:7px;background:#0c0b14}.history-date{margin-bottom:5px;color:#79758f;font-size:8px;letter-spacing:.08em}.history-copy{color:#bbb6cf;font-size:10px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}#finishFootnote{margin:13px 0 0;color:#77738b;font-size:9px;line-height:1.6}
+@media(max-width:520px){#transcriptPanel{top:max(72px,calc(env(safe-area-inset-top) + 62px));left:10px;width:min(300px,calc(100vw - 68px));max-height:25vh;padding:12px}#dictationText{font-size:11px}#localNote{font-size:8px}#doneButton{bottom:max(20px,calc(env(safe-area-inset-bottom) + 12px))}#finishPanel{padding-left:12px;padding-right:12px}.finish-block{padding:12px}.finish-actions{gap:6px}.finish-action{font-size:9px;padding:0 10px}}
+
+@media(max-width:520px){#settings{padding:19px}.choice{min-height:66px}#micButton{bottom:max(21px,calc(env(safe-area-inset-bottom) + 12px))}#circle{width:min(68vw,34vh)}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<main id="stage" aria-label="Voice-reactive visualizer">
+  <div id="circle" class="shape" aria-hidden="true"></div>
+  <div id="voiceShape" class="shape" aria-hidden="true" hidden></div>
+  <div id="pattern" class="shape" aria-hidden="true" hidden>
+    <div id="core" class="orb-layer"></div>
+  </div>
+</main>
+
+<button id="gear" type="button" aria-label="Open visualizer settings" aria-expanded="false" aria-controls="settings">
+  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 8.8a3.2 3.2 0 1 0 0 6.4 3.2 3.2 0 0 0 0-6.4Z" stroke="currentColor" stroke-width="1.5"/><path d="m19.1 13.4 1.1.9-1.6 2.8-1.4-.5a7.7 7.7 0 0 1-1.4.8l-.2 1.5h-3.2l-.2-1.5a7.7 7.7 0 0 1-1.4-.8l-1.4.5-1.6-2.8 1.1-.9a7.5 7.5 0 0 1 0-1.6l-1.1-.9 1.6-2.8 1.4.5a7.7 7.7 0 0 1 1.4-.8l.2-1.5h3.2l.2 1.5a7.7 7.7 0 0 1 1.4.8l1.4-.5 1.6 2.8-1.1.9a7.5 7.5 0 0 1 0 1.6Z" transform="translate(-1.1 -1.1)" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/></svg>
+</button>
+
+<aside id="settings" aria-label="Visualizer settings" aria-hidden="true">
+  <div class="panel-heading"><h1>Settings</h1><span>Voice / 01</span></div>
+
+  <section class="group" aria-labelledby="shapeTitle">
+    <span class="group-title" id="shapeTitle">Main shape</span>
+    <div class="choices" role="group" aria-label="Choose a main shape">
+      <button class="choice" type="button" data-shape="circle" aria-pressed="true"><span class="choice-icon circle" aria-hidden="true"></span><span class="choice-name">Circle</span></button>
+      <button class="choice" type="button" data-shape="voice" aria-pressed="false"><span class="choice-icon voice" aria-hidden="true"></span><span class="choice-name">Voice</span></button>
+      <button class="choice" type="button" data-shape="pattern" aria-pressed="false"><span class="choice-icon pattern" aria-hidden="true"></span><span class="choice-name">Pattern</span></button>
+    </div>
+  </section>
+
+  <section class="group" id="spectrumSettings" hidden>
+    <div class="setting-row"><label for="dotCount">Spectrum dots</label><output id="dotCountValue" class="setting-value" for="dotCount">49</output></div>
+    <input id="dotCount" type="range" min="9" max="97" step="4" value="49">
+    <p class="helper">Choose how many dots make up the horizontal spectrum. Each frequency band grows upward with its own volume.</p>
+  </section>
+
+  <section class="group">
+    <div class="setting-row"><label for="sensitivity">Microphone sensitivity</label><output id="sensitivityValue" class="setting-value" for="sensitivity">1.6×</output></div>
+    <input id="sensitivity" type="range" min="0.5" max="3" step="0.1" value="1.6">
+    <p class="helper">Higher sensitivity makes quieter sounds create a stronger response.</p>
+  </section>
+
+  <section class="group">
+    <div class="setting-row"><label for="response">Motion response</label><output id="responseValue" class="setting-value" for="response">0.20</output></div>
+    <input id="response" type="range" min="0.06" max="0.42" step="0.02" value="0.20">
+    <p class="helper">Controls how quickly the shape follows changes in your voice.</p>
+  </section>
+
+  <section class="group">
+    <div class="switch-row">
+      <div class="switch-copy"><strong>Pitch movement</strong><small>Let higher and lower notes steer the Pattern shape.</small></div>
+      <label class="switch"><input id="pitchEnabled" type="checkbox" checked><span class="switch-track"></span></label>
+    </div>
+  </section>
+
+  <div class="panel-footer">
+    <span id="micStatus"><span id="statusDot"></span><span id="statusText">Microphone off</span></span>
+    <button id="reset" class="reset" type="button">Reset settings</button>
+  </div>
+</aside>
+
+<button id="micButton" class="mic-button" type="button"><span class="button-dot" aria-hidden="true"></span><span id="micButtonText">Start recording</span></button>
+<p id="message" role="status" aria-live="polite">Your voice, transcript, and finished video stay on this device. Start a take to begin.</p>
+<aside id="transcriptPanel" aria-label="Live dictation transcript">
+<div class="transcript-top"><span class="transcript-title">Live dictation</span><span id="localBadge">Checking local engine…</span></div>
+<p id="dictationText">Your words will appear here while you speak.</p><p id="interimText" aria-live="polite"></p>
+<p id="localNote">Checking whether this browser can transcribe speech entirely on-device.</p>
+<button id="setupLocal" type="button" hidden>Download browser-managed English pack</button>
+</aside>
+<button id="doneButton" type="button" hidden><span class="button-dot" aria-hidden="true"></span><span id="doneButtonText">Done · Make video</span></button>
+<section id="finishPanel" hidden aria-label="Finished video"><div class="finish-shell">
+<div class="finish-heading"><div><h2>Your take is ready.</h2><p>The video was assembled in your browser. Preview it, then save the video and a separate transcript file.</p></div><span id="finishStatus">LOCAL EXPORT</span></div>
+<video id="videoPreview" controls playsinline></video>
+<div class="finish-actions"><button id="downloadVideo" class="finish-action primary" type="button">Download video</button><button id="copyTranscript" class="finish-action" type="button">Copy transcript</button><button id="downloadTranscript" class="finish-action" type="button">Download transcript .txt</button><button id="newTake" class="finish-action" type="button">New take</button></div>
+<div class="finish-block"><h3>Transcript from this take</h3><p id="finishTranscript"></p></div>
+<details id="historyDetails"><summary>Previous dictations saved on this device</summary><div id="historyList"></div></details>
+<p id="finishFootnote">No video or transcript is uploaded by this page. The video file stays in memory until you save it. Local speech recognition works only when your browser supports its on-device engine and the English language pack is available.</p>
+</div></section>
+
+<script>
+(() => {
+  const stage = document.getElementById('stage');
+  const circle = document.getElementById('circle');
+  const voiceShape = document.getElementById('voiceShape');
+  const pattern = document.getElementById('pattern');
+  const core = document.getElementById('core');
+  const gear = document.getElementById('gear');
+  const settings = document.getElementById('settings');
+  const micButton = document.getElementById('micButton');
+  const micButtonText = document.getElementById('micButtonText');
+  const message = document.getElementById('message');
+  const micStatus = document.getElementById('micStatus');
+  const statusText = document.getElementById('statusText');
+  const sensitivity = document.getElementById('sensitivity');
+  const sensitivityValue = document.getElementById('sensitivityValue');
+  const spectrumSettings = document.getElementById('spectrumSettings');
+  const dotCountInput = document.getElementById('dotCount');
+  const dotCountValue = document.getElementById('dotCountValue');
+  const response = document.getElementById('response');
+  const responseValue = document.getElementById('responseValue');
+  const pitchEnabled = document.getElementById('pitchEnabled');
+  const shapeButtons = Array.from(document.querySelectorAll('[data-shape]'));
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const dictationTextNode=document.getElementById('dictationText'), interimTextNode=document.getElementById('interimText');
+  const localBadge=document.getElementById('localBadge'), localNote=document.getElementById('localNote'), setupLocalButton=document.getElementById('setupLocal');
+  const doneButton=document.getElementById('doneButton'), doneButtonText=document.getElementById('doneButtonText');
+  const finishPanel=document.getElementById('finishPanel'), videoPreview=document.getElementById('videoPreview'), finishTranscript=document.getElementById('finishTranscript');
+  const finishStatus=document.getElementById('finishStatus'), historyList=document.getElementById('historyList');
+  const downloadVideoButton=document.getElementById('downloadVideo'), copyTranscriptButton=document.getElementById('copyTranscript'), downloadTranscriptButton=document.getElementById('downloadTranscript'), newTakeButton=document.getElementById('newTake');
+  const exportCanvas=document.createElement('canvas');exportCanvas.width=1280;exportCanvas.height=720;
+  const exportContext=exportCanvas.getContext('2d');
+  const exportStars=Array.from({length:95},()=>({x:Math.random()*1280,y:Math.random()*720,r:Math.random()*1.5+.3,phase:Math.random()*6.28}));
+  let SpeechRecognitionClass=null,localSpeechState='checking',recognition=null,recognitionRestartTimer=0,recognitionStopResolve=null,recognitionStopTimer=0;
+  let recognitionResultIndices=new Set(),speechSegments=[],dictationText='',interimTranscript='',sessionStartedAt=0,finishing=false;
+  let recorder=null,recorderChunks=[],canvasStream=null,combinedStream=null,videoBlob=null,videoObjectUrl=null,currentVideoExtension='webm',sessionHistory=[];
+
+  let selectedShape = 'circle';
+  let listening = false;
+  let starting = false;
+  let stream = null;
+  let audioContext = null;
+  let analyser = null;
+  let source = null;
+  let timeData = null;
+  let frequencyData = null;
+  let frameId = 0;
+  let level = 0;
+  let pitchPosition = 0.5;
+  let previousLevel = 0;
+  let sensitivitySetting = Number(sensitivity.value);
+  let responseSetting = Number(response.value);
+  let spectrumCount = Number(dotCountInput.value);
+  let spectrumBars = [];
+  let spectrumLevels = [];
+  const spectrumDotCounts = [9,13,17,21,25,29,33,37,41,45,49,53,57,61,65,69,73,77,81,85,89,93,97];
+  const trailClones = [];
+  let lastSpeechAt = 0;
+  let nextCloneAt = 0;
+  let speaking = false;
+  const TRAIL_INTERVAL = 58;
+  const TRAIL_DURATION = 690;
+
+  function buildSpectrum(count) {
+    spectrumCount = count;
+    spectrumBars = [];
+    spectrumLevels = Array(count).fill(0);
+    voiceShape.replaceChildren();
+    voiceShape.style.setProperty('--spectrum-count', String(count));
+    // Keep the horizontal spectrum within the available width. More dots means
+    // each dot gets narrower, while fewer dots get a more substantial size.
+    const availableWidth = Math.min(window.innerWidth * 0.92, 1000);
+    const dotSize = clamp((availableWidth / count) * 0.34, 1.5, 8);
+    voiceShape.style.setProperty('--dot-size', dotSize.toFixed(2) + 'px');
+    for (let i = 0; i < count; i++) {
+      const cell = document.createElement('span');
+      cell.className = 'spectrum-dot';
+      cell.setAttribute('aria-hidden', 'true');
+      const bar = document.createElement('span');
+      bar.className = 'spectrum-bar';
+      cell.appendChild(bar);
+      voiceShape.appendChild(cell);
+      spectrumBars.push(bar);
+    }
+    dotCountValue.textContent = String(count);
+    dotCountInput.value = String(count);
+  }
+
+  function clamp(value, min, max) {
+    return Math.min(max, Math.max(min, value));
+  }
+
+  function toggleSettings(force) {
+    const open = typeof force === 'boolean' ? force : !settings.classList.contains('open');
+    settings.classList.toggle('open', open);
+    settings.setAttribute('aria-hidden', String(!open));
+    gear.setAttribute('aria-expanded', String(open));
+    gear.setAttribute('aria-label', open ? 'Close visualizer settings' : 'Open visualizer settings');
+  }
+
+  function setShape(shapeName) {
+    selectedShape = shapeName;
+    circle.hidden = shapeName !== 'circle';
+    voiceShape.hidden = shapeName !== 'voice';
+    pattern.hidden = shapeName !== 'pattern';
+    spectrumSettings.hidden = shapeName !== 'voice';
+    if (shapeName !== 'pattern') clearPatternClones();
+    shapeButtons.forEach((button) => {
+      button.setAttribute('aria-pressed', String(button.dataset.shape === shapeName));
+    });
+  }
+
+  function setStatus(label, live) {
+    statusText.textContent = label;
+    micStatus.classList.toggle('live', Boolean(live));
+    micButton.classList.toggle('live', Boolean(live));
+  }
+
+  function estimatePitch(bytes, sampleRate) {
+    const data = new Float32Array(bytes.length);
+    let mean = 0;
+    for (let i = 0; i < bytes.length; i++) mean += (bytes[i] - 128) / 128;
+    mean /= bytes.length;
+    let energy = 0;
+    for (let i = 0; i < bytes.length; i++) {
+      data[i] = (bytes[i] - 128) / 128 - mean;
+      energy += data[i] * data[i];
+    }
+    if (Math.sqrt(energy / data.length) < 0.012) return null;
+
+    const minLag = Math.max(25, Math.floor(sampleRate / 430));
+    const maxLag = Math.min(Math.floor(sampleRate / 65), Math.floor(data.length * 0.44));
+    const limit = data.length - maxLag;
+    let bestLag = 0;
+    let bestCorrelation = 0;
+    for (let lag = minLag; lag <= maxLag; lag += 2) {
+      let cross = 0;
+      let a2 = 0;
+      let b2 = 0;
+      for (let i = 0; i < limit; i += 3) {
+        const a = data[i];
+        const b = data[i + lag];
+        cross += a * b;
+        a2 += a * a;
+        b2 += b * b;
+      }
+      const correlation = cross / Math.sqrt((a2 * b2) || 1);
+      if (correlation > bestCorrelation) {
+        bestCorrelation = correlation;
+        bestLag = lag;
+      }
+    }
+    if (bestCorrelation < 0.36 || !bestLag) return null;
+    const hz = sampleRate / bestLag;
+    if (hz < 65 || hz > 430) return null;
+    const normalized = (Math.log(hz) - Math.log(80)) / (Math.log(400) - Math.log(80));
+    return clamp(normalized, 0, 1);
+  }
+
+  function updateSpectrum(responsiveness) {
+    if (!frequencyData || !audioContext) return;
+    const cellWidth = (voiceShape.clientWidth || window.innerWidth * 0.92) / spectrumCount;
+    const maxBarHeight = Math.max(12, Math.min(190, window.innerHeight * 0.27));
+    const dotWidth = clamp(cellWidth * 0.34, 1.5, 8);
+    const minHz = 65;
+    const maxHz = Math.min(9000, audioContext.sampleRate * 0.46);
+    const nyquist = audioContext.sampleRate / 2;
+
+    for (let i = 0; i < spectrumCount; i++) {
+      // Each dot maps to a different frequency band from low pitch on the
+      // left to high pitch on the right. Louder bands grow upward.
+      const position = i / Math.max(1, spectrumCount - 1);
+      const hz = minHz * Math.pow(maxHz / minHz, position);
+      const bin = clamp(Math.round((hz / nyquist) * (frequencyData.length - 1)), 0, frequencyData.length - 1);
+      const neighboringEnergy = (
+        frequencyData[Math.max(0, bin - 1)] +
+        frequencyData[bin] +
+        frequencyData[Math.min(frequencyData.length - 1, bin + 1)]
+      ) / 3;
+      const magnitude = clamp((neighboringEnergy - 34) / 170, 0, 1);
+      const easedMagnitude = Math.pow(magnitude, 0.82);
+      const speed = easedMagnitude > spectrumLevels[i] ? responsiveness * 1.35 : responsiveness * 0.52;
+      spectrumLevels[i] += (easedMagnitude - spectrumLevels[i]) * clamp(speed, 0.04, 0.7);
+
+      const strength = spectrumLevels[i];
+      const baseHeight = Math.max(2, dotWidth * 0.72);
+      const height = baseHeight + strength * (maxBarHeight - baseHeight);
+      spectrumBars[i].style.width = dotWidth.toFixed(1) + 'px';
+      spectrumBars[i].style.height = Math.min(maxBarHeight, height).toFixed(1) + 'px';
+      spectrumBars[i].style.opacity = (0.72 + strength * 0.28).toFixed(2);
+      spectrumBars[i].style.boxShadow = strength > 0.22
+        ? '0 0 ' + (2 + strength * 9).toFixed(1) + 'px rgba(255,255,255,' + (0.08 + strength * 0.28).toFixed(2) + ')'
+        : 'none';
+    }
+  }
+
+  function spawnPatternClone(now) {
+    const bounds = pattern.getBoundingClientRect();
+    const clone = document.createElement('div');
+    clone.className = 'pattern-clone';
+    clone.setAttribute('aria-hidden', 'true');
+    clone.style.left = bounds.left + 'px';
+    clone.style.top = bounds.top + 'px';
+    clone.style.width = bounds.width + 'px';
+    clone.style.height = bounds.height + 'px';
+    clone.style.opacity = '0.92';
+    clone.style.transform = 'translateY(0px)';
+    stage.appendChild(clone);
+    trailClones.push({ node: clone, createdAt: now, height: bounds.height });
+  }
+
+  function updatePatternClones(now) {
+    for (let i = trailClones.length - 1; i >= 0; i--) {
+      const trail = trailClones[i];
+      const age = (now - trail.createdAt) / TRAIL_DURATION;
+      if (age >= 1) {
+        trail.node.remove();
+        trailClones.splice(i, 1);
+        continue;
+      }
+      const easedRise = 1 - Math.pow(1 - age, 2);
+      trail.node.style.transform = 'translateY(' + (-easedRise * Math.max(120, trail.height * 1.25)).toFixed(1) + 'px)';
+      trail.node.style.opacity = String(0.92 * (1 - age));
+    }
+  }
+
+  function clearPatternClones() {
+    while (trailClones.length) {
+      const trail = trailClones.pop();
+      trail.node.remove();
+    }
+  }
+
+  function drawFrame() {
+    if (!listening || !analyser || !timeData) return;
+    const now = performance.now();
+    analyser.getByteTimeDomainData(timeData);
+    let squareSum = 0;
+    for (let i = 0; i < timeData.length; i++) {
+      const sample = (timeData[i] - 128) / 128;
+      squareSum += sample * sample;
+    }
+    const rms = Math.sqrt(squareSum / timeData.length);
+    const rawLevel = clamp((rms - 0.007) * 18 * sensitivitySetting, 0, 1);
+    const responsiveness = reducedMotion ? Math.min(0.1, responseSetting) : responseSetting;
+    level += (rawLevel - level) * (rawLevel > level ? responsiveness : responsiveness * 0.48);
+
+    // This release hold bridges short gaps between syllables while avoiding
+    // an endless trail from quiet microphone hiss.
+    if (rawLevel > 0.075) lastSpeechAt = now;
+    speaking = now - lastSpeechAt < 155;
+
+    if (selectedShape === 'voice' && frequencyData) {
+      analyser.getByteFrequencyData(frequencyData);
+      updateSpectrum(responsiveness);
+    }
+
+    if (pitchEnabled.checked && selectedShape === 'pattern' && speaking) {
+      const detected = estimatePitch(timeData, audioContext.sampleRate);
+      if (detected !== null) pitchPosition += (detected - pitchPosition) * responsiveness;
+    }
+
+    circle.style.transform = 'translate(-50%,-50%) scale(' + (1 + level * 0.72).toFixed(3) + ')';
+    circle.style.boxShadow = '0 0 ' + (65 + level * 65).toFixed(0) + 'px rgba(255,255,255,' + (0.035 + level * 0.075).toFixed(3) + ')';
+
+    if (selectedShape === 'pattern') {
+      if (speaking) {
+        const px = pitchEnabled.checked ? 50 + (pitchPosition - 0.5) * 74 : 50;
+        const py = 50 - level * 34;
+        pattern.style.left = clamp(px, 10, 90).toFixed(2) + '%';
+        pattern.style.top = clamp(py, 16, 83).toFixed(2) + '%';
+        const whiteness = Math.round(222 + clamp(level, 0, 1) * 33);
+        core.style.background = 'rgb(' + whiteness + ',' + whiteness + ',' + whiteness + ')';
+        core.style.boxShadow = '0 0 ' + (28 + level * 58).toFixed(0) + 'px rgba(255,255,255,' + (0.035 + level * 0.09).toFixed(3) + ')';
+
+        if (now >= nextCloneAt) {
+          spawnPatternClone(now);
+          nextCloneAt = now + TRAIL_INTERVAL;
+        }
+      } else {
+        pattern.style.left = '50%';
+        pattern.style.top = '50%';
+        core.style.background = '#858585';
+        core.style.boxShadow = '0 0 34px rgba(255,255,255,.035)';
+      }
+    }
+
+    updatePatternClones(now);
+    if(listening)drawExportFrame(now);
+    frameId = window.requestAnimationFrame(drawFrame);
+  }
+
+  async function startListening() {
+    if(starting||listening)return;
+    if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){message.textContent='Microphone access requires a browser that supports HTTPS microphone input.';return}
+    starting=true;micButton.disabled=true;message.textContent='Requesting microphone permission…';
+    try{
+      stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true},video:false});
+      const AC=window.AudioContext||window.webkitAudioContext;if(!AC)throw new Error('Audio analysis is not available in this browser.');
+      audioContext=new AC();if(audioContext.state==='suspended')await audioContext.resume();
+      analyser=audioContext.createAnalyser();analyser.fftSize=2048;analyser.smoothingTimeConstant=.72;
+      source=audioContext.createMediaStreamSource(stream);source.connect(analyser);
+      timeData=new Uint8Array(analyser.fftSize);frequencyData=new Uint8Array(analyser.frequencyBinCount);
+      speechSegments=[];dictationText='';interimTranscript='';recognitionResultIndices=new Set();level=0;lastSpeechAt=0;nextCloneAt=0;speaking=false;
+      sessionStartedAt=performance.now();finishing=false;starting=false;listening=true;
+      refreshTranscript();startVideoRecorder();
+      if(localSpeechState==='ready')startLocalRecognition();
+      else{dictationTextNode.textContent='Video is recording locally. Automatic dictation is not ready in this browser.';interimTextNode.textContent=''}
+      micButtonText.textContent='Recording…';micButton.disabled=false;doneButton.hidden=false;doneButton.disabled=false;
+      doneButtonText.textContent='Done · Make video';
+      message.textContent=localSpeechState==='ready'?'Recording locally. Your words become captions; nothing is sent to a video server.':'Recording locally. On-device dictation is unavailable, so automatic captions may be missing.';
+      setStatus('Recording locally',true);frameId=window.requestAnimationFrame(drawFrame);
+    }catch(error){
+      if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;
+      if(canvasStream)canvasStream.getTracks().forEach(t=>t.stop());canvasStream=null;
+      if(combinedStream)combinedStream.getTracks().forEach(t=>t.stop());combinedStream=null;
+      if(audioContext){try{await audioContext.close()}catch(_){}}audioContext=null;analyser=null;timeData=null;frequencyData=null;
+      if(recorder&&recorder.state!=='inactive'){try{recorder.stop()}catch(_){}}recorder=null;listening=false;starting=false;finishing=false;
+      message.textContent=error&&error.name==='NotAllowedError'?'Microphone access was blocked. Allow microphone permission for this site, then try again.':(error&&error.message?error.message:'Could not start a local recording. Check microphone and browser permissions.');
+      setStatus('Microphone off',false);
+    }finally{starting=false;micButton.disabled=false}
+  }
+
+  function drawExportFrame(now){
+    if(!exportContext)return;
+    const x=exportContext,w=1280,h=720,t=(now-sessionStartedAt)*.001,p={a:'#78f4ff',b:'#b79bff'};
+    x.setTransform(1,0,0,1,0,0);x.globalAlpha=1;x.fillStyle='#03030a';x.fillRect(0,0,w,h);
+    const bg=x.createRadialGradient(640,325,20,640,330,650);bg.addColorStop(0,'rgba(42,28,86,.38)');bg.addColorStop(.58,'rgba(8,13,32,.18)');bg.addColorStop(1,'rgba(2,2,8,0)');x.fillStyle=bg;x.fillRect(0,0,w,h);
+    for(const s of exportStars){x.globalAlpha=.2+.4*(.5+.5*Math.sin(t+s.phase));x.fillStyle=s.phase%2>1?p.a:p.b;x.fillRect(s.x,s.y,s.r,s.r)}x.globalAlpha=1;
+    x.strokeStyle='rgba(160,151,208,.12)';x.lineWidth=1;x.strokeRect(62,61,1156,598);
+    const cx=640,cy=320,e=clamp(level,0,1);
+    if(selectedShape==='circle'){
+      const r=94*(1+e*.64),g=x.createRadialGradient(cx-r*.2,cy-r*.2,2,cx,cy,r*2.3);
+      g.addColorStop(0,'rgba(255,255,255,.98)');g.addColorStop(.19,'rgba(231,239,255,.97)');g.addColorStop(.48,'rgba(151,147,184,.86)');g.addColorStop(.75,'rgba(88,82,133,.4)');g.addColorStop(1,'rgba(100,80,180,0)');
+      x.fillStyle=g;x.shadowColor='rgba(154,137,255,.55)';x.shadowBlur=38+e*36;x.beginPath();x.arc(cx,cy,r,0,Math.PI*2);x.fill();x.shadowBlur=0;
+      x.strokeStyle='rgba(174,161,255,.32)';x.beginPath();x.arc(cx,cy,r*1.28+Math.sin(t)*3,0,Math.PI*2);x.stroke();
+      x.strokeStyle='rgba(110,239,255,.18)';x.beginPath();x.arc(cx,cy,r*1.55,0,Math.PI*2);x.stroke();
+    }else if(selectedShape==='voice'){
+      const cell=950/Math.max(1,spectrumCount),base=340;
+      for(let i=0;i<spectrumCount;i++){
+        const v=spectrumLevels[i]||0,bh=3+v*205,g=x.createLinearGradient(0,base-bh,0,base+bh);
+        g.addColorStop(0,'rgba(116,238,255,.82)');g.addColorStop(.5,'rgba(247,246,255,.99)');g.addColorStop(1,'rgba(173,126,255,.82)');
+        x.fillStyle=g;x.shadowColor='rgba(121,208,255,'+(.04+v*.3)+')';x.shadowBlur=2+v*12;x.fillRect(165+i*cell,base-bh,Math.max(2,cell-2),bh*2);
+      }x.shadowBlur=0;x.fillStyle='rgba(255,255,255,.32)';x.fillRect(165,base,950,1);
+    }else{
+      const px=cx+(pitchEnabled.checked?(pitchPosition-.5)*250:0),py=cy-e*28,r=78*(1+e*.35);
+      for(let i=0;i<5;i++){x.save();x.translate(px,py);x.rotate(t*(i%2?-.12:.09)+i*1.1);x.strokeStyle=i%2?'rgba(181,151,255,.46)':'rgba(111,244,255,.4)';x.lineWidth=1.2;x.beginPath();x.ellipse(0,0,r*(1+i*.105),r*(.42+i*.06),0,0,Math.PI*2);x.stroke();x.restore()}
+      const g=x.createRadialGradient(px-r*.27,py-r*.31,2,px,py,r*1.15);g.addColorStop(0,'#fff');g.addColorStop(.24,'#e9e5ff');g.addColorStop(.6,'#c1b9dc');g.addColorStop(1,'rgba(112,99,151,.16)');
+      x.fillStyle=g;x.shadowColor='rgba(174,142,255,.58)';x.shadowBlur=44;x.beginPath();x.arc(px,py,r,0,Math.PI*2);x.fill();x.shadowBlur=0;
+    }
+    x.fillStyle='rgba(232,231,249,.88)';x.font='600 13px system-ui,sans-serif';x.textAlign='left';x.fillText('T E S T   /   V O I C E   S T U D Y',80,40);
+    x.fillStyle='rgba(133,128,164,.8)';x.font='11px system-ui,sans-serif';x.textAlign='right';x.fillText('REC  •  LOCAL SESSION',1200,40);
+    x.textAlign='left';x.fillText('A MOMENT, PRESERVED',80,690);x.textAlign='right';x.fillText(Math.max(0,(now-sessionStartedAt)/1000).toFixed(1)+' SEC',1200,690);
+    const caption=(interimTranscript||(speechSegments.length?speechSegments[speechSegments.length-1].text:'')).trim();
+    if(caption){
+      x.font='600 28px system-ui,sans-serif';const words=caption.split(/\s+/),lines=[];let line='';
+      for(const word of words){const trial=line?line+' '+word:word;if(x.measureText(trial).width>980&&line){lines.push(line);line=word}else line=trial}
+      if(line)lines.push(line);const shown=lines.slice(-2),height=shown.length*37+28;
+      x.fillStyle='rgba(3,3,10,.83)';x.fillRect(135,535,1010,height);x.fillStyle='rgba(108,241,255,.86)';x.fillRect(135,535,3,height);
+      x.fillStyle='#faf9ff';x.textAlign='center';x.textBaseline='middle';shown.forEach((s,i)=>x.fillText(s,640,535+14+37*(i+.5),980));x.textBaseline='alphabetic';
+    }
+  }
+  function getSavedHistory(){try{const v=JSON.parse(localStorage.getItem('abyssalbar.test.dictations')||'[]');return Array.isArray(v)?v:[]}catch(_){return []}}
+  function renderHistory(){
+    sessionHistory=getSavedHistory();historyList.replaceChildren();
+    if(!sessionHistory.length){const p=document.createElement('p');p.className='history-copy';p.textContent='Completed transcripts are saved here on this device.';historyList.appendChild(p);return}
+    sessionHistory.slice().reverse().slice(0,20).forEach(item=>{const card=document.createElement('article');card.className='history-item';const d=document.createElement('div');d.className='history-date';d.textContent=new Date(item.time).toLocaleString();const txt=document.createElement('div');txt.className='history-copy';txt.textContent=item.text||'(No speech transcribed.)';card.append(d,txt);historyList.appendChild(card)});
+  }
+  function refreshTranscript(){
+    dictationText=speechSegments.map(s=>s.text).join(' ').replace(/\s+([,.!?])/g,'$1').trim();
+    dictationTextNode.textContent=dictationText||'Listening for your words…';interimTextNode.textContent=interimTranscript||'';
+    drawExportFrame(performance.now());
+  }
+  async function checkLocalSpeech(){
+    SpeechRecognitionClass=window.SpeechRecognition||window.webkitSpeechRecognition||null;
+    if(!SpeechRecognitionClass){localSpeechState='unsupported';localBadge.textContent='LOCAL DICTATION UNAVAILABLE';localBadge.className='warning';localNote.textContent='This browser does not expose speech recognition that can be forced to stay on-device. Video recording remains local, but automatic dictation is unavailable. No cloud fallback will be used.';setupLocalButton.hidden=true;return}
+    let probe;try{probe=new SpeechRecognitionClass()}catch(_){}
+    if(!probe||!('processLocally' in probe)){localSpeechState='unsupported';localBadge.textContent='LOCAL DICTATION UNAVAILABLE';localBadge.className='warning';localNote.textContent='This browser cannot guarantee on-device speech recognition. Recording and video export remain local, but automatic dictation needs a browser with a local speech engine.';setupLocalButton.hidden=true;return}
+    try{
+      if(typeof SpeechRecognitionClass.available==='function'){
+        const res=await SpeechRecognitionClass.available({langs:['en-US'],processLocally:true});
+        if(res==='available'){localSpeechState='ready';localBadge.textContent='ON-DEVICE READY';localBadge.className='ready';localNote.textContent='Dictation uses the browser’s local speech engine. This page does not send audio to a transcription server.';setupLocalButton.hidden=true;return}
+        if(res==='downloadable'||res==='downloading'){localSpeechState='pack-missing';localBadge.textContent='LOCAL PACK NEEDED';localBadge.className='warning';localNote.textContent='The browser can transcribe locally, but its English pack is not ready. Nothing downloads automatically. Setup is optional.';setupLocalButton.hidden=false;return}
+        localSpeechState='unsupported';localBadge.textContent='LOCAL ENGINE UNAVAILABLE';localBadge.className='warning';localNote.textContent='The browser reports its on-device English engine is unavailable. No remote transcription service will be used.';setupLocalButton.hidden=true;return;
+      }
+      localSpeechState='ready';localBadge.textContent='ON-DEVICE READY';localBadge.className='ready';localNote.textContent='The recognizer is explicitly set to local-only. If the local pack is missing, the browser will report that rather than switching to a remote service.';setupLocalButton.hidden=true;
+    }catch(_){localSpeechState='unsupported';localBadge.textContent='LOCAL ENGINE UNAVAILABLE';localBadge.className='warning';localNote.textContent='Could not verify local recognition support. No cloud transcription fallback will be used.';setupLocalButton.hidden=true}
+  }
+  async function installLocalSpeechPack(){
+    if(!SpeechRecognitionClass||typeof SpeechRecognitionClass.install!=='function'){localNote.textContent='This browser cannot install an on-device language pack from this page.';return}
+    setupLocalButton.disabled=true;setupLocalButton.textContent='Setting up local English…';
+    localNote.textContent='Your browser is setting up its local English pack. This optional step is managed by the browser.';
+    try{const ok=await SpeechRecognitionClass.install({langs:['en-US']});if(ok)await checkLocalSpeech();else{localSpeechState='pack-missing';localBadge.textContent='LOCAL PACK NEEDED';localBadge.className='warning';localNote.textContent='The browser did not finish installing its on-device English pack.'}}
+    catch(_){localSpeechState='pack-missing';localBadge.textContent='LOCAL PACK NEEDED';localBadge.className='warning';localNote.textContent='The browser could not install the local pack. Video recording still works locally, but automatic dictation may remain unavailable.'}
+    finally{setupLocalButton.disabled=false;setupLocalButton.textContent='Download browser-managed English pack';setupLocalButton.hidden=localSpeechState!=='pack-missing'}
+  }
+  function startLocalRecognition(){
+    if(!SpeechRecognitionClass||localSpeechState!=='ready'||!listening||finishing)return;
+    let rec;try{rec=new SpeechRecognitionClass()}catch(_){return}
+    if(!('processLocally' in rec)){localSpeechState='unsupported';checkLocalSpeech();return}
+    rec.lang='en-US';rec.continuous=true;rec.interimResults=true;rec.maxAlternatives=1;rec.processLocally=true;recognition=rec;
+    const seen=new Set();
+    rec.onresult=e=>{
+      interimTranscript='';
+      for(let i=0;i<e.results.length;i++){
+        const result=e.results[i],text=(result[0]?.transcript||'').trim();if(!text)continue;
+        if(result.isFinal){if(!seen.has(i)){seen.add(i);speechSegments.push({text,time:Math.max(0,(performance.now()-sessionStartedAt)/1000)})}}
+        else interimTranscript+=(interimTranscript?' ':'')+text;
+      }
+      refreshTranscript();
+    };
+    rec.onerror=e=>{
+      if(e.error==='no-speech'||e.error==='aborted')return;
+      if(e.error==='language-not-supported'){localSpeechState='pack-missing';localBadge.textContent='LOCAL PACK NEEDED';localBadge.className='warning';localNote.textContent='The browser has no ready local English model. Use the optional setup button to install its language pack; no remote service will be used.';setupLocalButton.hidden=!(SpeechRecognitionClass&&typeof SpeechRecognitionClass.install==='function')}
+      else if(e.error==='not-allowed'||e.error==='service-not-allowed'){localSpeechState='unsupported';localBadge.textContent='LOCAL DICTATION BLOCKED';localBadge.className='warning';localNote.textContent='The browser blocked its local speech engine. No cloud fallback was attempted.'}
+    };
+    rec.onend=()=>{
+      if(recognition===rec)recognition=null;
+      if(finishing){if(recognitionStopResolve){const fn=recognitionStopResolve;recognitionStopResolve=null;fn()}return}
+      if(listening&&localSpeechState==='ready'){clearTimeout(recognitionRestartTimer);recognitionRestartTimer=setTimeout(startLocalRecognition,350)}
+    };
+    try{rec.start()}catch(_){recognition=null}
+  }
+  function stopLocalRecognition(){
+    clearTimeout(recognitionRestartTimer);recognitionRestartTimer=0;if(!recognition)return Promise.resolve();
+    return new Promise(resolve=>{
+      let done=false;const finish=()=>{if(done)return;done=true;clearTimeout(recognitionStopTimer);recognitionStopResolve=null;resolve()};
+      recognitionStopResolve=finish;recognitionStopTimer=setTimeout(finish,900);try{recognition.stop()}catch(_){finish()}
+    });
+  }
+  function startVideoRecorder(){
+    if(!window.MediaRecorder||!exportCanvas.captureStream)throw new Error('This browser cannot record canvas video. Try a browser with MediaRecorder support.');
+    canvasStream=exportCanvas.captureStream(30);combinedStream=new MediaStream([...canvasStream.getVideoTracks(),...stream.getAudioTracks()]);
+    const types=['video/webm;codecs=vp8,opus','video/webm;codecs=vp9,opus','video/webm','video/mp4'];
+    const type=types.find(t=>MediaRecorder.isTypeSupported&&MediaRecorder.isTypeSupported(t));
+    const opts={videoBitsPerSecond:3500000,audioBitsPerSecond:128000};if(type)opts.mimeType=type;
+    recorder=new MediaRecorder(combinedStream,opts);currentVideoExtension=(recorder.mimeType||type||'video/webm').includes('mp4')?'mp4':'webm';
+    recorderChunks=[];recorder.ondataavailable=e=>{if(e.data&&e.data.size)recorderChunks.push(e.data)};
+    recorder.onerror=()=>{message.textContent='The browser reported a video recording error. The transcript remains on this device.'};
+    recorder.onstop=finishVideoExport;recorder.start(1000);
+  }
+  function saveLocalFile(blob,name){
+    const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
+  }
+  function copyCurrentTranscript(){
+    const text=dictationText||'(No speech was transcribed in this take.)';
+    if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(text).then(()=>message.textContent='Transcript copied locally.').catch(()=>copyFallback(text));
+    else copyFallback(text);
+  }
+  function copyFallback(text){
+    const f=document.createElement('textarea');f.value=text;f.setAttribute('readonly','');f.style.position='fixed';f.style.opacity='0';document.body.appendChild(f);f.select();
+    let ok=false;try{ok=document.execCommand('copy')}catch(_){}f.remove();message.textContent=ok?'Transcript copied.':'Copy was blocked. Use Download transcript instead.';
+  }
+  function finishVideoExport(){
+    if(canvasStream)canvasStream.getTracks().forEach(t=>t.stop());
+    if(combinedStream)combinedStream.getTracks().forEach(t=>{if(t.readyState!=='ended')t.stop()});
+    canvasStream=null;combinedStream=null;
+    if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;
+    if(source){try{source.disconnect()}catch(_){}}source=null;
+    if(audioContext){audioContext.close().catch(()=>{});audioContext=null}
+    analyser=null;timeData=null;frequencyData=null;listening=false;starting=false;finishing=false;recognition=null;
+    if(frameId)cancelAnimationFrame(frameId);frameId=0;
+    micButton.disabled=false;micButtonText.textContent='Start new take';doneButton.hidden=true;doneButton.disabled=false;doneButtonText.textContent='Done · Make video';setStatus('Microphone off',false);
+    const type=(recorder&&recorder.mimeType)||(currentVideoExtension==='mp4'?'video/mp4':'video/webm');videoBlob=new Blob(recorderChunks,{type});recorder=null;
+    if(videoObjectUrl)URL.revokeObjectURL(videoObjectUrl);videoObjectUrl=videoBlob.size?URL.createObjectURL(videoBlob):null;
+    if(videoObjectUrl){videoPreview.src=videoObjectUrl;videoPreview.hidden=false;downloadVideoButton.disabled=false;finishStatus.textContent='READY · '+currentVideoExtension.toUpperCase()}
+    else{videoPreview.removeAttribute('src');videoPreview.hidden=true;downloadVideoButton.disabled=true;finishStatus.textContent='VIDEO EXPORT FAILED'}
+    const text=dictationText.trim();finishTranscript.textContent=text||'No words were transcribed. If local dictation was unavailable, the video may contain the original audio without automatic captions.';
+    try{if(text){sessionHistory=getSavedHistory();sessionHistory.push({time:new Date().toISOString(),text,segments:speechSegments});sessionHistory=sessionHistory.slice(-30);localStorage.setItem('abyssalbar.test.dictations',JSON.stringify(sessionHistory))}}catch(_){}
+    renderHistory();finishPanel.hidden=false;message.textContent=videoObjectUrl?'Video ready. Preview or download it below.':'The session ended, but the browser did not create a video file.';
+  }
+  async function finishSession(){
+    if(!listening||finishing)return;
+    finishing=true;doneButton.disabled=true;doneButtonText.textContent='Finishing…';micButton.disabled=true;message.textContent='Finishing the local recording and saving the dictation…';
+    await stopLocalRecognition();clearTimeout(recognitionRestartTimer);
+    if(recorder&&recorder.state!=='inactive'){try{recorder.stop()}catch(_){finishVideoExport()}}else finishVideoExport();
+  }
+  function resetForNewTake(){
+    finishPanel.hidden=true;if(videoObjectUrl){URL.revokeObjectURL(videoObjectUrl);videoObjectUrl=null}
+    videoBlob=null;recorder=null;recorderChunks=[];speechSegments=[];dictationText='';interimTranscript='';
+    dictationTextNode.textContent='Your words will appear here while you speak.';interimTextNode.textContent='';
+    videoPreview.pause();videoPreview.removeAttribute('src');videoPreview.load();micButton.disabled=false;micButtonText.textContent='Start recording';doneButton.hidden=true;doneButton.disabled=false;
+    message.textContent='Ready for a new take. Completed transcripts remain saved on this device.';renderHistory();
+  }
+
+  gear.addEventListener('click', () => toggleSettings());
+  shapeButtons.forEach((button) => button.addEventListener('click', () => setShape(button.dataset.shape)));
+  micButton.addEventListener('click', () => {
+    if(listening)finishSession();
+    else if(finishPanel.hidden)startListening();
+    else resetForNewTake();
+  });
+  doneButton.addEventListener('click',finishSession);
+  setupLocalButton.addEventListener('click',installLocalSpeechPack);
+  downloadVideoButton.addEventListener('click',()=>{if(videoBlob&&videoBlob.size)saveLocalFile(videoBlob,'test-voice-study-'+new Date().toISOString().slice(0,10)+'.'+currentVideoExtension)});
+  downloadTranscriptButton.addEventListener('click',()=>saveLocalFile(new Blob([dictationText||'(No speech was transcribed in this take.)'],{type:'text/plain;charset=utf-8'}),'test-transcript-'+new Date().toISOString().slice(0,10)+'.txt'));
+  copyTranscriptButton.addEventListener('click',copyCurrentTranscript);
+  newTakeButton.addEventListener('click',resetForNewTake);
+  dotCountInput.addEventListener('input', () => {
+    const count = Number(dotCountInput.value);
+    buildSpectrum(count);
+  });
+  sensitivity.addEventListener('input', () => {
+    sensitivitySetting = Number(sensitivity.value);
+    sensitivityValue.textContent = sensitivitySetting.toFixed(1) + '×';
+  });
+  response.addEventListener('input', () => {
+    responseSetting = Number(response.value);
+    responseValue.textContent = responseSetting.toFixed(2);
+  });
+  pitchEnabled.addEventListener('change', () => {
+    if (!pitchEnabled.checked) pattern.style.left = '50%';
+  });
+  document.getElementById('reset').addEventListener('click', () => {
+    buildSpectrum(49);
+    sensitivity.value = '1.6';
+    response.value = '0.20';
+    pitchEnabled.checked = true;
+    sensitivitySetting = 1.6;
+    responseSetting = 0.20;
+    sensitivityValue.textContent = '1.6×';
+    responseValue.textContent = '0.20';
+    setShape('circle');
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && settings.classList.contains('open')) toggleSettings(false);
+  });
+  document.addEventListener('pointerdown', (event) => {
+    if (!settings.classList.contains('open')) return;
+    if (!settings.contains(event.target) && !gear.contains(event.target)) toggleSettings(false);
+  });
+  window.addEventListener('pagehide',()=>{
+    listening=false;if(frameId)cancelAnimationFrame(frameId);clearTimeout(recognitionRestartTimer);
+    if(recognition){try{recognition.stop()}catch(_){}}if(recorder&&recorder.state!=='inactive'){try{recorder.stop()}catch(_){}}
+    if(stream)stream.getTracks().forEach(t=>t.stop());if(canvasStream)canvasStream.getTracks().forEach(t=>t.stop());
+    if(combinedStream)combinedStream.getTracks().forEach(t=>t.stop());if(audioContext)audioContext.close().catch(()=>{});if(videoObjectUrl)URL.revokeObjectURL(videoObjectUrl);
+  });
+  buildSpectrum(49);
+  setShape('circle');
+  checkLocalSpeech();
+  renderHistory();
+})();
+</script>
+</body>
+</html>
