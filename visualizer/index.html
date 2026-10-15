@@ -11,10 +11,10 @@
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000;color:#fff;font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
 #stage{position:fixed;inset:0;overflow:hidden;background:#000;isolation:isolate}
 #particles{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none}
-#flame{position:absolute;left:50%;top:50%;width:clamp(60px,13vmin,112px);aspect-ratio:1;border-radius:50%;background:#808080;transform:translate3d(-50%,-50%,0);z-index:2;will-change:left,top}
+#flame{position:absolute;left:50%;top:50%;width:clamp(60px,13vmin,112px);aspect-ratio:1;border-radius:50%;background:#fff;transform:translate3d(-50%,-50%,0);z-index:2;will-change:left,top}
 .orb{position:absolute;left:50%;top:50%;width:clamp(160px,34vmin,290px);aspect-ratio:1;border-radius:50%;background:var(--white);transform:translate3d(-50%,-50%,0) scale(1);z-index:3;will-change:transform}
 .wave{position:absolute;left:50%;top:50%;width:clamp(130px,27.88vmin,238px);height:clamp(100px,28vmin,230px);transform:translate3d(-50%,-50%,0);display:grid;grid-template-columns:repeat(5,minmax(0,1fr));align-items:center;justify-items:center;gap:clamp(5px,1.7vmin,15px);z-index:4;pointer-events:none}
-.dot{display:block;width:clamp(8px,2.4vmin,15px);height:clamp(8px,2.4vmin,15px);border-radius:50%;background:#000;transform:scaleY(1);transform-origin:center;will-change:transform}
+.dot{display:block;width:clamp(6px,1.4vmin,9px);height:clamp(6px,1.4vmin,9px);border-radius:999px;background:#000;will-change:height}
 .controls{position:fixed;z-index:10;left:50%;bottom:max(26px,env(safe-area-inset-bottom));transform:translateX(-50%);display:flex;align-items:center}
 .controls button{border:2px solid #fff;border-radius:0;padding:12px 17px;background:#fff;color:#000;font:inherit;font-size:11px;font-weight:650;white-space:nowrap;cursor:pointer;transition:none}
 .controls button:hover{background:#000;color:#fff;border-color:#fff}
@@ -40,7 +40,7 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000;color:
 'use strict';
 const orb=document.getElementById('orb'),flame=document.getElementById('flame'),dots=[...document.querySelectorAll('.dot')],canvas=document.getElementById('particles'),ctx=canvas.getContext('2d'),mic=document.getElementById('mic'),status=document.getElementById('status'),message=document.getElementById('message');
 const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
-const TRAIL_INTERVAL=58,TRAIL_DURATION=690;
+const TRAIL_INTERVAL=68,TRAIL_DURATION=1200;
 let stream=null,audio=null,analyser=null,source=null,timeData=null,freqData=null,raf=0,listening=false,starting=false,stopping=false,level=0,pitch=.5,lastSpeech=0,lastPitchAt=0,nextCloneAt=0,trails=[],width=0,height=0,dpr=1,flameX=.5,flameY=.5,previousTime=0,flameDiameter=100;
 const dotLevels=[0,0,0,0,0];
 function clamp(v,min,max){return Math.min(max,Math.max(min,v))}
@@ -59,29 +59,32 @@ function estimatePitch(bytes,sampleRate){
  const hz=sampleRate/bestLag;if(hz<65||hz>430)return null;
  return clamp((Math.log(hz)-Math.log(80))/(Math.log(400)-Math.log(80)),0,1)
 }
-function emitTrail(now){trails.push({x:flameX*width,y:flameY*height,createdAt:now});if(trails.length>18)trails.shift();nextCloneAt=now+TRAIL_INTERVAL}
+function emitTrail(now){trails.push({x:flameX*width,y:flameY*height,createdAt:now});if(trails.length>24)trails.shift();nextCloneAt=now+TRAIL_INTERVAL}
 function drawTrails(now){
  ctx.clearRect(0,0,width,height);
  for(let i=trails.length-1;i>=0;i--){
   const t=trails[i],age=(now-t.createdAt)/TRAIL_DURATION;
   if(age>=1){trails.splice(i,1);continue}
-  const eased=1-Math.pow(1-age,2),rise=Math.max(120,flameDiameter*1.25)*eased;
+  const rise=Math.max(90,flameDiameter*1.05)*age;
   const radius=flameDiameter*.5;
+  const alpha=.92*(1-age);
   ctx.beginPath();ctx.arc(t.x,t.y-rise,radius,0,Math.PI*2);
-  ctx.fillStyle='#fff';ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,'+alpha.toFixed(3)+')';ctx.fill();
  }
 }
-function updateWave(responsiveness){
+function updateWave(responsiveness,speaking){
  if(!freqData||!audio)return;
  const nyquist=audio.sampleRate/2,minHz=65,maxHz=Math.min(9000,audio.sampleRate*.46);
  for(let i=0;i<5;i++){
   const pos=i/4,hz=minHz*Math.pow(maxHz/minHz,pos),bin=clamp(Math.round(hz/nyquist*(freqData.length-1)),0,freqData.length-1);
   const energy=(freqData[Math.max(0,bin-1)]+freqData[bin]+freqData[Math.min(freqData.length-1,bin+1)])/3;
-  const magnitude=Math.pow(clamp((energy-34)/170,0,1),.82);
-  dotLevels[i]+=(magnitude-dotLevels[i])*(magnitude>dotLevels[i]?responsiveness*1.25:responsiveness*.48);
-  // Scale each circular dot around its own center. Its position never changes.
-  const stretch=1+dotLevels[i]*7.2;
-  dots[i].style.transform='scaleY('+stretch.toFixed(3)+')';
+  const magnitude=speaking?Math.pow(clamp((energy-34)/170,0,1),.82):0;
+  const changeRate=magnitude>dotLevels[i]?responsiveness*1.25:Math.max(.12,responsiveness*.78);
+  dotLevels[i]+=(magnitude-dotLevels[i])*Math.min(.45,changeRate);
+  // Height changes symmetrically around the grid's fixed vertical center.
+  const diameter=dots[i].getBoundingClientRect().width;
+  const extension=Math.min(150,Math.max(80,height*.24));
+  dots[i].style.height=(diameter+dotLevels[i]*extension)+'px';
  }
 }
 function frame(now){
@@ -96,7 +99,7 @@ function frame(now){
  const speaking=now-lastSpeech<155;
  analyser.getByteFrequencyData(freqData);
  orb.style.transform='translate3d(-50%,-50%,0) scale('+(1+level*.72).toFixed(3)+')';
- updateWave(reducedMotion ? 0.08 : 0.16);
+ updateWave(reducedMotion ? 0.08 : 0.16,speaking);
  const responsiveness=reducedMotion ? 0.07 : 0.13;
  if(speaking){
   if(now-lastPitchAt>=45){
@@ -109,12 +112,11 @@ function frame(now){
   const targetY=clamp(.5-level*.34,.16,.83);
   const move=1-Math.pow(1-(reducedMotion ? 0.06 : 0.13),dt);
   flameX+=(targetX-flameX)*move;flameY+=(targetY-flameY)*move;
-  flame.style.background='#fff';
   if(now>=nextCloneAt)emitTrail(now);
  }else{
   const returnEase=1-Math.pow(1-(reducedMotion ? 0.06 : 0.085),dt);
   flameX+=(.5-flameX)*returnEase;flameY+=(.5-flameY)*returnEase;
-  flame.style.background='#808080';
+
  }
  flame.style.left=(flameX*100).toFixed(3)+'%';flame.style.top=(flameY*100).toFixed(3)+'%';
  drawTrails(now);raf=requestAnimationFrame(frame)
@@ -150,9 +152,9 @@ async function stop(){
  const activeAudio=audio;audio=null;analyser=null;timeData=null;freqData=null;
  if(activeAudio)try{await activeAudio.close()}catch(_){}
  level=0;pitch=.5;lastSpeech=0;lastPitchAt=0;previousTime=0;trails=[];dotLevels.fill(0);
- flameX=.5;flameY=.5;flame.style.left='50%';flame.style.top='50%';flame.style.background='#808080';
+ flameX=.5;flameY=.5;flame.style.left='50%';flame.style.top='50%';
  orb.style.transform='translate3d(-50%,-50%,0) scale(1)';
- dots.forEach(d=>{d.style.transform='scaleY(1)'});
+ dots.forEach(d=>{d.style.height=''});
  drawTrails(performance.now());
  mic.textContent='Enable microphone';status.textContent='Microphone off';status.classList.remove('live');message.textContent='Microphone off. Press the button to start again.';
  stopping=false;mic.disabled=false;
