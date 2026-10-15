@@ -90,6 +90,7 @@ input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radiu
 .finish-actions{display:flex;flex-wrap:wrap;gap:8px;margin:13px 0 19px}.finish-action{min-height:37px;padding:0 13px;border:1px solid #302d40;border-radius:7px;background:#11101a;color:#e8e5f6;font-size:10px;cursor:pointer}.finish-action.primary{border-color:#7561a2;background:#241b38}.finish-action:disabled{opacity:.45;cursor:not-allowed}
 .finish-block{margin-top:14px;padding:15px;border:1px solid #292638;border-radius:9px;background:rgba(13,12,22,.8)}.finish-block h3{margin:0 0 9px;color:#d9d5e9;font-size:10px;font-weight:600;letter-spacing:.13em;text-transform:uppercase}#finishTranscript{margin:0;color:#c7c3d8;font-size:12px;line-height:1.7;white-space:pre-wrap;overflow-wrap:anywhere;max-height:170px;overflow:auto}
 #historyDetails{margin-top:14px;border-top:1px solid #242233;padding-top:12px;color:#aaa5bf;font-size:10px}#historyDetails summary{cursor:pointer;letter-spacing:.04em}#historyList{display:grid;gap:8px;margin-top:12px}.history-item{padding:10px;border:1px solid #282538;border-radius:7px;background:#0c0b14}.history-date{margin-bottom:5px;color:#79758f;font-size:8px;letter-spacing:.08em}.history-copy{color:#bbb6cf;font-size:10px;line-height:1.55;white-space:pre-wrap;overflow-wrap:anywhere}#finishFootnote{margin:13px 0 0;color:#77738b;font-size:9px;line-height:1.6}
+#testTitle{position:fixed;z-index:9;top:max(19px,env(safe-area-inset-top));left:max(18px,env(safe-area-inset-left));display:flex;align-items:center;gap:10px;color:#e9e7f5;font-size:10px;font-weight:650;letter-spacing:.19em;pointer-events:none}#testTitle span{color:#77748b;font-size:8px;font-weight:500;letter-spacing:.15em}
 @media(max-width:520px){#transcriptPanel{top:max(72px,calc(env(safe-area-inset-top) + 62px));left:10px;width:min(300px,calc(100vw - 68px));max-height:25vh;padding:12px}#dictationText{font-size:11px}#localNote{font-size:8px}#doneButton{bottom:max(20px,calc(env(safe-area-inset-bottom) + 12px))}#finishPanel{padding-left:12px;padding-right:12px}.finish-block{padding:12px}.finish-actions{gap:6px}.finish-action{font-size:9px;padding:0 10px}}
 
 @media(max-width:520px){#settings{padding:19px}.choice{min-height:66px}#micButton{bottom:max(21px,calc(env(safe-area-inset-bottom) + 12px))}#circle{width:min(68vw,34vh)}}
@@ -105,6 +106,7 @@ input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radiu
   </div>
 </main>
 
+<div id="testTitle" aria-hidden="true">TEST <span>VOICE STUDIO / LOCAL TAKE</span></div>
 <button id="gear" type="button" aria-label="Open visualizer settings" aria-expanded="false" aria-controls="settings">
   <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 8.8a3.2 3.2 0 1 0 0 6.4 3.2 3.2 0 0 0 0-6.4Z" stroke="currentColor" stroke-width="1.5"/><path d="m19.1 13.4 1.1.9-1.6 2.8-1.4-.5a7.7 7.7 0 0 1-1.4.8l-.2 1.5h-3.2l-.2-1.5a7.7 7.7 0 0 1-1.4-.8l-1.4.5-1.6-2.8 1.1-.9a7.5 7.5 0 0 1 0-1.6l-1.1-.9 1.6-2.8 1.4.5a7.7 7.7 0 0 1 1.4-.8l.2-1.5h3.2l.2 1.5a7.7 7.7 0 0 1 1.4.8l1.4-.5 1.6 2.8-1.1.9a7.5 7.5 0 0 1 0 1.6Z" transform="translate(-1.1 -1.1)" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/></svg>
 </button>
@@ -467,6 +469,7 @@ input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radiu
     if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){message.textContent='Microphone access requires a browser that supports HTTPS microphone input.';return}
     starting=true;micButton.disabled=true;message.textContent='Requesting microphone permission…';
     try{
+      if(localSpeechState==='checking')await checkLocalSpeech();
       stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true},video:false});
       const AC=window.AudioContext||window.webkitAudioContext;if(!AC)throw new Error('Audio analysis is not available in this browser.');
       audioContext=new AC();if(audioContext.state==='suspended')await audioContext.resume();
@@ -581,6 +584,7 @@ input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radiu
       }
       refreshTranscript();
     };
+    rec.onstart=()=>{localBadge.textContent='LISTENING ON-DEVICE';localBadge.className='ready'};
     rec.onerror=e=>{
       if(e.error==='no-speech'||e.error==='aborted')return;
       if(e.error==='language-not-supported'){localSpeechState='pack-missing';localBadge.textContent='LOCAL PACK NEEDED';localBadge.className='warning';localNote.textContent='The browser has no ready local English model. Use the optional setup button to install its language pack; no remote service will be used.';setupLocalButton.hidden=!(SpeechRecognitionClass&&typeof SpeechRecognitionClass.install==='function')}
