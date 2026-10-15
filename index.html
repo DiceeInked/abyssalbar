@@ -259,6 +259,7 @@ button{font:inherit}
       zoom.style.setProperty('--zoom-scale',String(Math.ceil(coverScale)));
       zoom.classList.add('grow');
       window.setTimeout(()=>{
+        menu.style.display='none';
         zoom.style.display='none';
         if(mode==='voice') {
           canvas.style.display='none';
@@ -298,7 +299,7 @@ button{font:inherit}
     experience.inert=true;
     zoom.style.display='block';
     zoom.classList.remove('grow');
-    menu.classList.remove('leaving');
+    menu.style.display='grid';
     opened=false;
     window.setTimeout(()=>{zoom.style.width='0';zoom.style.height='0';},20);
   });
