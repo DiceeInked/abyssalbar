@@ -93,28 +93,28 @@ function frame(now){
  analyser.getByteTimeDomainData(timeData);let sum=0;
  for(let i=0;i<timeData.length;i++){const s=(timeData[i]-128)/128;sum+=s*s}
  const rms=Math.sqrt(sum/timeData.length),raw=clamp((rms-.007)*18*1.6,0,1);
- const attack=reducedMotion?.09:.18,release=reducedMotion?.07:.085;
+ const attack=reducedMotion ? 0.09 : 0.18,release=reducedMotion ? 0.07 : 0.085;
  level+=(raw-level)*(raw>level?1-Math.pow(1-attack,dt):1-Math.pow(1-release,dt));
  if(raw>.075)lastSpeech=now;
  const speaking=now-lastSpeech<155;
  analyser.getByteFrequencyData(freqData);
  orb.style.transform='translate3d(-50%,-50%,0) scale('+(1+level*.72).toFixed(3)+')';
  orb.style.boxShadow='0 0 '+(65+level*65).toFixed(0)+'px rgba(255,255,255,'+(.035+level*.075).toFixed(3)+')';
- updateWave(reducedMotion?.08:.16);
- const responsiveness=reducedMotion?.07:.13;
+ updateWave(reducedMotion ? 0.08 : 0.16);
+ const responsiveness=reducedMotion ? 0.07 : 0.13;
  if(speaking){
   const detected=estimatePitch(timeData,audio.sampleRate);
   if(detected!==null)pitch+=(detected-pitch)*responsiveness;
   // Pitch steers left/right; volume steers up/down, with generous safe margins.
   const targetX=clamp(.5+(pitch-.5)*.74,.13,.87);
   const targetY=clamp(.5-level*.34,.16,.83);
-  const move=1-Math.pow(1-(reducedMotion?.06:.13),dt);
+  const move=1-Math.pow(1-(reducedMotion ? 0.06 : 0.13),dt);
   flameX+=(targetX-flameX)*move;flameY+=(targetY-flameY)*move;
   flame.style.background='#f8f8f8';
   flame.style.boxShadow='0 0 '+(28+level*58).toFixed(0)+'px rgba(255,255,255,'+(.035+level*.09).toFixed(3)+')';
   if(now>=nextCloneAt)emitTrail(now);
  }else{
-  const returnEase=1-Math.pow(1-(reducedMotion?.06:.085),dt);
+  const returnEase=1-Math.pow(1-(reducedMotion ? 0.06 : 0.085),dt);
   flameX+=(.5-flameX)*returnEase;flameY+=(.5-flameY)*returnEase;
   flame.style.background='#858585';flame.style.boxShadow='0 0 34px rgba(255,255,255,.035)';
  }
