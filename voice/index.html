@@ -17,9 +17,9 @@ button{color:inherit}
 #stage:after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(ellipse at center,rgba(255,255,255,.025),transparent 58%)}
 .shape{position:absolute;left:50%;top:50%;pointer-events:none;will-change:transform,left,top,width,height,opacity}
 #circle{width:clamp(160px,34vmin,290px);height:auto;aspect-ratio:1;border-radius:50%;background:#f7f7f7;transform:translate(-50%,-50%) scale(1);box-shadow:0 0 80px rgba(255,255,255,.055);transition:opacity .35s ease}
-#voiceShape{width:min(88vw,760px);height:min(72vh,620px);transform:translate(-50%,-50%);display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:repeat(var(--spectrum-count,49),minmax(0,1fr));align-items:center;justify-items:center;gap:1px}
+#voiceShape{width:min(92vw,1000px);height:min(58vh,460px);transform:translate(-50%,-50%);display:grid;grid-template-columns:repeat(var(--spectrum-count,49),minmax(0,1fr));grid-template-rows:minmax(0,1fr);align-items:center;justify-items:center;gap:1px}
 .spectrum-dot{display:flex;align-items:center;justify-content:center;min-width:0;width:100%;height:100%}
-.spectrum-bar{display:block;width:3px;height:var(--dot-size,4px);max-width:96%;border-radius:999px;background:#f7f7f7;opacity:.85;box-shadow:0 0 8px rgba(255,255,255,.15);transition:width .07s linear,height .07s linear,opacity .07s linear}
+.spectrum-bar{display:block;width:var(--dot-size,4px);height:3px;max-height:96%;border-radius:999px;background:#f7f7f7;opacity:.85;box-shadow:0 0 8px rgba(255,255,255,.15);transition:width .07s linear,height .07s linear,opacity .07s linear}
 #pattern{width:clamp(112px,22vmin,180px);height:auto;aspect-ratio:1;transform:translate(-50%,-50%);transition:left .12s ease-out,top .12s ease-out;z-index:2}
 .orb-layer{position:absolute;inset:0;border-radius:50%;width:100%;height:100%;background:#f8f8f8;transition:background .12s ease,box-shadow .12s ease}
 #core{z-index:1;background:#858585;box-shadow:0 0 34px rgba(255,255,255,.035)}
@@ -109,7 +109,7 @@ input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radiu
   <section class="group" id="spectrumSettings" hidden>
     <div class="setting-row"><label for="dotCount">Spectrum dots</label><output id="dotCountValue" class="setting-value" for="dotCount">49</output></div>
     <input id="dotCount" type="range" min="9" max="97" step="4" value="49">
-    <p class="helper">Choose how many dots make up the vertical spectrum. Their size adjusts automatically to fit.</p>
+    <p class="helper">Choose how many dots make up the horizontal spectrum. Each frequency band grows upward with its own volume.</p>
   </section>
 
   <section class="group">
@@ -197,9 +197,10 @@ input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radiu
     spectrumLevels = Array(count).fill(0);
     voiceShape.replaceChildren();
     voiceShape.style.setProperty('--spectrum-count', String(count));
-    // Keep the overall spectrum height steady. More dots means each dot gets
-    // a smaller footprint, while fewer dots get a more substantial size.
-    const dotSize = clamp(620 / count * 0.34, 2, 8);
+    // Keep the horizontal spectrum within the available width. More dots means
+    // each dot gets narrower, while fewer dots get a more substantial size.
+    const availableWidth = Math.min(window.innerWidth * 0.92, 1000);
+    const dotSize = clamp((availableWidth / count) * 0.34, 1.5, 8);
     voiceShape.style.setProperty('--dot-size', dotSize.toFixed(2) + 'px');
     for (let i = 0; i < count; i++) {
       const cell = document.createElement('span');
@@ -288,14 +289,16 @@ input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radiu
 
   function updateSpectrum(responsiveness) {
     if (!frequencyData || !audioContext) return;
-    const cellHeight = (voiceShape.clientHeight || window.innerHeight * 0.72) / spectrumCount;
-    const maxBarWidth = Math.max(3, Math.min(46, window.innerWidth * 0.18));
+    const cellWidth = (voiceShape.clientWidth || window.innerWidth * 0.92) / spectrumCount;
+    const maxBarHeight = Math.max(12, Math.min(190, window.innerHeight * 0.27));
+    const dotWidth = clamp(cellWidth * 0.34, 1.5, 8);
     const minHz = 65;
     const maxHz = Math.min(9000, audioContext.sampleRate * 0.46);
     const nyquist = audioContext.sampleRate / 2;
 
     for (let i = 0; i < spectrumCount; i++) {
-      // Each row maps to a different frequency band in the vertical spectrum.
+      // Each dot maps to a different frequency band from low pitch on the
+      // left to high pitch on the right. Louder bands grow upward.
       const position = i / Math.max(1, spectrumCount - 1);
       const hz = minHz * Math.pow(maxHz / minHz, position);
       const bin = clamp(Math.round((hz / nyquist) * (frequencyData.length - 1)), 0, frequencyData.length - 1);
@@ -310,10 +313,10 @@ input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radiu
       spectrumLevels[i] += (easedMagnitude - spectrumLevels[i]) * clamp(speed, 0.04, 0.7);
 
       const strength = spectrumLevels[i];
-      const width = strength < 0.075 ? Math.max(2, cellHeight * 0.42) : Math.max(3, cellHeight * 0.42) + strength * (maxBarWidth - Math.max(3, cellHeight * 0.42));
-      const dotSize = clamp(cellHeight * 0.34, 2, 8);
-      spectrumBars[i].style.width = Math.min(maxBarWidth, width).toFixed(1) + 'px';
-      spectrumBars[i].style.height = dotSize.toFixed(1) + 'px';
+      const baseHeight = Math.max(2, dotWidth * 0.72);
+      const height = baseHeight + strength * (maxBarHeight - baseHeight);
+      spectrumBars[i].style.width = dotWidth.toFixed(1) + 'px';
+      spectrumBars[i].style.height = Math.min(maxBarHeight, height).toFixed(1) + 'px';
       spectrumBars[i].style.opacity = (0.72 + strength * 0.28).toFixed(2);
       spectrumBars[i].style.boxShadow = strength > 0.22
         ? '0 0 ' + (2 + strength * 9).toFixed(1) + 'px rgba(255,255,255,' + (0.08 + strength * 0.28).toFixed(2) + ')'
@@ -489,7 +492,7 @@ input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radiu
     clearPatternClones();
     spectrumLevels.fill(0);
     spectrumBars.forEach((bar) => {
-      bar.style.width = '3px';
+      bar.style.width = clamp(((voiceShape.clientWidth || window.innerWidth * 0.92) / spectrumCount) * 0.34, 1.5, 8).toFixed(1) + 'px';
       bar.style.height = '3px';
       bar.style.opacity = '0.85';
       bar.style.boxShadow = 'none';
