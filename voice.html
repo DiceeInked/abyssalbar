@@ -1,0 +1,540 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#000000">
+  <meta name="description" content="A minimal voice visualizer. Speak, and watch each word appear in a living white circle.">
+  <title>VOICE</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --black: #000;
+      --white: #f7f7f7;
+      --muted: #777;
+      --pulse: 1;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      width: 100%;
+      min-width: 280px;
+      height: 100%;
+      min-height: 100%;
+      margin: 0;
+      background: var(--black);
+    }
+
+    body {
+      overflow: hidden;
+      color: var(--white);
+      font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      -webkit-font-smoothing: antialiased;
+      user-select: none;
+    }
+
+    .shell {
+      position: relative;
+      display: grid;
+      width: 100%;
+      height: 100%;
+      min-height: 100svh;
+      place-items: center;
+      isolation: isolate;
+      background: #000;
+    }
+
+    .topline {
+      position: absolute;
+      top: max(23px, env(safe-area-inset-top));
+      left: max(24px, env(safe-area-inset-left));
+      right: max(24px, env(safe-area-inset-right));
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      pointer-events: none;
+    }
+
+    .brand {
+      font-size: 10px;
+      font-weight: 650;
+      letter-spacing: .24em;
+      color: #858585;
+      text-transform: uppercase;
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: #777;
+      font-size: 9px;
+      font-weight: 650;
+      letter-spacing: .17em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #515151;
+      transition: background .25s ease, box-shadow .25s ease;
+    }
+
+    .status.live { color: #c7c7c7; }
+    .status.live .status-dot {
+      background: #f4f4f4;
+      box-shadow: 0 0 12px rgba(255,255,255,.65);
+    }
+
+    .stage {
+      display: grid;
+      place-items: center;
+      width: 100%;
+      padding: 28px;
+      transform: translateY(-1.5vh);
+    }
+
+    .orb {
+      --pulse: 1;
+      display: grid;
+      place-items: center;
+      width: clamp(220px, 52vmin, 390px);
+      aspect-ratio: 1;
+      padding: 12%;
+      border: 0;
+      border-radius: 50%;
+      outline: none;
+      background: var(--white);
+      color: #050505;
+      cursor: pointer;
+      transform: scale(var(--pulse));
+      transform-origin: center;
+      will-change: transform;
+      -webkit-tap-highlight-color: transparent;
+      transition: background .25s ease;
+    }
+
+    .orb:focus-visible {
+      box-shadow: 0 0 0 3px #000, 0 0 0 5px #f7f7f7;
+    }
+
+    .word {
+      display: block;
+      max-width: 100%;
+      overflow-wrap: anywhere;
+      color: #050505;
+      font-size: clamp(25px, 5vmin, 52px);
+      font-weight: 720;
+      letter-spacing: -.055em;
+      line-height: 1.05;
+      text-align: center;
+      text-transform: none;
+    }
+
+    .word.prompt {
+      font-size: clamp(10px, 1.55vmin, 13px);
+      font-weight: 750;
+      letter-spacing: .19em;
+      line-height: 1.7;
+      text-transform: uppercase;
+    }
+
+    .word.small-word { font-size: clamp(19px, 3.8vmin, 37px); }
+
+    .departing-word {
+      position: fixed;
+      z-index: 5;
+      display: block;
+      max-width: min(80vw, 390px);
+      overflow-wrap: anywhere;
+      color: #050505;
+      font-size: clamp(25px, 5vmin, 52px);
+      font-weight: 720;
+      letter-spacing: -.055em;
+      line-height: 1.05;
+      text-align: center;
+      pointer-events: none;
+      transform: translate(-50%, -50%);
+      animation: word-float-away 1.15s cubic-bezier(.22,.7,.25,1) forwards;
+    }
+
+    .departing-word.small-word { font-size: clamp(19px, 3.8vmin, 37px); }
+
+    @keyframes word-float-away {
+      0%   { transform: translate(-50%, -50%) translateY(0); color: #050505; opacity: 1; }
+      32%  { color: #050505; opacity: 1; }
+      58%  { color: #f7f7f7; opacity: .85; }
+      100% { transform: translate(-50%, -50%) translateY(-230px); color: #f7f7f7; opacity: 0; }
+    }
+
+    .bottom {
+      position: absolute;
+      right: max(22px, env(safe-area-inset-right));
+      bottom: max(24px, env(safe-area-inset-bottom));
+      left: max(22px, env(safe-area-inset-left));
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      text-align: center;
+    }
+
+    .hint {
+      margin: 0;
+      color: #666;
+      font-size: 9px;
+      font-weight: 550;
+      letter-spacing: .12em;
+      line-height: 1.6;
+      text-transform: uppercase;
+    }
+
+    .hint.hidden { display: none; }
+
+    .error {
+      max-width: min(500px, 88vw);
+      color: #aaa;
+      font-size: 11px;
+      letter-spacing: .02em;
+      line-height: 1.5;
+      text-transform: none;
+    }
+
+    @media (max-height: 500px) {
+      .stage { transform: none; }
+      .orb { width: min(48vh, 290px); }
+      .topline { top: 15px; }
+      .bottom { bottom: 12px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .status-dot, .orb { transition: none; }
+      .departing-word { animation-duration: .01ms; }
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <header class="topline" aria-hidden="true">
+      <span class="brand">Voice / Visualizer</span>
+      <span class="status" id="status"><span class="status-dot"></span><span id="statusText">Mic off</span></span>
+    </header>
+
+    <section class="stage" aria-label="Voice visualizer">
+      <button class="orb" id="orb" type="button" aria-label="Start microphone and speech recognition">
+        <span class="word prompt" id="word" aria-live="off">Tap to<br>start</span>
+      </button>
+    </section>
+
+    <footer class="bottom">
+      <p class="hint" id="hint">Click the circle to begin · Esc to stop</p>
+      <p class="hint" id="privacy">Live words use your browser’s speech-recognition service.</p>
+      <p class="hint error" id="message" role="status" aria-live="polite"></p>
+    </footer>
+  </main>
+
+  <script>
+    (() => {
+      const orb = document.getElementById('orb');
+      const word = document.getElementById('word');
+      const status = document.getElementById('status');
+      const statusText = document.getElementById('statusText');
+      const hint = document.getElementById('hint');
+      const privacy = document.getElementById('privacy');
+      const message = document.getElementById('message');
+
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      let listening = false;
+      let starting = false;
+      let micStream = null;
+      let audioContext = null;
+      let analyser = null;
+      let timeData = null;
+      let frameId = 0;
+      let recognition = null;
+      let recognitionDisabled = false;
+      let recognitionBusy = false;
+      let recognitionRestartTimer = 0;
+      let recognitionGeneration = 0;
+      let pulse = 1;
+
+      function setStatus(label, live) {
+        statusText.textContent = label;
+        status.classList.toggle('live', Boolean(live));
+      }
+
+      function floatPreviousWordAway() {
+        if (word.classList.contains('prompt')) return;
+        const previous = word.textContent.trim();
+        if (!previous) return;
+
+        const bounds = word.getBoundingClientRect();
+        const ghost = document.createElement('span');
+        ghost.className = 'departing-word' + (word.classList.contains('small-word') ? ' small-word' : '');
+        ghost.textContent = previous;
+        ghost.style.left = (bounds.left + bounds.width / 2) + 'px';
+        ghost.style.top = (bounds.top + bounds.height / 2) + 'px';
+        document.body.appendChild(ghost);
+        ghost.addEventListener('animationend', () => ghost.remove(), { once: true });
+      }
+
+      function showWord(value) {
+        const next = String(value || '').trim();
+        if (!next) return;
+        if (!word.classList.contains('prompt') && word.textContent.trim().toLocaleLowerCase() === next.toLocaleLowerCase()) return;
+        floatPreviousWordAway();
+        word.textContent = next;
+        word.classList.remove('prompt');
+        word.classList.toggle('small-word', next.length > 11);
+        orb.setAttribute('aria-label', 'Listening. Latest recognized word: ' + next + '. Click to stop.');
+      }
+
+      function latestWord(transcript) {
+        const matches = transcript.match(/[\p{L}\p{N}]+(?:['’\-][\p{L}\p{N}]+)*/gu);
+        return matches && matches.length ? matches[matches.length - 1] : '';
+      }
+
+      function startRecognition() {
+        if (!SpeechRecognition) {
+          setStatus('Mic live · no captions', true);
+          message.textContent = 'Your microphone is working, but this browser does not offer live speech recognition. Try a supported browser such as Chrome on desktop.';
+          return;
+        }
+
+        if (!listening || recognitionDisabled) return;
+        if (recognitionRestartTimer) {
+          window.clearTimeout(recognitionRestartTimer);
+          recognitionRestartTimer = 0;
+        }
+
+        // Some browsers take a moment to release their speech service after stop().
+        // Never start a second recognition instance until the previous one has ended.
+        if (recognitionBusy) {
+          recognitionRestartTimer = window.setTimeout(() => {
+            recognitionRestartTimer = 0;
+            if (listening && !recognitionDisabled) startRecognition();
+          }, 350);
+          return;
+        }
+
+        const generation = recognitionGeneration;
+        const instance = new SpeechRecognition();
+        recognition = instance;
+        recognitionBusy = true;
+        instance.lang = 'en-US';
+        instance.continuous = true;
+        instance.interimResults = true;
+        instance.maxAlternatives = 1;
+
+        instance.onstart = () => {
+          if (listening && generation === recognitionGeneration) {
+            setStatus('Listening', true);
+            message.textContent = '';
+          }
+        };
+
+        instance.onresult = (event) => {
+          if (!listening || generation !== recognitionGeneration) return;
+          let transcript = '';
+          for (let i = event.results.length - 1; i >= 0; i--) {
+            const candidate = event.results[i][0] && event.results[i][0].transcript;
+            if (candidate && candidate.trim()) {
+              transcript = candidate.trim();
+              break;
+            }
+          }
+          const token = latestWord(transcript);
+          if (token) showWord(token);
+        };
+
+        instance.onerror = (event) => {
+          if (generation !== recognitionGeneration) return;
+          if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+            recognitionDisabled = true;
+            setStatus('Speech blocked', true);
+            message.textContent = 'Microphone or speech-recognition permission was blocked. Check your browser permissions, then restart.';
+          } else if (event.error === 'language-not-supported') {
+            recognitionDisabled = true;
+            setStatus('Language unavailable', true);
+            message.textContent = 'English speech recognition is not available in this browser.';
+          } else if (event.error !== 'aborted' && event.error !== 'no-speech') {
+            setStatus('Mic live · captions retrying', true);
+            message.textContent = 'Speech recognition had a temporary problem. Trying to reconnect…';
+          }
+        };
+
+        instance.onend = () => {
+          recognitionBusy = false;
+          if (recognition === instance) recognition = null;
+
+          if (!listening || recognitionDisabled) return;
+          if (recognitionRestartTimer) window.clearTimeout(recognitionRestartTimer);
+          recognitionRestartTimer = window.setTimeout(() => {
+            recognitionRestartTimer = 0;
+            if (listening && !recognitionDisabled) startRecognition();
+          }, 350);
+        };
+
+        try {
+          instance.start();
+        } catch (_) {
+          // A few engines briefly reject start() while cleaning up a previous session.
+          recognitionBusy = false;
+          if (recognition === instance) recognition = null;
+          setStatus('Mic live · captions retrying', true);
+          message.textContent = 'Reconnecting speech recognition…';
+          recognitionRestartTimer = window.setTimeout(() => {
+            recognitionRestartTimer = 0;
+            if (listening && !recognitionDisabled) startRecognition();
+          }, 600);
+        }
+      }
+
+      function animate() {
+        if (!listening || !analyser || !timeData) return;
+        analyser.getByteTimeDomainData(timeData);
+        let sum = 0;
+        for (let i = 0; i < timeData.length; i++) {
+          const sample = (timeData[i] - 128) / 128;
+          sum += sample * sample;
+        }
+        const rms = Math.sqrt(sum / timeData.length);
+        const energy = Math.max(0, Math.min(0.58, (rms - 0.012) * 8.4));
+        const target = 1 + energy;
+        pulse += (target - pulse) * (target > pulse ? 0.28 : 0.11);
+        orb.style.setProperty('--pulse', pulse.toFixed(3));
+        frameId = window.requestAnimationFrame(animate);
+      }
+
+      async function startSession() {
+        if (starting || listening) return;
+        starting = true;
+        orb.disabled = true;
+        message.textContent = '';
+        setStatus('Requesting mic', false);
+
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          setStatus('Mic unavailable', false);
+          message.textContent = 'Microphone access requires a supported browser and a secure HTTPS website.';
+          starting = false;
+          orb.disabled = false;
+          return;
+        }
+
+        try {
+          micStream = await navigator.mediaDevices.getUserMedia({
+            audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+            video: false
+          });
+
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          if (AudioContextClass) {
+            audioContext = new AudioContextClass();
+            if (audioContext.state === 'suspended') await audioContext.resume();
+            analyser = audioContext.createAnalyser();
+            analyser.fftSize = 1024;
+            analyser.smoothingTimeConstant = 0.72;
+            const source = audioContext.createMediaStreamSource(micStream);
+            source.connect(analyser);
+            timeData = new Uint8Array(analyser.fftSize);
+          }
+
+          listening = true;
+          recognitionGeneration++;
+          recognitionDisabled = false;
+          starting = false;
+          orb.disabled = false;
+          orb.classList.add('active');
+          hint.textContent = 'Click the circle or press Esc to stop';
+          privacy.classList.add('hidden');
+          setStatus(SpeechRecognition ? 'Listening' : 'Mic live', true);
+          word.textContent = '…';
+          word.classList.remove('prompt', 'small-word');
+          orb.setAttribute('aria-label', 'Microphone active. Click to stop listening.');
+          if (analyser && timeData) frameId = window.requestAnimationFrame(animate);
+          startRecognition();
+        } catch (error) {
+          if (micStream) micStream.getTracks().forEach((track) => track.stop());
+          micStream = null;
+          listening = false;
+          starting = false;
+          orb.disabled = false;
+          setStatus('Mic denied', false);
+          message.textContent = error && error.name === 'NotAllowedError'
+            ? 'Microphone access was not allowed. Allow it in your browser’s site settings, then click the circle again.'
+            : 'Could not start the microphone. Check that a microphone is connected and available to your browser.';
+        }
+      }
+
+      async function stopSession() {
+        listening = false;
+        starting = false;
+        recognitionGeneration++;
+        if (recognitionRestartTimer) {
+          window.clearTimeout(recognitionRestartTimer);
+          recognitionRestartTimer = 0;
+        }
+        if (frameId) window.cancelAnimationFrame(frameId);
+        frameId = 0;
+
+        // Keep the instance's onend handler attached so the browser can tell us
+        // when its speech service is actually released before the next start.
+        if (recognition) {
+          recognitionDisabled = true;
+          try { recognition.stop(); } catch (_) {
+            recognitionBusy = false;
+            recognition = null;
+          }
+        } else {
+          recognitionBusy = false;
+        }
+
+        if (micStream) {
+          micStream.getTracks().forEach((track) => track.stop());
+          micStream = null;
+        }
+
+        if (audioContext) {
+          try { await audioContext.close(); } catch (_) {}
+          audioContext = null;
+        }
+
+        analyser = null;
+        timeData = null;
+        pulse = 1;
+        orb.style.setProperty('--pulse', '1');
+        orb.disabled = false;
+        orb.classList.remove('active');
+        word.textContent = 'Tap to start';
+        word.classList.add('prompt');
+        word.classList.remove('small-word');
+        orb.setAttribute('aria-label', 'Start microphone and speech recognition');
+        hint.textContent = 'Click the circle to begin · Esc to stop';
+        privacy.classList.remove('hidden');
+        setStatus('Mic off', false);
+      }
+
+      orb.addEventListener('click', () => {
+        if (listening) stopSession();
+        else startSession();
+      });
+
+      window.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && listening) stopSession();
+      });
+
+      window.addEventListener('pagehide', () => {
+        if (micStream) micStream.getTracks().forEach((track) => track.stop());
+        if (recognition) {
+          try { recognition.stop(); } catch (_) {}
+        }
+      });
+    })();
+  </script>
+</body>
+</html>
