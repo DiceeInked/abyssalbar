@@ -371,7 +371,7 @@ input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radiu
         const py = 50 - level * 34;
         pattern.style.left = clamp(px, 10, 90).toFixed(2) + '%';
         pattern.style.top = clamp(py, 16, 83).toFixed(2) + '%';
-        const whiteness = Math.round(130 + clamp(level * 2.8, 0, 1) * 125);
+        const whiteness = Math.round(222 + clamp(level, 0, 1) * 33);
         core.style.background = 'rgb(' + whiteness + ',' + whiteness + ',' + whiteness + ')';
         core.style.boxShadow = '0 0 ' + (28 + level * 58).toFixed(0) + 'px rgba(255,255,255,' + (0.035 + level * 0.09).toFixed(3) + ')';
 
