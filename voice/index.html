@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<meta name="description" content="A quiet, voice-reactive visualizer. Shape, sound, and movement in one minimal space.">
+<title>Voice</title>
+<style>
+:root{color-scheme:dark;--bg:#000;--fg:#f8f8f8;--muted:#777;--panel:#101010;--line:#292929;--ease:cubic-bezier(.2,.75,.25,1)}
+*{box-sizing:border-box}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:var(--bg)}
+body{font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:var(--fg);-webkit-font-smoothing:antialiased;overscroll-behavior:none}
+button,input{font:inherit}
+button{color:inherit}
+#stage{position:fixed;inset:0;overflow:hidden;background:#000;isolation:isolate}
+#stage:after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(ellipse at center,rgba(255,255,255,.025),transparent 58%)}
+.shape{position:absolute;left:50%;top:50%;pointer-events:none;will-change:transform,left,top,width,height,opacity}
+#circle{width:clamp(160px,34vmin,290px);height:auto;aspect-ratio:1;border-radius:50%;background:#f7f7f7;transform:translate(-50%,-50%) scale(1);box-shadow:0 0 80px rgba(255,255,255,.055);transition:opacity .35s ease}
+#voiceShape{width:22vw;height:3px;min-width:76px;max-width:88vw;border-radius:999px;background:#f7f7f7;transform:translate(-50%,-50%);box-shadow:0 0 24px rgba(255,255,255,.15),0 0 65px rgba(255,255,255,.08);transition:opacity .35s ease}
+#pattern{width:clamp(112px,22vmin,180px);height:auto;aspect-ratio:1;transform:translate(-50%,-50%);transition:opacity .35s ease}
+.orb-layer{position:absolute;inset:0;border-radius:50%;width:100%;height:100%;background:#f8f8f8}
+#echo{z-index:0;opacity:0;transform:translateY(-14px);filter:blur(.4px)}
+#core{z-index:1;box-shadow:0 0 48px rgba(255,255,255,.06)}
+#circle[hidden],#voiceShape[hidden],#pattern[hidden]{display:none}
+#gear{position:fixed;z-index:20;top:max(16px,env(safe-area-inset-top));right:max(16px,env(safe-area-inset-right));width:44px;height:44px;display:grid;place-items:center;padding:0;border:1px solid transparent;border-radius:50%;background:rgba(255,255,255,.035);color:#bdbdbd;cursor:pointer;transition:background .2s,color .2s,border-color .2s}
+#gear:hover,#gear[aria-expanded=true]{background:#171717;color:#fff;border-color:#303030}
+#gear:focus-visible,.choice:focus-visible,.mic-button:focus-visible,.reset:focus-visible{outline:2px solid #fff;outline-offset:3px}
+#gear svg{width:20px;height:20px}
+#settings{position:fixed;z-index:19;top:max(70px,calc(env(safe-area-inset-top) + 58px));right:max(12px,env(safe-area-inset-right));width:min(352px,calc(100vw - 24px));max-height:calc(100dvh - 96px);overflow:auto;padding:22px;border:1px solid #2a2a2a;border-radius:18px;background:rgba(12,12,12,.96);box-shadow:0 22px 90px rgba(0,0,0,.6);backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);opacity:0;visibility:hidden;transform:translateY(-8px) scale(.985);transform-origin:top right;transition:opacity .18s ease,transform .18s ease,visibility .18s}
+#settings.open{opacity:1;visibility:visible;transform:translateY(0) scale(1)}
+.panel-heading{display:flex;justify-content:space-between;align-items:center;gap:16px;margin:0 0 24px}
+.panel-heading h1{margin:0;font-size:15px;font-weight:600;letter-spacing:-.02em}
+.panel-heading span{color:#777;font-size:10px;letter-spacing:.16em;text-transform:uppercase}
+.group{padding:0 0 21px;margin:0 0 21px;border-bottom:1px solid #242424}
+.group:last-of-type{border-bottom:0;margin-bottom:2px;padding-bottom:6px}
+.group-title{display:block;margin:0 0 12px;color:#8b8b8b;font-size:10px;font-weight:650;letter-spacing:.16em;text-transform:uppercase}
+.choices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.choice{display:flex;min-width:0;min-height:72px;flex-direction:column;justify-content:center;align-items:center;gap:9px;padding:10px 4px;border:1px solid #2a2a2a;border-radius:11px;background:#080808;color:#8f8f8f;cursor:pointer;transition:background .18s,border-color .18s,color .18s}
+.choice[aria-pressed=true]{background:#f4f4f4;border-color:#f4f4f4;color:#090909}
+.choice-icon{width:25px;height:22px;display:grid;place-items:center}
+.choice-icon.circle:before{content:"";display:block;width:19px;height:19px;border-radius:50%;background:currentColor}
+.choice-icon.voice:before{content:"";display:block;width:23px;height:2px;border-radius:4px;background:currentColor;box-shadow:0 0 0 2px transparent}
+.choice-icon.pattern:before{content:"";display:block;width:17px;height:17px;border-radius:50%;background:currentColor;box-shadow:0 -6px 0 -1px currentColor;opacity:.95}
+.choice-name{font-size:11px;font-weight:550}
+.setting-row{display:flex;justify-content:space-between;align-items:center;gap:14px;margin:0 0 12px}
+.setting-row label,.setting-row .setting-label{font-size:12px;color:#e1e1e1}
+.setting-value{color:#8a8a8a;font-size:11px;font-variant-numeric:tabular-nums}
+input[type=range]{display:block;width:100%;height:18px;margin:0;background:transparent;accent-color:#f4f4f4;cursor:pointer}
+input[type=range]::-webkit-slider-runnable-track{height:2px;background:#363636}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:13px;height:13px;border-radius:50%;margin-top:-5.5px;background:#f4f4f4;border:0}
+input[type=range]::-moz-range-track{height:2px;background:#363636}
+input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radius:50%;background:#f4f4f4}
+.helper{margin:8px 0 0;color:#727272;font-size:10px;line-height:1.5}
+.switch-row{display:flex;align-items:center;justify-content:space-between;gap:20px}
+.switch-copy{display:grid;gap:5px}
+.switch-copy strong{font-size:12px;font-weight:500}
+.switch-copy small{font-size:10px;color:#777;line-height:1.45}
+.switch{position:relative;flex:0 0 38px;width:38px;height:22px}
+.switch input{position:absolute;width:1px;height:1px;opacity:0}
+.switch-track{position:absolute;inset:0;border-radius:99px;background:#343434;cursor:pointer;transition:background .2s}
+.switch-track:after{content:"";position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#ddd;transition:transform .2s}
+.switch input:checked+.switch-track{background:#f2f2f2}
+.switch input:checked+.switch-track:after{transform:translateX(16px);background:#111}
+.switch input:focus-visible+.switch-track{outline:2px solid #fff;outline-offset:3px}
+.panel-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:14px;border-top:1px solid #242424}
+#micStatus{display:flex;align-items:center;gap:7px;color:#797979;font-size:10px}
+#statusDot{width:6px;height:6px;border-radius:50%;background:#555}
+#micStatus.live #statusDot{background:#f7f7f7;box-shadow:0 0 10px rgba(255,255,255,.55)}
+.reset{padding:7px 0;border:0;background:none;color:#aaa;font-size:10px;cursor:pointer}
+.reset:hover{color:#fff}
+#micButton{position:fixed;z-index:10;bottom:max(28px,calc(env(safe-area-inset-bottom) + 16px));left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:10px;padding:12px 17px;border:1px solid #2d2d2d;border-radius:99px;background:rgba(10,10,10,.78);color:#e7e7e7;font-size:11px;letter-spacing:.015em;white-space:nowrap;cursor:pointer;box-shadow:0 10px 35px rgba(0,0,0,.28);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);transition:border-color .2s,background .2s}
+#micButton:hover{border-color:#626262;background:#151515}
+#micButton .button-dot{width:6px;height:6px;border-radius:50%;background:#858585}
+#micButton.live .button-dot{background:#f7f7f7;box-shadow:0 0 10px rgba(255,255,255,.6)}
+#micButton[disabled]{opacity:.6;cursor:wait}
+#message{position:fixed;z-index:11;bottom:max(78px,calc(env(safe-area-inset-bottom) + 66px));left:50%;transform:translateX(-50%);width:min(430px,calc(100vw - 34px));margin:0;color:#929292;text-align:center;font-size:11px;line-height:1.5;pointer-events:none;text-wrap:balance}
+@media(max-width:520px){#settings{padding:19px}.choice{min-height:66px}#micButton{bottom:max(21px,calc(env(safe-area-inset-bottom) + 12px))}#circle{width:min(68vw,34vh)}}
+@media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<main id="stage" aria-label="Voice-reactive visualizer">
+  <div id="circle" class="shape" aria-hidden="true"></div>
+  <div id="voiceShape" class="shape" aria-hidden="true" hidden></div>
+  <div id="pattern" class="shape" aria-hidden="true" hidden>
+    <div id="echo" class="orb-layer"></div>
+    <div id="core" class="orb-layer"></div>
+  </div>
+</main>
+
+<button id="gear" type="button" aria-label="Open visualizer settings" aria-expanded="false" aria-controls="settings">
+  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 8.8a3.2 3.2 0 1 0 0 6.4 3.2 3.2 0 0 0 0-6.4Z" stroke="currentColor" stroke-width="1.5"/><path d="m19.1 13.4 1.1.9-1.6 2.8-1.4-.5a7.7 7.7 0 0 1-1.4.8l-.2 1.5h-3.2l-.2-1.5a7.7 7.7 0 0 1-1.4-.8l-1.4.5-1.6-2.8 1.1-.9a7.5 7.5 0 0 1 0-1.6l-1.1-.9 1.6-2.8 1.4.5a7.7 7.7 0 0 1 1.4-.8l.2-1.5h3.2l.2 1.5a7.7 7.7 0 0 1 1.4.8l1.4-.5 1.6 2.8-1.1.9a7.5 7.5 0 0 1 0 1.6Z" transform="translate(-1.1 -1.1)" stroke="currentColor" stroke-width="1.25" stroke-linejoin="round"/></svg>
+</button>
+
+<aside id="settings" aria-label="Visualizer settings" aria-hidden="true">
+  <div class="panel-heading"><h1>Settings</h1><span>Voice / 01</span></div>
+
+  <section class="group" aria-labelledby="shapeTitle">
+    <span class="group-title" id="shapeTitle">Main shape</span>
+    <div class="choices" role="group" aria-label="Choose a main shape">
+      <button class="choice" type="button" data-shape="circle" aria-pressed="true"><span class="choice-icon circle" aria-hidden="true"></span><span class="choice-name">Circle</span></button>
+      <button class="choice" type="button" data-shape="voice" aria-pressed="false"><span class="choice-icon voice" aria-hidden="true"></span><span class="choice-name">Voice</span></button>
+      <button class="choice" type="button" data-shape="pattern" aria-pressed="false"><span class="choice-icon pattern" aria-hidden="true"></span><span class="choice-name">Pattern</span></button>
+    </div>
+  </section>
+
+  <section class="group">
+    <div class="setting-row"><label for="sensitivity">Microphone sensitivity</label><output id="sensitivityValue" class="setting-value" for="sensitivity">1.6×</output></div>
+    <input id="sensitivity" type="range" min="0.5" max="3" step="0.1" value="1.6">
+    <p class="helper">Higher sensitivity makes quieter sounds create a stronger response.</p>
+  </section>
+
+  <section class="group">
+    <div class="setting-row"><label for="response">Motion response</label><output id="responseValue" class="setting-value" for="response">0.20</output></div>
+    <input id="response" type="range" min="0.06" max="0.42" step="0.02" value="0.20">
+    <p class="helper">Controls how quickly the shape follows changes in your voice.</p>
+  </section>
+
+  <section class="group">
+    <div class="switch-row">
+      <div class="switch-copy"><strong>Pitch movement</strong><small>Let higher and lower notes steer the Pattern shape.</small></div>
+      <label class="switch"><input id="pitchEnabled" type="checkbox" checked><span class="switch-track"></span></label>
+    </div>
+  </section>
+
+  <div class="panel-footer">
+    <span id="micStatus"><span id="statusDot"></span><span id="statusText">Microphone off</span></span>
+    <button id="reset" class="reset" type="button">Reset settings</button>
+  </div>
+</aside>
+
+<button id="micButton" class="mic-button" type="button"><span class="button-dot" aria-hidden="true"></span><span id="micButtonText">Enable microphone</span></button>
+<p id="message" role="status" aria-live="polite">Your voice shapes the motion. Microphone access starts only when you press the button.</p>
+
+<script>
+(() => {
+  const circle = document.getElementById('circle');
+  const voiceShape = document.getElementById('voiceShape');
+  const pattern = document.getElementById('pattern');
+  const echo = document.getElementById('echo');
+  const core = document.getElementById('core');
+  const gear = document.getElementById('gear');
+  const settings = document.getElementById('settings');
+  const micButton = document.getElementById('micButton');
+  const micButtonText = document.getElementById('micButtonText');
+  const message = document.getElementById('message');
+  const micStatus = document.getElementById('micStatus');
+  const statusText = document.getElementById('statusText');
+  const sensitivity = document.getElementById('sensitivity');
+  const sensitivityValue = document.getElementById('sensitivityValue');
+  const response = document.getElementById('response');
+  const responseValue = document.getElementById('responseValue');
+  const pitchEnabled = document.getElementById('pitchEnabled');
+  const shapeButtons = Array.from(document.querySelectorAll('[data-shape]'));
+  const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  let selectedShape = 'circle';
+  let listening = false;
+  let starting = false;
+  let stream = null;
+  let audioContext = null;
+  let analyser = null;
+  let source = null;
+  let timeData = null;
+  let frameId = 0;
+  let level = 0;
+  let pitchPosition = 0.5;
+  let echoLife = 0;
+  let previousLevel = 0;
+  let sensitivitySetting = Number(sensitivity.value);
+  let responseSetting = Number(response.value);
+
+  function clamp(value, min, max) {
+    return Math.min(max, Math.max(min, value));
+  }
+
+  function toggleSettings(force) {
+    const open = typeof force === 'boolean' ? force : !settings.classList.contains('open');
+    settings.classList.toggle('open', open);
+    settings.setAttribute('aria-hidden', String(!open));
+    gear.setAttribute('aria-expanded', String(open));
+    gear.setAttribute('aria-label', open ? 'Close visualizer settings' : 'Open visualizer settings');
+  }
+
+  function setShape(shapeName) {
+    selectedShape = shapeName;
+    circle.hidden = shapeName !== 'circle';
+    voiceShape.hidden = shapeName !== 'voice';
+    pattern.hidden = shapeName !== 'pattern';
+    shapeButtons.forEach((button) => {
+      button.setAttribute('aria-pressed', String(button.dataset.shape === shapeName));
+    });
+  }
+
+  function setStatus(label, live) {
+    statusText.textContent = label;
+    micStatus.classList.toggle('live', Boolean(live));
+    micButton.classList.toggle('live', Boolean(live));
+  }
+
+  function estimatePitch(bytes, sampleRate) {
+    const data = new Float32Array(bytes.length);
+    let mean = 0;
+    for (let i = 0; i < bytes.length; i++) mean += (bytes[i] - 128) / 128;
+    mean /= bytes.length;
+    let energy = 0;
+    for (let i = 0; i < bytes.length; i++) {
+      data[i] = (bytes[i] - 128) / 128 - mean;
+      energy += data[i] * data[i];
+    }
+    if (Math.sqrt(energy / data.length) < 0.012) return null;
+
+    const minLag = Math.max(25, Math.floor(sampleRate / 430));
+    const maxLag = Math.min(Math.floor(sampleRate / 65), Math.floor(data.length * 0.44));
+    const limit = data.length - maxLag;
+    let bestLag = 0;
+    let bestCorrelation = 0;
+    for (let lag = minLag; lag <= maxLag; lag += 2) {
+      let cross = 0;
+      let a2 = 0;
+      let b2 = 0;
+      for (let i = 0; i < limit; i += 3) {
+        const a = data[i];
+        const b = data[i + lag];
+        cross += a * b;
+        a2 += a * a;
+        b2 += b * b;
+      }
+      const correlation = cross / Math.sqrt((a2 * b2) || 1);
+      if (correlation > bestCorrelation) {
+        bestCorrelation = correlation;
+        bestLag = lag;
+      }
+    }
+    if (bestCorrelation < 0.36 || !bestLag) return null;
+    const hz = sampleRate / bestLag;
+    if (hz < 65 || hz > 430) return null;
+    const normalized = (Math.log(hz) - Math.log(80)) / (Math.log(400) - Math.log(80));
+    return clamp(normalized, 0, 1);
+  }
+
+  function drawFrame() {
+    if (!listening || !analyser || !timeData) return;
+    analyser.getByteTimeDomainData(timeData);
+    let squareSum = 0;
+    for (let i = 0; i < timeData.length; i++) {
+      const sample = (timeData[i] - 128) / 128;
+      squareSum += sample * sample;
+    }
+    const rms = Math.sqrt(squareSum / timeData.length);
+    const rawLevel = clamp((rms - 0.007) * 18 * sensitivitySetting, 0, 1);
+    const responsiveness = reducedMotion ? Math.min(0.1, responseSetting) : responseSetting;
+    level += (rawLevel - level) * (rawLevel > level ? responsiveness : responsiveness * 0.48);
+
+    if (level > previousLevel + 0.018) echoLife = 1;
+    echoLife *= 0.84;
+    previousLevel = level;
+
+    if (pitchEnabled.checked && selectedShape === 'pattern') {
+      const detected = estimatePitch(timeData, audioContext.sampleRate);
+      if (detected !== null) pitchPosition += (detected - pitchPosition) * responsiveness;
+    }
+
+    circle.style.transform = 'translate(-50%,-50%) scale(' + (1 + level * 0.72).toFixed(3) + ')';
+    circle.style.boxShadow = '0 0 ' + (65 + level * 65).toFixed(0) + 'px rgba(255,255,255,' + (0.035 + level * 0.075).toFixed(3) + ')';
+
+    const beamWidth = Math.min(window.innerWidth * 0.88, window.innerWidth * (0.2 + level * 1.1));
+    const beamHeight = 2 + level * Math.min(42, window.innerHeight * 0.055);
+    voiceShape.style.width = beamWidth.toFixed(1) + 'px';
+    voiceShape.style.height = beamHeight.toFixed(1) + 'px';
+    voiceShape.style.boxShadow = '0 0 ' + (18 + level * 45).toFixed(0) + 'px rgba(255,255,255,' + (0.09 + level * 0.24).toFixed(3) + ')';
+
+    let px = 50;
+    let py = 52;
+    if (pitchEnabled.checked) px = 50 + (pitchPosition - 0.5) * 74;
+    else px = 50 + Math.sin(performance.now() * 0.00055) * 12;
+    py = 53 - level * 35 + Math.sin(performance.now() * 0.0007) * (reducedMotion ? 0 : 2.5);
+    pattern.style.left = clamp(px, 10, 90).toFixed(2) + '%';
+    pattern.style.top = clamp(py, 16, 79).toFixed(2) + '%';
+    echo.style.transform = 'translateY(' + (-10 - level * 60).toFixed(1) + 'px) scale(1)';
+    echo.style.opacity = clamp(echoLife * (0.14 + level * 0.72), 0, 0.78).toFixed(3);
+    core.style.boxShadow = '0 0 ' + (30 + level * 55).toFixed(0) + 'px rgba(255,255,255,' + (0.035 + level * 0.09).toFixed(3) + ')';
+
+    frameId = window.requestAnimationFrame(drawFrame);
+  }
+
+  async function startListening() {
+    if (starting || listening) return;
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      message.textContent = 'This browser cannot access the microphone here. Open the page over HTTPS in a browser that supports microphone input.';
+      return;
+    }
+    starting = true;
+    micButton.disabled = true;
+    message.textContent = 'Requesting microphone access…';
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+        video: false
+      });
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContextClass) throw new Error('Audio analysis is not available in this browser.');
+      audioContext = new AudioContextClass();
+      if (audioContext.state === 'suspended') await audioContext.resume();
+      analyser = audioContext.createAnalyser();
+      analyser.fftSize = 2048;
+      analyser.smoothingTimeConstant = 0.72;
+      source = audioContext.createMediaStreamSource(stream);
+      source.connect(analyser);
+      timeData = new Uint8Array(analyser.fftSize);
+      listening = true;
+      level = 0;
+      echoLife = 0;
+      previousLevel = 0;
+      micButtonText.textContent = 'Stop listening';
+      message.textContent = 'Listening. Your microphone audio is used locally to animate the shape.';
+      setStatus('Microphone on', true);
+      frameId = window.requestAnimationFrame(drawFrame);
+    } catch (error) {
+      if (stream) stream.getTracks().forEach((track) => track.stop());
+      stream = null;
+      message.textContent = error && error.name === 'NotAllowedError'
+        ? 'Microphone access was blocked. Allow microphone permission for this site, then try again.'
+        : (error && error.message ? error.message : 'Could not start the microphone. Check your browser permissions.');
+      setStatus('Microphone off', false);
+    } finally {
+      starting = false;
+      micButton.disabled = false;
+    }
+  }
+
+  async function stopListening() {
+    listening = false;
+    if (frameId) window.cancelAnimationFrame(frameId);
+    frameId = 0;
+    if (stream) stream.getTracks().forEach((track) => track.stop());
+    stream = null;
+    if (source) {
+      try { source.disconnect(); } catch (_) {}
+    }
+    source = null;
+    if (audioContext) {
+      try { await audioContext.close(); } catch (_) {}
+    }
+    audioContext = null;
+    analyser = null;
+    timeData = null;
+    level = 0;
+    previousLevel = 0;
+    echoLife = 0;
+    circle.style.transform = 'translate(-50%,-50%) scale(1)';
+    circle.style.boxShadow = '0 0 80px rgba(255,255,255,.055)';
+    voiceShape.style.width = '22vw';
+    voiceShape.style.height = '3px';
+    voiceShape.style.boxShadow = '0 0 24px rgba(255,255,255,.15),0 0 65px rgba(255,255,255,.08)';
+    pattern.style.left = '50%';
+    pattern.style.top = '50%';
+    echo.style.opacity = '0';
+    echo.style.transform = 'translateY(-14px)';
+    core.style.boxShadow = '0 0 48px rgba(255,255,255,.06)';
+    micButtonText.textContent = 'Enable microphone';
+    message.textContent = 'Microphone off. Press the button to start again.';
+    setStatus('Microphone off', false);
+  }
+
+  gear.addEventListener('click', () => toggleSettings());
+  shapeButtons.forEach((button) => button.addEventListener('click', () => setShape(button.dataset.shape)));
+  micButton.addEventListener('click', () => {
+    if (listening) stopListening();
+    else startListening();
+  });
+  sensitivity.addEventListener('input', () => {
+    sensitivitySetting = Number(sensitivity.value);
+    sensitivityValue.textContent = sensitivitySetting.toFixed(1) + '×';
+  });
+  response.addEventListener('input', () => {
+    responseSetting = Number(response.value);
+    responseValue.textContent = responseSetting.toFixed(2);
+  });
+  pitchEnabled.addEventListener('change', () => {
+    if (!pitchEnabled.checked) pattern.style.left = '50%';
+  });
+  document.getElementById('reset').addEventListener('click', () => {
+    sensitivity.value = '1.6';
+    response.value = '0.20';
+    pitchEnabled.checked = true;
+    sensitivitySetting = 1.6;
+    responseSetting = 0.20;
+    sensitivityValue.textContent = '1.6×';
+    responseValue.textContent = '0.20';
+    setShape('circle');
+  });
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && settings.classList.contains('open')) toggleSettings(false);
+  });
+  document.addEventListener('pointerdown', (event) => {
+    if (!settings.classList.contains('open')) return;
+    if (!settings.contains(event.target) && !gear.contains(event.target)) toggleSettings(false);
+  });
+  window.addEventListener('pagehide', () => {
+    listening = false;
+    if (frameId) window.cancelAnimationFrame(frameId);
+    if (stream) stream.getTracks().forEach((track) => track.stop());
+    if (audioContext) audioContext.close().catch(() => {});
+  });
+  setShape('circle');
+})();
+</script>
+</body>
+</html>
