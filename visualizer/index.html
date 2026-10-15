@@ -6,23 +6,23 @@
 <meta name="theme-color" content="#000000">
 <title>Voice · Combined</title>
 <style>
-:root{color-scheme:dark;--black:#050505;--white:#f8f8f8}
+:root{color-scheme:dark;--black:#000;--white:#fff}
 *{box-sizing:border-box}
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000;color:#fff;font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
 #stage{position:fixed;inset:0;overflow:hidden;background:#000;isolation:isolate}
 #particles{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none}
-#flame{position:absolute;left:50%;top:50%;width:clamp(60px,13vmin,112px);aspect-ratio:1;border-radius:50%;background:#858585;transform:translate3d(-50%,-50%,0);z-index:2;will-change:left,top,background;box-shadow:0 0 34px rgba(255,255,255,.035)}
-.orb{position:absolute;left:50%;top:50%;width:clamp(160px,34vmin,290px);aspect-ratio:1;border-radius:50%;background:var(--white);transform:translate3d(-50%,-50%,0) scale(1);z-index:3;will-change:transform;box-shadow:0 0 65px rgba(255,255,255,.035)}
+#flame{position:absolute;left:50%;top:50%;width:clamp(60px,13vmin,112px);aspect-ratio:1;border-radius:50%;background:#808080;transform:translate3d(-50%,-50%,0);z-index:2;will-change:left,top}
+.orb{position:absolute;left:50%;top:50%;width:clamp(160px,34vmin,290px);aspect-ratio:1;border-radius:50%;background:var(--white);transform:translate3d(-50%,-50%,0) scale(1);z-index:3;will-change:transform}
 .wave{position:absolute;left:50%;top:50%;width:clamp(130px,27.88vmin,238px);height:clamp(100px,28vmin,230px);transform:translate3d(-50%,-50%,0);display:grid;grid-template-columns:repeat(5,minmax(0,1fr));align-items:center;justify-items:center;gap:clamp(5px,1.7vmin,15px);z-index:4;pointer-events:none}
-.dot{display:block;width:clamp(8px,2.4vmin,15px);height:clamp(8px,2.4vmin,15px);border-radius:50%;background:#050505;transform:scaleY(1);transform-origin:center;will-change:transform;opacity:.96}
+.dot{display:block;width:clamp(8px,2.4vmin,15px);height:clamp(8px,2.4vmin,15px);border-radius:50%;background:#000;transform:scaleY(1);transform-origin:center;will-change:transform}
 .controls{position:fixed;z-index:10;left:50%;bottom:max(26px,env(safe-area-inset-bottom));transform:translateX(-50%);display:flex;align-items:center}
-.controls button{border:1px solid #303030;border-radius:99px;padding:12px 17px;background:rgba(12,12,12,.94);color:#eee;font:inherit;font-size:11px;white-space:nowrap;cursor:pointer;transition:background .16s ease,border-color .16s ease}
-.controls button:hover{background:#1a1a1a;border-color:#4a4a4a}
-.controls button:disabled{opacity:.6;cursor:wait}
-.status{position:fixed;top:max(20px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);color:#777;font-size:10px;letter-spacing:.15em;text-transform:uppercase;white-space:nowrap;z-index:10}
-.status.live{color:#eee}
+.controls button{border:2px solid #fff;border-radius:0;padding:12px 17px;background:#fff;color:#000;font:inherit;font-size:11px;font-weight:650;white-space:nowrap;cursor:pointer;transition:none}
+.controls button:hover{background:#000;color:#fff;border-color:#fff}
+.controls button:disabled{cursor:wait}
+.status{position:fixed;top:max(20px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);color:#888;font-size:10px;letter-spacing:.15em;text-transform:uppercase;white-space:nowrap;z-index:10}
+.status.live{color:#fff}
 #message{position:fixed;z-index:10;bottom:max(78px,calc(env(safe-area-inset-bottom) + 64px));left:50%;transform:translateX(-50%);width:min(440px,calc(100vw - 34px));margin:0;text-align:center;color:#777;font-size:11px;line-height:1.5;pointer-events:none}
-@media(prefers-reduced-motion:reduce){.orb{transition:none}}
+
 </style>
 </head>
 <body>
@@ -41,10 +41,10 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000;color:
 const orb=document.getElementById('orb'),flame=document.getElementById('flame'),dots=[...document.querySelectorAll('.dot')],canvas=document.getElementById('particles'),ctx=canvas.getContext('2d'),mic=document.getElementById('mic'),status=document.getElementById('status'),message=document.getElementById('message');
 const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const TRAIL_INTERVAL=58,TRAIL_DURATION=690;
-let stream=null,audio=null,analyser=null,source=null,timeData=null,freqData=null,raf=0,listening=false,starting=false,level=0,pitch=.5,lastSpeech=0,nextCloneAt=0,trails=[],width=0,height=0,dpr=1,flameX=.5,flameY=.5,previousTime=0;
+let stream=null,audio=null,analyser=null,source=null,timeData=null,freqData=null,raf=0,listening=false,starting=false,stopping=false,level=0,pitch=.5,lastSpeech=0,lastPitchAt=0,nextCloneAt=0,trails=[],width=0,height=0,dpr=1,flameX=.5,flameY=.5,previousTime=0,flameDiameter=100;
 const dotLevels=[0,0,0,0,0];
 function clamp(v,min,max){return Math.min(max,Math.max(min,v))}
-function resize(){width=innerWidth;height=innerHeight;dpr=Math.min(window.devicePixelRatio||1,2);canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);canvas.style.width=width+'px';canvas.style.height=height+'px';ctx.setTransform(dpr,0,0,dpr,0,0);drawTrails(performance.now())}
+function resize(){width=innerWidth;height=innerHeight;dpr=Math.min(window.devicePixelRatio||1,2);canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);canvas.style.width=width+'px';canvas.style.height=height+'px';ctx.setTransform(dpr,0,0,dpr,0,0);flameDiameter=flame.getBoundingClientRect().width||100;trails.length=0;drawTrails(performance.now())}
 // Pitch estimator adapted from the original Pattern prototype.
 function estimatePitch(bytes,sampleRate){
  const data=new Float32Array(bytes.length);let mean=0;
@@ -62,15 +62,13 @@ function estimatePitch(bytes,sampleRate){
 function emitTrail(now){trails.push({x:flameX*width,y:flameY*height,createdAt:now});if(trails.length>18)trails.shift();nextCloneAt=now+TRAIL_INTERVAL}
 function drawTrails(now){
  ctx.clearRect(0,0,width,height);
- const diameter=flame.getBoundingClientRect().width;
  for(let i=trails.length-1;i>=0;i--){
   const t=trails[i],age=(now-t.createdAt)/TRAIL_DURATION;
   if(age>=1){trails.splice(i,1);continue}
-  const eased=1-Math.pow(1-age,2),rise=Math.max(120,diameter*1.25)*eased;
-  const alpha=.92*(1-age);
-  const radius=diameter*.5;
+  const eased=1-Math.pow(1-age,2),rise=Math.max(120,flameDiameter*1.25)*eased;
+  const radius=flameDiameter*.5;
   ctx.beginPath();ctx.arc(t.x,t.y-rise,radius,0,Math.PI*2);
-  ctx.fillStyle='rgba(248,248,248,'+alpha.toFixed(3)+')';ctx.fill();
+  ctx.fillStyle='#fff';ctx.fill();
  }
 }
 function updateWave(responsiveness){
@@ -84,7 +82,6 @@ function updateWave(responsiveness){
   // Scale each circular dot around its own center. Its position never changes.
   const stretch=1+dotLevels[i]*7.2;
   dots[i].style.transform='scaleY('+stretch.toFixed(3)+')';
-  dots[i].style.opacity=(.82+dotLevels[i]*.18).toFixed(2);
  }
 }
 function frame(now){
@@ -99,30 +96,31 @@ function frame(now){
  const speaking=now-lastSpeech<155;
  analyser.getByteFrequencyData(freqData);
  orb.style.transform='translate3d(-50%,-50%,0) scale('+(1+level*.72).toFixed(3)+')';
- orb.style.boxShadow='0 0 '+(65+level*65).toFixed(0)+'px rgba(255,255,255,'+(.035+level*.075).toFixed(3)+')';
  updateWave(reducedMotion ? 0.08 : 0.16);
  const responsiveness=reducedMotion ? 0.07 : 0.13;
  if(speaking){
-  const detected=estimatePitch(timeData,audio.sampleRate);
-  if(detected!==null)pitch+=(detected-pitch)*responsiveness;
+  if(now-lastPitchAt>=45){
+   lastPitchAt=now;
+   const detected=estimatePitch(timeData,audio.sampleRate);
+   if(detected!==null)pitch+=(detected-pitch)*responsiveness;
+  }
   // Pitch steers left/right; volume steers up/down, with generous safe margins.
   const targetX=clamp(.5+(pitch-.5)*.74,.13,.87);
   const targetY=clamp(.5-level*.34,.16,.83);
   const move=1-Math.pow(1-(reducedMotion ? 0.06 : 0.13),dt);
   flameX+=(targetX-flameX)*move;flameY+=(targetY-flameY)*move;
-  flame.style.background='#f8f8f8';
-  flame.style.boxShadow='0 0 '+(28+level*58).toFixed(0)+'px rgba(255,255,255,'+(.035+level*.09).toFixed(3)+')';
+  flame.style.background='#fff';
   if(now>=nextCloneAt)emitTrail(now);
  }else{
   const returnEase=1-Math.pow(1-(reducedMotion ? 0.06 : 0.085),dt);
   flameX+=(.5-flameX)*returnEase;flameY+=(.5-flameY)*returnEase;
-  flame.style.background='#858585';flame.style.boxShadow='0 0 34px rgba(255,255,255,.035)';
+  flame.style.background='#808080';
  }
  flame.style.left=(flameX*100).toFixed(3)+'%';flame.style.top=(flameY*100).toFixed(3)+'%';
  drawTrails(now);raf=requestAnimationFrame(frame)
 }
 async function start(){
- if(starting||listening)return;starting=true;mic.disabled=true;message.textContent='Requesting microphone access…';
+ if(starting||listening||stopping)return;starting=true;mic.disabled=true;message.textContent='Requesting microphone access…';
  try{
   if(!navigator.mediaDevices?.getUserMedia)throw new Error('Microphone access is unavailable here. Open this page over HTTPS in a browser that supports microphone input.');
   stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true},video:false});
@@ -131,26 +129,37 @@ async function start(){
   analyser=audio.createAnalyser();analyser.fftSize=2048;analyser.smoothingTimeConstant=.72;
   source=audio.createMediaStreamSource(stream);source.connect(analyser);
   timeData=new Uint8Array(analyser.fftSize);freqData=new Uint8Array(analyser.frequencyBinCount);
-  listening=true;level=0;pitch=.5;lastSpeech=0;nextCloneAt=0;previousTime=0;trails=[];dotLevels.fill(0);
+  listening=true;level=0;pitch=.5;lastSpeech=0;lastPitchAt=0;nextCloneAt=0;previousTime=0;trails=[];dotLevels.fill(0);
   mic.textContent='Stop listening';status.textContent='Listening';status.classList.add('live');message.textContent='Audio is analysed locally to animate the visuals.';
   raf=requestAnimationFrame(frame)
  }catch(e){
+  listening=false;if(raf)cancelAnimationFrame(raf);raf=0;
   if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;
-  message.textContent=e.message||'Could not start microphone. Check site permissions.';status.textContent='Microphone off'
- }finally{starting=false;mic.disabled=false}
+  if(source)try{source.disconnect()}catch(_){}source=null;
+  const failedAudio=audio;audio=null;analyser=null;timeData=null;freqData=null;
+  if(failedAudio)try{await failedAudio.close()}catch(_){}
+  message.textContent=e.message||'Could not start microphone. Check site permissions.';
+  status.textContent='Microphone off';status.classList.remove('live');
+}finally{starting=false;mic.disabled=false}
 }
 async function stop(){
- listening=false;if(raf)cancelAnimationFrame(raf);if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;
- if(source)try{source.disconnect()}catch(e){}if(audio)try{await audio.close()}catch(e){}
- audio=null;analyser=null;source=null;timeData=null;freqData=null;level=0;pitch=.5;lastSpeech=0;previousTime=0;trails=[];dotLevels.fill(0);
- flameX=.5;flameY=.5;flame.style.left='50%';flame.style.top='50%';flame.style.background='#858585';flame.style.boxShadow='0 0 34px rgba(255,255,255,.035)';
- orb.style.transform='translate3d(-50%,-50%,0) scale(1)';orb.style.boxShadow='0 0 65px rgba(255,255,255,.035)';
- dots.forEach(d=>{d.style.transform='scaleY(1)';d.style.opacity='.96'});drawTrails(performance.now());
- mic.textContent='Enable microphone';status.textContent='Microphone off';status.classList.remove('live');message.textContent='Microphone off. Press the button to start again.'
+ if(stopping)return;stopping=true;mic.disabled=true;
+ listening=false;if(raf)cancelAnimationFrame(raf);raf=0;
+ const activeStream=stream;stream=null;if(activeStream)activeStream.getTracks().forEach(t=>t.stop());
+ if(source)try{source.disconnect()}catch(_){}source=null;
+ const activeAudio=audio;audio=null;analyser=null;timeData=null;freqData=null;
+ if(activeAudio)try{await activeAudio.close()}catch(_){}
+ level=0;pitch=.5;lastSpeech=0;lastPitchAt=0;previousTime=0;trails=[];dotLevels.fill(0);
+ flameX=.5;flameY=.5;flame.style.left='50%';flame.style.top='50%';flame.style.background='#808080';
+ orb.style.transform='translate3d(-50%,-50%,0) scale(1)';
+ dots.forEach(d=>{d.style.transform='scaleY(1)'});
+ drawTrails(performance.now());
+ mic.textContent='Enable microphone';status.textContent='Microphone off';status.classList.remove('live');message.textContent='Microphone off. Press the button to start again.';
+ stopping=false;mic.disabled=false;
 }
 mic.addEventListener('click',()=>listening?stop():start());
 addEventListener('resize',resize,{passive:true});
-addEventListener('pagehide',()=>{if(stream)stream.getTracks().forEach(t=>t.stop());if(audio)audio.close().catch(()=>{})});
+addEventListener('pagehide',()=>{listening=false;if(raf)cancelAnimationFrame(raf);raf=0;if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;if(source)try{source.disconnect()}catch(_){}source=null;if(audio)audio.close().catch(()=>{});audio=null});
 resize();drawTrails(performance.now());
 })();
 </script>
