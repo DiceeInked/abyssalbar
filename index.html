@@ -40,7 +40,7 @@ button{font:inherit}
     <button class="dot active" type="button" aria-label="Open elastic blob experience"></button>
     <button class="dot active" type="button" aria-label="Open ripple rings experience"></button>
     <button class="dot active" type="button" aria-label="Open drifting particles experience"></button>
-    <button class="dot active" type="button" aria-label="Open voice visualizer"></button>
+    <button class="dot active" type="button" aria-label="Open combined voice visualizer"></button>
     <button class="dot active" type="button" aria-label="Open Test dictation studio"></button>
     <button class="dot" type="button" aria-label="Unavailable experience"></button>
     <button class="dot" type="button" aria-label="Unavailable experience"></button>
@@ -265,7 +265,7 @@ button{font:inherit}
         zoom.style.display='none';
         if(mode==='voice') {
           canvas.style.display='none';testFrame.style.display='none';
-          voiceFrame.style.display='block';voiceFrame.srcdoc=voiceDocument;
+          voiceFrame.style.display='block';voiceFrame.src=new URL('visualizer/',window.location.href).href;
         } else if(mode==='test') {
           canvas.style.display='none';voiceFrame.style.display='none';
           testFrame.style.display='block';testFrame.src=new URL('test/',window.location.href).href;
