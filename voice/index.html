@@ -17,9 +17,9 @@ button{color:inherit}
 #stage:after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(ellipse at center,rgba(255,255,255,.025),transparent 58%)}
 .shape{position:absolute;left:50%;top:50%;pointer-events:none;will-change:transform,left,top,width,height,opacity}
 #circle{width:clamp(160px,34vmin,290px);height:auto;aspect-ratio:1;border-radius:50%;background:#f7f7f7;transform:translate(-50%,-50%) scale(1);box-shadow:0 0 80px rgba(255,255,255,.055);transition:opacity .35s ease}
-#voiceShape{width:min(88vw,760px);height:min(180px,28vh);transform:translate(-50%,-50%);display:grid;grid-template-columns:repeat(49,minmax(0,1fr));align-items:center;gap:1px}
+#voiceShape{width:min(88vw,760px);height:min(72vh,620px);transform:translate(-50%,-50%);display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:repeat(var(--spectrum-count,49),minmax(0,1fr));align-items:center;justify-items:center;gap:1px}
 .spectrum-dot{display:flex;align-items:center;justify-content:center;min-width:0;width:100%;height:100%}
-.spectrum-bar{display:block;width:3px;height:3px;max-width:96%;border-radius:999px;background:#f7f7f7;opacity:.85;box-shadow:0 0 8px rgba(255,255,255,.15);transition:width .07s linear,height .07s linear,opacity .07s linear}
+.spectrum-bar{display:block;width:3px;height:var(--dot-size,4px);max-width:96%;border-radius:999px;background:#f7f7f7;opacity:.85;box-shadow:0 0 8px rgba(255,255,255,.15);transition:width .07s linear,height .07s linear,opacity .07s linear}
 #pattern{width:clamp(112px,22vmin,180px);height:auto;aspect-ratio:1;transform:translate(-50%,-50%);transition:left .12s ease-out,top .12s ease-out;z-index:2}
 .orb-layer{position:absolute;inset:0;border-radius:50%;width:100%;height:100%;background:#f8f8f8;transition:background .12s ease,box-shadow .12s ease}
 #core{z-index:1;background:#858585;box-shadow:0 0 34px rgba(255,255,255,.035)}
@@ -106,6 +106,12 @@ input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radiu
     </div>
   </section>
 
+  <section class="group" id="spectrumSettings" hidden>
+    <div class="setting-row"><label for="dotCount">Spectrum dots</label><output id="dotCountValue" class="setting-value" for="dotCount">49</output></div>
+    <input id="dotCount" type="range" min="9" max="97" step="4" value="49">
+    <p class="helper">Choose how many dots make up the vertical spectrum. Their size adjusts automatically to fit.</p>
+  </section>
+
   <section class="group">
     <div class="setting-row"><label for="sensitivity">Microphone sensitivity</label><output id="sensitivityValue" class="setting-value" for="sensitivity">1.6×</output></div>
     <input id="sensitivity" type="range" min="0.5" max="3" step="0.1" value="1.6">
@@ -150,6 +156,9 @@ input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radiu
   const statusText = document.getElementById('statusText');
   const sensitivity = document.getElementById('sensitivity');
   const sensitivityValue = document.getElementById('sensitivityValue');
+  const spectrumSettings = document.getElementById('spectrumSettings');
+  const dotCountInput = document.getElementById('dotCount');
+  const dotCountValue = document.getElementById('dotCountValue');
   const response = document.getElementById('response');
   const responseValue = document.getElementById('responseValue');
   const pitchEnabled = document.getElementById('pitchEnabled');
@@ -171,9 +180,10 @@ input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radiu
   let previousLevel = 0;
   let sensitivitySetting = Number(sensitivity.value);
   let responseSetting = Number(response.value);
-  const SPECTRUM_COUNT = 49;
-  const spectrumBars = [];
-  const spectrumLevels = Array(SPECTRUM_COUNT).fill(0);
+  let spectrumCount = Number(dotCountInput.value);
+  let spectrumBars = [];
+  let spectrumLevels = [];
+  const spectrumDotCounts = [9,13,17,21,25,29,33,37,41,45,49,53,57,61,65,69,73,77,81,85,89,93,97];
   const trailClones = [];
   let lastSpeechAt = 0;
   let nextCloneAt = 0;
@@ -181,15 +191,28 @@ input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radiu
   const TRAIL_INTERVAL = 58;
   const TRAIL_DURATION = 690;
 
-  for (let i = 0; i < SPECTRUM_COUNT; i++) {
-    const cell = document.createElement('span');
-    cell.className = 'spectrum-dot';
-    cell.setAttribute('aria-hidden', 'true');
-    const bar = document.createElement('span');
-    bar.className = 'spectrum-bar';
-    cell.appendChild(bar);
-    voiceShape.appendChild(cell);
-    spectrumBars.push(bar);
+  function buildSpectrum(count) {
+    spectrumCount = count;
+    spectrumBars = [];
+    spectrumLevels = Array(count).fill(0);
+    voiceShape.replaceChildren();
+    voiceShape.style.setProperty('--spectrum-count', String(count));
+    // Keep the overall spectrum height steady. More dots means each dot gets
+    // a smaller footprint, while fewer dots get a more substantial size.
+    const dotSize = clamp(620 / count * 0.34, 2, 8);
+    voiceShape.style.setProperty('--dot-size', dotSize.toFixed(2) + 'px');
+    for (let i = 0; i < count; i++) {
+      const cell = document.createElement('span');
+      cell.className = 'spectrum-dot';
+      cell.setAttribute('aria-hidden', 'true');
+      const bar = document.createElement('span');
+      bar.className = 'spectrum-bar';
+      cell.appendChild(bar);
+      voiceShape.appendChild(cell);
+      spectrumBars.push(bar);
+    }
+    dotCountValue.textContent = String(count);
+    dotCountInput.value = String(count);
   }
 
   function clamp(value, min, max) {
@@ -209,6 +232,7 @@ input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radiu
     circle.hidden = shapeName !== 'circle';
     voiceShape.hidden = shapeName !== 'voice';
     pattern.hidden = shapeName !== 'pattern';
+    spectrumSettings.hidden = shapeName !== 'voice';
     if (shapeName !== 'pattern') clearPatternClones();
     shapeButtons.forEach((button) => {
       button.setAttribute('aria-pressed', String(button.dataset.shape === shapeName));
@@ -264,15 +288,15 @@ input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radiu
 
   function updateSpectrum(responsiveness) {
     if (!frequencyData || !audioContext) return;
-    const cellWidth = (voiceShape.clientWidth || window.innerWidth * 0.88) / SPECTRUM_COUNT;
-    const maxBarWidth = Math.max(3, cellWidth * 0.94);
-    const nyquist = audioContext.sampleRate / 2;
+    const cellHeight = (voiceShape.clientHeight || window.innerHeight * 0.72) / spectrumCount;
+    const maxBarWidth = Math.max(3, Math.min(46, window.innerWidth * 0.18));
     const minHz = 65;
-    const maxHz = Math.min(9000, nyquist * 0.92);
+    const maxHz = Math.min(9000, audioContext.sampleRate * 0.46);
+    const nyquist = audioContext.sampleRate / 2;
 
-    for (let i = 0; i < SPECTRUM_COUNT; i++) {
-      // Use logarithmic frequency spacing so bass, mids and treble all have room.
-      const position = i / (SPECTRUM_COUNT - 1);
+    for (let i = 0; i < spectrumCount; i++) {
+      // Each row maps to a different frequency band in the vertical spectrum.
+      const position = i / Math.max(1, spectrumCount - 1);
       const hz = minHz * Math.pow(maxHz / minHz, position);
       const bin = clamp(Math.round((hz / nyquist) * (frequencyData.length - 1)), 0, frequencyData.length - 1);
       const neighboringEnergy = (
@@ -286,9 +310,10 @@ input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radiu
       spectrumLevels[i] += (easedMagnitude - spectrumLevels[i]) * clamp(speed, 0.04, 0.7);
 
       const strength = spectrumLevels[i];
-      const width = strength < 0.075 ? 3 : 3 + strength * (maxBarWidth - 3);
+      const width = strength < 0.075 ? Math.max(2, cellHeight * 0.42) : Math.max(3, cellHeight * 0.42) + strength * (maxBarWidth - Math.max(3, cellHeight * 0.42));
+      const dotSize = clamp(cellHeight * 0.34, 2, 8);
       spectrumBars[i].style.width = Math.min(maxBarWidth, width).toFixed(1) + 'px';
-      spectrumBars[i].style.height = strength < 0.075 ? '3px' : '2px';
+      spectrumBars[i].style.height = dotSize.toFixed(1) + 'px';
       spectrumBars[i].style.opacity = (0.72 + strength * 0.28).toFixed(2);
       spectrumBars[i].style.boxShadow = strength > 0.22
         ? '0 0 ' + (2 + strength * 9).toFixed(1) + 'px rgba(255,255,255,' + (0.08 + strength * 0.28).toFixed(2) + ')'
@@ -486,6 +511,10 @@ input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radiu
     if (listening) stopListening();
     else startListening();
   });
+  dotCountInput.addEventListener('input', () => {
+    const count = Number(dotCountInput.value);
+    buildSpectrum(count);
+  });
   sensitivity.addEventListener('input', () => {
     sensitivitySetting = Number(sensitivity.value);
     sensitivityValue.textContent = sensitivitySetting.toFixed(1) + '×';
@@ -498,6 +527,7 @@ input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radiu
     if (!pitchEnabled.checked) pattern.style.left = '50%';
   });
   document.getElementById('reset').addEventListener('click', () => {
+    buildSpectrum(49);
     sensitivity.value = '1.6';
     response.value = '0.20';
     pitchEnabled.checked = true;
@@ -520,6 +550,7 @@ input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radiu
     if (stream) stream.getTracks().forEach((track) => track.stop());
     if (audioContext) audioContext.close().catch(() => {});
   });
+  buildSpectrum(49);
   setShape('circle');
 })();
 </script>
