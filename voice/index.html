@@ -17,11 +17,13 @@ button{color:inherit}
 #stage:after{content:"";position:absolute;inset:0;z-index:-1;pointer-events:none;background:radial-gradient(ellipse at center,rgba(255,255,255,.025),transparent 58%)}
 .shape{position:absolute;left:50%;top:50%;pointer-events:none;will-change:transform,left,top,width,height,opacity}
 #circle{width:clamp(160px,34vmin,290px);height:auto;aspect-ratio:1;border-radius:50%;background:#f7f7f7;transform:translate(-50%,-50%) scale(1);box-shadow:0 0 80px rgba(255,255,255,.055);transition:opacity .35s ease}
-#voiceShape{width:22vw;height:3px;min-width:76px;max-width:88vw;border-radius:999px;background:#f7f7f7;transform:translate(-50%,-50%);box-shadow:0 0 24px rgba(255,255,255,.15),0 0 65px rgba(255,255,255,.08);transition:opacity .35s ease}
-#pattern{width:clamp(112px,22vmin,180px);height:auto;aspect-ratio:1;transform:translate(-50%,-50%);transition:opacity .35s ease}
-.orb-layer{position:absolute;inset:0;border-radius:50%;width:100%;height:100%;background:#f8f8f8}
-#echo{z-index:0;opacity:0;transform:translateY(-14px);filter:blur(.4px)}
-#core{z-index:1;box-shadow:0 0 48px rgba(255,255,255,.06)}
+#voiceShape{width:min(88vw,760px);height:min(180px,28vh);transform:translate(-50%,-50%);display:grid;grid-template-columns:repeat(49,minmax(0,1fr));align-items:center;gap:1px}
+.spectrum-dot{display:flex;align-items:center;justify-content:center;min-width:0;width:100%;height:100%}
+.spectrum-bar{display:block;width:3px;height:3px;max-width:96%;border-radius:999px;background:#f7f7f7;opacity:.85;box-shadow:0 0 8px rgba(255,255,255,.15);transition:width .07s linear,height .07s linear,opacity .07s linear}
+#pattern{width:clamp(112px,22vmin,180px);height:auto;aspect-ratio:1;transform:translate(-50%,-50%);transition:left .12s ease-out,top .12s ease-out;z-index:2}
+.orb-layer{position:absolute;inset:0;border-radius:50%;width:100%;height:100%;background:#f8f8f8;transition:background .12s ease,box-shadow .12s ease}
+#core{z-index:1;background:#858585;box-shadow:0 0 34px rgba(255,255,255,.035)}
+.pattern-clone{position:absolute;z-index:1;border-radius:50%;background:#f8f8f8;pointer-events:none;will-change:transform,opacity;box-shadow:0 0 42px rgba(255,255,255,.045)}
 #circle[hidden],#voiceShape[hidden],#pattern[hidden]{display:none}
 #gear{position:fixed;z-index:20;top:max(16px,env(safe-area-inset-top));right:max(16px,env(safe-area-inset-right));width:44px;height:44px;display:grid;place-items:center;padding:0;border:1px solid transparent;border-radius:50%;background:rgba(255,255,255,.035);color:#bdbdbd;cursor:pointer;transition:background .2s,color .2s,border-color .2s}
 #gear:hover,#gear[aria-expanded=true]{background:#171717;color:#fff;border-color:#303030}
@@ -84,7 +86,6 @@ input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radiu
   <div id="circle" class="shape" aria-hidden="true"></div>
   <div id="voiceShape" class="shape" aria-hidden="true" hidden></div>
   <div id="pattern" class="shape" aria-hidden="true" hidden>
-    <div id="echo" class="orb-layer"></div>
     <div id="core" class="orb-layer"></div>
   </div>
 </main>
@@ -135,10 +136,10 @@ input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radiu
 
 <script>
 (() => {
+  const stage = document.getElementById('stage');
   const circle = document.getElementById('circle');
   const voiceShape = document.getElementById('voiceShape');
   const pattern = document.getElementById('pattern');
-  const echo = document.getElementById('echo');
   const core = document.getElementById('core');
   const gear = document.getElementById('gear');
   const settings = document.getElementById('settings');
@@ -163,13 +164,33 @@ input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radiu
   let analyser = null;
   let source = null;
   let timeData = null;
+  let frequencyData = null;
   let frameId = 0;
   let level = 0;
   let pitchPosition = 0.5;
-  let echoLife = 0;
   let previousLevel = 0;
   let sensitivitySetting = Number(sensitivity.value);
   let responseSetting = Number(response.value);
+  const SPECTRUM_COUNT = 49;
+  const spectrumBars = [];
+  const spectrumLevels = Array(SPECTRUM_COUNT).fill(0);
+  const trailClones = [];
+  let lastSpeechAt = 0;
+  let nextCloneAt = 0;
+  let speaking = false;
+  const TRAIL_INTERVAL = 58;
+  const TRAIL_DURATION = 690;
+
+  for (let i = 0; i < SPECTRUM_COUNT; i++) {
+    const cell = document.createElement('span');
+    cell.className = 'spectrum-dot';
+    cell.setAttribute('aria-hidden', 'true');
+    const bar = document.createElement('span');
+    bar.className = 'spectrum-bar';
+    cell.appendChild(bar);
+    voiceShape.appendChild(cell);
+    spectrumBars.push(bar);
+  }
 
   function clamp(value, min, max) {
     return Math.min(max, Math.max(min, value));
@@ -188,6 +209,7 @@ input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radiu
     circle.hidden = shapeName !== 'circle';
     voiceShape.hidden = shapeName !== 'voice';
     pattern.hidden = shapeName !== 'pattern';
+    if (shapeName !== 'pattern') clearPatternClones();
     shapeButtons.forEach((button) => {
       button.setAttribute('aria-pressed', String(button.dataset.shape === shapeName));
     });
@@ -240,8 +262,80 @@ input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radiu
     return clamp(normalized, 0, 1);
   }
 
+  function updateSpectrum(responsiveness) {
+    if (!frequencyData || !audioContext) return;
+    const cellWidth = (voiceShape.clientWidth || window.innerWidth * 0.88) / SPECTRUM_COUNT;
+    const maxBarWidth = Math.max(3, cellWidth * 0.94);
+    const nyquist = audioContext.sampleRate / 2;
+    const minHz = 65;
+    const maxHz = Math.min(9000, nyquist * 0.92);
+
+    for (let i = 0; i < SPECTRUM_COUNT; i++) {
+      // Use logarithmic frequency spacing so bass, mids and treble all have room.
+      const position = i / (SPECTRUM_COUNT - 1);
+      const hz = minHz * Math.pow(maxHz / minHz, position);
+      const bin = clamp(Math.round((hz / nyquist) * (frequencyData.length - 1)), 0, frequencyData.length - 1);
+      const neighboringEnergy = (
+        frequencyData[Math.max(0, bin - 1)] +
+        frequencyData[bin] +
+        frequencyData[Math.min(frequencyData.length - 1, bin + 1)]
+      ) / 3;
+      const magnitude = clamp((neighboringEnergy - 34) / 170, 0, 1);
+      const easedMagnitude = Math.pow(magnitude, 0.82);
+      const speed = easedMagnitude > spectrumLevels[i] ? responsiveness * 1.35 : responsiveness * 0.52;
+      spectrumLevels[i] += (easedMagnitude - spectrumLevels[i]) * clamp(speed, 0.04, 0.7);
+
+      const strength = spectrumLevels[i];
+      const width = strength < 0.075 ? 3 : 3 + strength * (maxBarWidth - 3);
+      spectrumBars[i].style.width = Math.min(maxBarWidth, width).toFixed(1) + 'px';
+      spectrumBars[i].style.height = strength < 0.075 ? '3px' : '2px';
+      spectrumBars[i].style.opacity = (0.72 + strength * 0.28).toFixed(2);
+      spectrumBars[i].style.boxShadow = strength > 0.22
+        ? '0 0 ' + (2 + strength * 9).toFixed(1) + 'px rgba(255,255,255,' + (0.08 + strength * 0.28).toFixed(2) + ')'
+        : 'none';
+    }
+  }
+
+  function spawnPatternClone(now) {
+    const bounds = pattern.getBoundingClientRect();
+    const clone = document.createElement('div');
+    clone.className = 'pattern-clone';
+    clone.setAttribute('aria-hidden', 'true');
+    clone.style.left = bounds.left + 'px';
+    clone.style.top = bounds.top + 'px';
+    clone.style.width = bounds.width + 'px';
+    clone.style.height = bounds.height + 'px';
+    clone.style.opacity = '0.92';
+    clone.style.transform = 'translateY(0px)';
+    stage.appendChild(clone);
+    trailClones.push({ node: clone, createdAt: now, height: bounds.height });
+  }
+
+  function updatePatternClones(now) {
+    for (let i = trailClones.length - 1; i >= 0; i--) {
+      const trail = trailClones[i];
+      const age = (now - trail.createdAt) / TRAIL_DURATION;
+      if (age >= 1) {
+        trail.node.remove();
+        trailClones.splice(i, 1);
+        continue;
+      }
+      const easedRise = 1 - Math.pow(1 - age, 2);
+      trail.node.style.transform = 'translateY(' + (-easedRise * Math.max(120, trail.height * 1.25)).toFixed(1) + 'px)';
+      trail.node.style.opacity = String(0.92 * (1 - age));
+    }
+  }
+
+  function clearPatternClones() {
+    while (trailClones.length) {
+      const trail = trailClones.pop();
+      trail.node.remove();
+    }
+  }
+
   function drawFrame() {
     if (!listening || !analyser || !timeData) return;
+    const now = performance.now();
     analyser.getByteTimeDomainData(timeData);
     let squareSum = 0;
     for (let i = 0; i < timeData.length; i++) {
@@ -253,11 +347,17 @@ input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radiu
     const responsiveness = reducedMotion ? Math.min(0.1, responseSetting) : responseSetting;
     level += (rawLevel - level) * (rawLevel > level ? responsiveness : responsiveness * 0.48);
 
-    if (level > previousLevel + 0.018) echoLife = 1;
-    echoLife *= 0.84;
-    previousLevel = level;
+    // This release hold bridges short gaps between syllables while avoiding
+    // an endless trail from quiet microphone hiss.
+    if (rawLevel > 0.075) lastSpeechAt = now;
+    speaking = now - lastSpeechAt < 155;
 
-    if (pitchEnabled.checked && selectedShape === 'pattern') {
+    if (selectedShape === 'voice' && frequencyData) {
+      analyser.getByteFrequencyData(frequencyData);
+      updateSpectrum(responsiveness);
+    }
+
+    if (pitchEnabled.checked && selectedShape === 'pattern' && speaking) {
       const detected = estimatePitch(timeData, audioContext.sampleRate);
       if (detected !== null) pitchPosition += (detected - pitchPosition) * responsiveness;
     }
@@ -265,23 +365,29 @@ input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radiu
     circle.style.transform = 'translate(-50%,-50%) scale(' + (1 + level * 0.72).toFixed(3) + ')';
     circle.style.boxShadow = '0 0 ' + (65 + level * 65).toFixed(0) + 'px rgba(255,255,255,' + (0.035 + level * 0.075).toFixed(3) + ')';
 
-    const beamWidth = Math.min(window.innerWidth * 0.88, window.innerWidth * (0.2 + level * 1.1));
-    const beamHeight = 2 + level * Math.min(42, window.innerHeight * 0.055);
-    voiceShape.style.width = beamWidth.toFixed(1) + 'px';
-    voiceShape.style.height = beamHeight.toFixed(1) + 'px';
-    voiceShape.style.boxShadow = '0 0 ' + (18 + level * 45).toFixed(0) + 'px rgba(255,255,255,' + (0.09 + level * 0.24).toFixed(3) + ')';
+    if (selectedShape === 'pattern') {
+      if (speaking) {
+        const px = pitchEnabled.checked ? 50 + (pitchPosition - 0.5) * 74 : 50;
+        const py = 50 - level * 34;
+        pattern.style.left = clamp(px, 10, 90).toFixed(2) + '%';
+        pattern.style.top = clamp(py, 16, 83).toFixed(2) + '%';
+        const whiteness = Math.round(130 + clamp(level * 2.8, 0, 1) * 125);
+        core.style.background = 'rgb(' + whiteness + ',' + whiteness + ',' + whiteness + ')';
+        core.style.boxShadow = '0 0 ' + (28 + level * 58).toFixed(0) + 'px rgba(255,255,255,' + (0.035 + level * 0.09).toFixed(3) + ')';
 
-    let px = 50;
-    let py = 52;
-    if (pitchEnabled.checked) px = 50 + (pitchPosition - 0.5) * 74;
-    else px = 50 + Math.sin(performance.now() * 0.00055) * 12;
-    py = 53 - level * 35 + Math.sin(performance.now() * 0.0007) * (reducedMotion ? 0 : 2.5);
-    pattern.style.left = clamp(px, 10, 90).toFixed(2) + '%';
-    pattern.style.top = clamp(py, 16, 79).toFixed(2) + '%';
-    echo.style.transform = 'translateY(' + (-10 - level * 60).toFixed(1) + 'px) scale(1)';
-    echo.style.opacity = clamp(echoLife * (0.14 + level * 0.72), 0, 0.78).toFixed(3);
-    core.style.boxShadow = '0 0 ' + (30 + level * 55).toFixed(0) + 'px rgba(255,255,255,' + (0.035 + level * 0.09).toFixed(3) + ')';
+        if (now >= nextCloneAt) {
+          spawnPatternClone(now);
+          nextCloneAt = now + TRAIL_INTERVAL;
+        }
+      } else {
+        pattern.style.left = '50%';
+        pattern.style.top = '50%';
+        core.style.background = '#858585';
+        core.style.boxShadow = '0 0 34px rgba(255,255,255,.035)';
+      }
+    }
 
+    updatePatternClones(now);
     frameId = window.requestAnimationFrame(drawFrame);
   }
 
@@ -309,10 +415,13 @@ input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radiu
       source = audioContext.createMediaStreamSource(stream);
       source.connect(analyser);
       timeData = new Uint8Array(analyser.fftSize);
+      frequencyData = new Uint8Array(analyser.frequencyBinCount);
       listening = true;
       level = 0;
-      echoLife = 0;
       previousLevel = 0;
+      lastSpeechAt = 0;
+      nextCloneAt = 0;
+      speaking = false;
       micButtonText.textContent = 'Stop listening';
       message.textContent = 'Listening. Your microphone audio is used locally to animate the shape.';
       setStatus('Microphone on', true);
@@ -346,19 +455,26 @@ input[type=range]::-moz-range-thumb{width:13px;height:13px;border:0;border-radiu
     audioContext = null;
     analyser = null;
     timeData = null;
+    frequencyData = null;
     level = 0;
     previousLevel = 0;
-    echoLife = 0;
+    lastSpeechAt = 0;
+    nextCloneAt = 0;
+    speaking = false;
+    clearPatternClones();
+    spectrumLevels.fill(0);
+    spectrumBars.forEach((bar) => {
+      bar.style.width = '3px';
+      bar.style.height = '3px';
+      bar.style.opacity = '0.85';
+      bar.style.boxShadow = 'none';
+    });
     circle.style.transform = 'translate(-50%,-50%) scale(1)';
     circle.style.boxShadow = '0 0 80px rgba(255,255,255,.055)';
-    voiceShape.style.width = '22vw';
-    voiceShape.style.height = '3px';
-    voiceShape.style.boxShadow = '0 0 24px rgba(255,255,255,.15),0 0 65px rgba(255,255,255,.08)';
     pattern.style.left = '50%';
     pattern.style.top = '50%';
-    echo.style.opacity = '0';
-    echo.style.transform = 'translateY(-14px)';
-    core.style.boxShadow = '0 0 48px rgba(255,255,255,.06)';
+    core.style.background = '#858585';
+    core.style.boxShadow = '0 0 34px rgba(255,255,255,.035)';
     micButtonText.textContent = 'Enable microphone';
     message.textContent = 'Microphone off. Press the button to start again.';
     setStatus('Microphone off', false);
