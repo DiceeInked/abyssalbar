@@ -122,7 +122,7 @@ input[type=range]{width:135px;accent-color:var(--teal)}
       <tbody></tbody>
     </table></div>
     <div class="rule-explain"><b>Strong attraction</b> moves the row's dots toward the column's dots. <b>Repulsion</b> makes the row's dots move away. <b>No response</b> means this rule adds no acceleration. A dot never directly pushes another dot, and there is no automatic collision-push.</div>
-    <div class="option-row"><label for="preset">Rule starter</label><select id="preset" class="btn small"><option value="cycle">Chase / avoid</option><option value="all">Attract all</option><option value="neutral">No interactions</option><option value="random">Random rules</option></select></div>
+    <div class="option-row"><label for="preset">Behavior preset</label><select id="preset" class="btn small"><option value="cycle">Chase / avoid</option><option value="clusters">Color clusters</option><option value="swarm">Mixed swarm</option><option value="all">Attract all</option><option value="neutral">No interactions</option><option value="random">Random rules</option></select></div>
     <div class="footer-actions"><button class="btn small" id="randomRules" type="button">Randomize rules</button><button class="btn small" id="neutralRules" type="button">Clear rules</button></div>
   </div>
 
@@ -134,7 +134,11 @@ input[type=range]{width:135px;accent-color:var(--teal)}
 
   <div class="section">
     <h2>Simulation</h2>
+    <div class="option-row"><label for="particleCount">Particle count</label><input id="particleCount" type="range" min="100" max="2000" step="50" value="500"><span id="particleCountValue">500</span></div>
     <div class="option-row"><label for="speed">Simulation speed</label><input id="speed" type="range" min="0.1" max="4" step="0.1" value="1" aria-label="Simulation playback speed"><span id="speedValue">1.0×</span></div>
+    <div class="option-row"><label for="forceMultiplier">Force multiplier</label><input id="forceMultiplier" type="range" min="0.1" max="5" step="0.1" value="1.5"><span id="forceValue">1.5×</span></div>
+    <div class="option-row"><label for="damping">Damping</label><input id="damping" type="range" min="0" max="0.15" step="0.005" value="0.035"><span id="dampingValue">0.035</span></div>
+    <div class="option-row"><label for="boundaries">World edges</label><select id="boundaries" class="btn small"><option value="wrap">Wrap around</option><option value="bounce">Bounce</option></select></div>
     <div class="option-row"><label for="showRanges">Show interaction ranges</label><input id="showRanges" type="checkbox"></div>
     <div class="option-row"><label for="sizeWorld">Dot size follows zoom</label><input id="sizeWorld" type="checkbox" checked></div>
     <div class="footer-actions">
@@ -168,7 +172,7 @@ input[type=range]{width:135px;accent-color:var(--teal)}
   ];
   const state = {
     particles:[], matrix:[], selectedColor:0, paintMode:false, paused:false, showRanges:false, sizeFollowsZoom:true,
-    speed:1, baseScale:7, zoom:1, camX:0, camY:0, worldW:0, worldH:0, width:0, height:0, dpr:1, countOnStart:500,
+    speed:1, forceMultiplier:1.5, damping:.035, boundaryMode:"wrap", baseScale:7, zoom:1, camX:0, camY:0, worldW:0, worldH:0, width:0, height:0, dpr:1, countOnStart:500,
     pointerMap:new Map(), gesture:null, lastTime:0, accumulator:0, frame:0, dirty:true
   };
   let species = colors.map((c)=>({radius:1,min:2,max:5}));
@@ -235,6 +239,11 @@ input[type=range]{width:135px;accent-color:var(--teal)}
       for(let i=0;i<4;i++){
         const next=(i+1)%4;m[i][next]='strong-attract';m[next][i]='strong-repel';
       }
+    } else if(name==='clusters'){
+      for(let i=0;i<4;i++)for(let j=0;j<4;j++)m[i][j]=i===j?'weak-repel':'weak-attract';
+    } else if(name==='swarm'){
+      for(let i=0;i<4;i++)for(let j=0;j<4;j++)m[i][j]=i===j?'strong-repel':(['weak-attract','weak-repel'][Math.floor(Math.random()*2)]);
+      for(let i=0;i<4;i++)m[i][(i+1)%4]='strong-attract';
     } else if(name==='all'){
       for(let i=0;i<4;i++)for(let j=0;j<4;j++)m[i][j]=i===j?'strong-repel':'weak-attract';
     } else if(name==='random'){
@@ -263,8 +272,13 @@ input[type=range]{width:135px;accent-color:var(--teal)}
     const s=scale();return{x:(x-state.camX)*s+state.width/2,y:(y-state.camY)*s+state.height/2};
   }
   function wrapParticle(p){
-    p.x=((p.x%state.worldW)+state.worldW)%state.worldW;
-    p.y=((p.y%state.worldH)+state.worldH)%state.worldH;
+    if(state.boundaryMode==="bounce"){
+      if(p.x<0){p.x=0;p.vx=Math.abs(p.vx||0);}else if(p.x>state.worldW){p.x=state.worldW;p.vx=-Math.abs(p.vx||0);}
+      if(p.y<0){p.y=0;p.vy=Math.abs(p.vy||0);}else if(p.y>state.worldH){p.y=state.worldH;p.vy=-Math.abs(p.vy||0);}
+    }else{
+      p.x=((p.x%state.worldW)+state.worldW)%state.worldW;
+      p.y=((p.y%state.worldH)+state.worldH)%state.worldH;
+    }
   }
   function addParticle(color,x,y,quiet=false){
     const p={x:Number.isFinite(x)?x:state.camX+rand(-state.width/scale()*.35,state.width/scale()*.35),y:Number.isFinite(y)?y:state.camY+rand(-state.height/scale()*.35,state.height/scale()*.35),vx:rand(-.035,.035),vy:rand(-.035,.035),type:color};
@@ -279,8 +293,15 @@ input[type=range]{width:135px;accent-color:var(--teal)}
   }
   function seedPopulation(n){
     state.particles.length=0;
-    for(let i=0;i<n;i++)addParticle(i%4,rand(0,state.worldW),rand(0,state.worldH),true);
+    const viewW=state.width/scale(),viewH=state.height/scale();
+    for(let i=0;i<n;i++)addParticle(i%4,state.camX+rand(-viewW*.48,viewW*.48),state.camY+rand(-viewH*.48,viewH*.48),true);
     state.dirty=true;updateStatus();
+  }
+  function setParticleCount(n){
+    n=clamp(Math.round(n/50)*50,100,2000);state.countOnStart=n;
+    while(state.particles.length<n){const i=state.particles.length;addParticle(i%4,undefined,undefined,true);}
+    if(state.particles.length>n)state.particles.length=n;
+    document.getElementById("particleCountValue").textContent=String(n);updateStatus();
   }
   function updateStatus(){
     document.getElementById('status').textContent=state.particles.length+' dots';
@@ -332,13 +353,13 @@ input[type=range]{width:135px;accent-color:var(--teal)}
           if(d<setting.min||d>setting.max)continue;
           const rule=getRule(a.type,b.type).strength;if(rule===0)continue;
           const t=(d-setting.min)/(setting.max-setting.min);
-          const envelope=Math.sin(Math.PI*t);
+          const envelope=d<setting.min?d/setting.min:Math.max(0,1-t);
           const force=rule*envelope;
           ax[i]+=(dx/d)*force;ay[i]+=(dy/d)*force;
         }
       }
     }
-    const accel=.018,friction=Math.pow(.965,dt),maxSpeed=.36;
+    const accel=.018*state.forceMultiplier,friction=Math.pow(1-state.damping,dt),maxSpeed=.36;
     for(let i=0;i<ps.length;i++){
       const p=ps[i];p.vx=(p.vx+ax[i]*accel*dt)*friction;p.vy=(p.vy+ay[i]*accel*dt)*friction;
       const v=hypot(p.vx,p.vy);if(v>maxSpeed){p.vx=p.vx/v*maxSpeed;p.vy=p.vy/v*maxSpeed;}
@@ -408,6 +429,10 @@ input[type=range]{width:135px;accent-color:var(--teal)}
   document.getElementById('randomRules').addEventListener('click',()=>{setPreset('random');document.getElementById('preset').value='random';});
   document.getElementById('neutralRules').addEventListener('click',()=>{setPreset('neutral');document.getElementById('preset').value='neutral';});
   document.getElementById('speed').addEventListener('input',e=>{state.speed=Number(e.target.value);document.getElementById('speedValue').textContent=state.speed.toFixed(1)+'×';});
+  document.getElementById('particleCount').addEventListener('input',e=>setParticleCount(Number(e.target.value)));
+  document.getElementById('forceMultiplier').addEventListener('input',e=>{state.forceMultiplier=Number(e.target.value);document.getElementById('forceValue').textContent=state.forceMultiplier.toFixed(1)+'×';});
+  document.getElementById('damping').addEventListener('input',e=>{state.damping=Number(e.target.value);document.getElementById('dampingValue').textContent=state.damping.toFixed(3);});
+  document.getElementById('boundaries').addEventListener('change',e=>{state.boundaryMode=e.target.value;});
   document.getElementById('showRanges').addEventListener('change',e=>{state.showRanges=e.target.checked;});
   document.getElementById('sizeWorld').addEventListener('change',e=>{state.sizeFollowsZoom=e.target.checked;});
   document.getElementById('scatter').addEventListener('click',()=>{
