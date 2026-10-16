@@ -635,6 +635,11 @@ input[type=range]{width:135px;accent-color:var(--teal)}
   setPreset('random');
   buildSpeciesSettings();
   resize();
+  // Give every fresh page load a new population, from 500 to 1,500 dots.
+  // Use the existing 50-dot increments and sync the settings display to reality.
+  state.countOnStart=500+Math.floor(Math.random()*21)*50;
+  document.getElementById('particleCount').value=String(state.countOnStart);
+  document.getElementById('particleCountValue').textContent=String(state.countOnStart);
   // Populate a world larger than the viewport, so panning explores the world instead of one fixed screen.
   seedPopulation(state.countOnStart);
   state.frame=requestAnimationFrame(animate);
