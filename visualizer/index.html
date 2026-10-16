@@ -7,8 +7,9 @@
 <title>Voice · Combined</title>
 <style>
 :root{color-scheme:dark;--black:#000;--white:#fff}
-*{box-sizing:border-box}
-html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000;color:#fff;font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000;color:#fff;font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;overscroll-behavior:none}
+#stage,#stage *{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:none}
 #stage{position:fixed;inset:0;overflow:hidden;background:#000;isolation:isolate}
 #particles{position:absolute;inset:0;width:100%;height:100%;z-index:2;pointer-events:none}
 .orb{position:absolute;left:50%;top:50%;width:clamp(160px,34vmin,290px);aspect-ratio:1;border-radius:50%;background:var(--white);transform:translate3d(-50%,-50%,0) scale(1);z-index:3;will-change:transform}
@@ -25,6 +26,16 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000;color:
 #caption-layer{position:absolute;left:50%;top:50%;width:min(88vw,640px);transform:translate3d(-50%,-50%,0);z-index:5;display:flex;align-items:center;justify-content:center;pointer-events:none;text-align:center}
 #caption-word{display:inline-block;max-width:100%;padding:.13em .27em;border-radius:2px;background:#fff;color:#000;font-size:clamp(25px,5.5vw,54px);font-weight:650;letter-spacing:-.045em;line-height:1.08;overflow-wrap:anywhere;opacity:0;transform:translateY(7px) scale(.98);will-change:opacity,transform}
 #caption-word.active{animation:caption-in 200ms cubic-bezier(.2,.75,.25,1) both}
+#export-panel{position:fixed;z-index:30;inset:0;background:rgba(0,0,0,.94);display:flex;align-items:center;justify-content:center;padding:20px}
+#export-panel[hidden]{display:none}
+.export-card{width:min(560px,100%);max-height:100%;overflow:auto;display:flex;flex-direction:column;gap:14px;align-items:stretch}
+#export-title{margin:0;color:#fff;font-size:14px;font-weight:650;letter-spacing:.06em}
+#export-status{margin:0;color:#aaa;font-size:12px;line-height:1.5}
+#export-preview{display:block;width:100%;max-height:60vh;aspect-ratio:9/16;object-fit:contain;background:#000;border:1px solid #333}
+.export-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.export-actions a,.export-actions button{border:1px solid #fff;border-radius:0;background:#fff;color:#000;padding:12px 15px;font:inherit;font-size:12px;font-weight:650;text-decoration:none;cursor:pointer}
+.export-actions button{background:#000;color:#fff}
+#export-panel button:focus-visible,#export-panel a:focus-visible{outline:2px solid #aaa;outline-offset:3px}
 #stage.spotlight-mode #particles,#stage.spotlight-mode .wave{visibility:hidden}
 #stage.spotlight-mode #orb{background:#000;transform:translate3d(-50%,-50%,0) scale(1);z-index:4}
 #stage.spotlight-mode #glow{opacity:1;visibility:visible;animation:glow-drift 8s ease-in-out infinite}
@@ -44,15 +55,27 @@ body.spotlight-mode #status,body.spotlight-mode #message{visibility:hidden}
 </main>
 <div class="status" id="status">Microphone off</div>
 <p id="message">Start the microphone to animate the orb, five-dot wave, and rising pitch notes.</p>
-<div class="controls"><button id="mic" type="button">Enable microphone</button></div>
+<div class="controls"><button id="mic" type="button">Start recording</button></div>
+<section id="export-panel" hidden aria-live="polite" aria-label="Recording export">
+ <div class="export-card">
+  <h2 id="export-title">Your video is ready</h2>
+  <p id="export-status">Your recording has been processed on this device.</p>
+  <video id="export-preview" controls playsinline preload="metadata"></video>
+  <div class="export-actions">
+   <a id="download-link" href="#" download="abyssalbar-recording.webm">Download video</a>
+   <button id="close-export" type="button">Close</button>
+  </div>
+ </div>
+</section>
 <script>
 (()=>{
 'use strict';
-const stage=document.getElementById('stage'),orb=document.getElementById('orb'),dots=[...document.querySelectorAll('.dot')],canvas=document.getElementById('particles'),ctx=canvas.getContext('2d'),mic=document.getElementById('mic'),status=document.getElementById('status'),message=document.getElementById('message'),captionWord=document.getElementById('caption-word');
+const stage=document.getElementById('stage'),orb=document.getElementById('orb'),dots=[...document.querySelectorAll('.dot')],canvas=document.getElementById('particles'),ctx=canvas.getContext('2d'),mic=document.getElementById('mic'),status=document.getElementById('status'),message=document.getElementById('message'),captionWord=document.getElementById('caption-word'),exportPanel=document.getElementById('export-panel'),exportTitle=document.getElementById('export-title'),exportStatus=document.getElementById('export-status'),exportPreview=document.getElementById('export-preview'),downloadLink=document.getElementById('download-link'),closeExport=document.getElementById('close-export');
 const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const PITCH_INTERVAL=45,NOTE_RELEASE_MS=170,NOTE_DURATION=2400,NOTE_WIDTH=12,NOTE_MAX_COUNT=48,NOTE_PADDING=0.12;
 let stream=null,audio=null,analyser=null,source=null,timeData=null,freqData=null,raf=0,listening=false,starting=false,stopping=false,level=0,pitchMinLog=null,pitchMaxLog=null,lastSpeech=0,lastPitchAt=0,lastValidPitchAt=0,candidateMidi=null,candidateCount=0,currentMidi=null,currentNote=null,notes=[],width=0,height=0,dpr=1,previousTime=0,dotDiameters=[];
-let spotlightMode=false,recognition=null,recognitionBlocked=false,holdPointerId=null,wordQueue=[],activeWord=null,activeWordUntil=0,captionToken=0,finalSegments=new Map(),interimCounts=new Map();
+let spotlightMode=false,recognition=null,recognitionBlocked=false,recognitionLoading=false,holdPointerId=null,wordQueue=[],activeWord=null,activeWordUntil=0,captionToken=0,finalSegments=new Map(),interimCounts=new Map();
+let isRecording=false,audioRecorder=null,audioChunks=[],recordingStartedAt=0,lastRecordedFrameAt=-1,recordedFrames=[],recordedNotes=[],recordedSpeechSegments=[],exportObjectUrl=null,transcriberPromise=null;
 const SpeechRecognitionAPI=window.SpeechRecognition||window.webkitSpeechRecognition;
 const pitchScratch=new Float32Array(2048);
 const dotLevels=[0,0,0,0,0];
@@ -95,7 +118,10 @@ function estimatePitch(bytes,sampleRate){
 }
 
 function startNote(now,midi,pitchPosition){
- const note={midi,x:clamp(pitchPosition,.025,.975),startedAt:now,lastSeen:now,endedAt:null};
+ const x=clamp(pitchPosition,.025,.975);
+ const recorded=isRecording?{midi,x,start:Math.max(0,(now-recordingStartedAt)/1000),end:null}:null;
+ if(recorded)recordedNotes.push(recorded);
+ const note={midi,x,startedAt:now,lastSeen:now,endedAt:null,recorded};
  notes.push(note);
  currentNote=note;currentMidi=midi;
  if(notes.length>NOTE_MAX_COUNT)notes.splice(0,notes.length-NOTE_MAX_COUNT);
@@ -103,6 +129,9 @@ function startNote(now,midi,pitchPosition){
 function endCurrentNote(now){
  if(!currentNote)return;
  currentNote.endedAt=now;
+ if(currentNote.recorded&&currentNote.recorded.end===null){
+  currentNote.recorded.end=Math.max(currentNote.recorded.start,(now-recordingStartedAt)/1000);
+ }
  currentNote=null;currentMidi=null;
 }
 function pitchToPosition(midiLog){
@@ -205,6 +234,10 @@ function frame(now){
   endCurrentNote(now);
   candidateMidi=null;candidateCount=0;
  }
+ if(isRecording&&now-lastRecordedFrameAt>=33){
+  recordedFrames.push({t:Math.max(0,(now-recordingStartedAt)/1000),level,wave:dotLevels.slice(),spot:spotlightMode});
+  lastRecordedFrameAt=now;
+ }
  updateCaption(now);
  drawNotes(now);
  raf=requestAnimationFrame(frame);
@@ -219,22 +252,23 @@ function enqueueWords(words){
  }
 }
 function handleSpeechResult(event,instance){
- if(!spotlightMode||recognition!==instance)return;
+ if(recognition!==instance)return;
  for(let i=0;i<event.results.length;i++){
   const result=event.results[i],transcript=result[0]?.transcript||'',words=transcriptWords(transcript);
   if(result.isFinal){
    if(!finalSegments.has(i)){
     const alreadyQueued=interimCounts.get(i)||0;
-    if(words.length>alreadyQueued)enqueueWords(words.slice(alreadyQueued));
+    if(words.length>alreadyQueued&&spotlightMode)enqueueWords(words.slice(alreadyQueued));
     finalSegments.set(i,transcript);
+    if(isRecording&&transcript.trim())recordedSpeechSegments.push({text:transcript,time:Math.max(0,(performance.now()-recordingStartedAt)/1000)});
     interimCounts.delete(i);
    }
-  }else{
+  }else if(spotlightMode){
    const alreadyQueued=interimCounts.get(i)||0;
    if(words.length>alreadyQueued)enqueueWords(words.slice(alreadyQueued));
    interimCounts.set(i,Math.max(alreadyQueued,words.length));
   }
- }
+ } 
 }
 function showSpeechNotice(text){
  captionWord.classList.remove('active');
@@ -260,42 +294,53 @@ function updateCaption(now){
   requestAnimationFrame(()=>{if(spotlightMode&&token===captionToken)captionWord.classList.add('active')});
  }
 }
-function startWordRecognition(){
- if(!SpeechRecognitionAPI){
-  showSpeechNotice('Speech recognition is not supported here');
-  return;
+async function startWordRecognition(){
+ if(recognition||recognitionLoading)return;
+ if(!SpeechRecognitionAPI||typeof SpeechRecognitionAPI.available!=='function'||typeof SpeechRecognitionAPI.install!=='function'){
+  recognitionBlocked=true;
+  if(spotlightMode)showSpeechNotice('Live captions vary by browser; the final video transcribes locally');
+  return false;
  }
- recognitionBlocked=false;
- finalSegments=new Map();interimCounts=new Map();wordQueue=[];activeWord=null;
- let instance;
+ recognitionLoading=true;
  try{
-  instance=new SpeechRecognitionAPI();
+  const options={langs:['en-US'],processLocally:true,quality:'dictation'};
+  let availability=await SpeechRecognitionAPI.available(options);
+  if(availability==='downloadable'||availability==='downloading'){
+   if(spotlightMode)showSpeechNotice('Preparing offline speech recognition…');
+   const installed=await SpeechRecognitionAPI.install(options);
+   if(!installed)throw new Error('The offline language pack could not be installed.');
+   availability=await SpeechRecognitionAPI.available(options);
+  }
+  if(availability!=='available')throw new Error('Offline speech recognition is not available in this browser.');
+  if(!spotlightMode||!listening)return false;
+  const instance=new SpeechRecognitionAPI();
+  if(!('processLocally' in instance))throw new Error('This browser cannot guarantee local speech recognition.');
+  instance.processLocally=true;
+  recognitionBlocked=false;
+  finalSegments=new Map();interimCounts=new Map();wordQueue=[];activeWord=null;
   recognition=instance;
-  instance.lang='en-US';
-  instance.continuous=true;
-  instance.interimResults=true;
-  instance.maxAlternatives=1;
+  instance.lang='en-US';instance.continuous=true;instance.interimResults=true;instance.maxAlternatives=1;
   instance.onresult=event=>handleSpeechResult(event,instance);
   instance.onerror=event=>{
    if(recognition!==instance||!spotlightMode)return;
-   if(event.error==='not-allowed'||event.error==='service-not-allowed'||event.error==='audio-capture'){
+   if(event.error==='not-allowed'||event.error==='service-not-allowed'||event.error==='audio-capture'||event.error==='language-not-supported'){
     recognitionBlocked=true;
-    showSpeechNotice('Allow speech recognition to show words');
+    showSpeechNotice('Live offline captions unavailable; final transcription stays on-device');
    }
   };
   instance.onend=()=>{
    if(recognition!==instance)return;
-   if(spotlightMode&&listening&&!recognitionBlocked){
-    try{instance.start()}catch(_){}
-   }else if(recognition===instance){
-    recognition=null;
-   }
+   if(spotlightMode&&listening&&!recognitionBlocked){try{instance.start()}catch(_){}}
+   else if(recognition===instance)recognition=null;
   };
   instance.start();
+  return true;
  }catch(_){
-  recognition=null;
-  showSpeechNotice('Speech recognition could not start');
- }
+  recognitionBlocked=true;
+  if(spotlightMode)showSpeechNotice('Live captions unavailable; final transcription stays on-device');
+  if(recognition){const old=recognition;recognition=null;old.onresult=null;old.onerror=null;old.onend=null;try{old.abort()}catch(_){}}
+  return false;
+ }finally{recognitionLoading=false}
 }
 function enterSpotlight(){
  if(spotlightMode||!listening)return;
@@ -325,62 +370,436 @@ function leaveSpotlight(){
  if(listening){status.textContent='Listening';status.classList.add('live')}
 }
 
+
+function chooseMimeType(types){
+ if(!window.MediaRecorder)return '';
+ if(typeof MediaRecorder.isTypeSupported!=='function')return '';
+ return types.find(type=>MediaRecorder.isTypeSupported(type))||'';
+}
+function cleanNoteEvents(events,duration){
+ const sorted=events.map(event=>({
+  midi:event.midi,
+  start:clamp(Number(event.start)||0,0,duration),
+  end:clamp(Number.isFinite(event.end)?event.end:duration,0,duration)
+ })).filter(event=>event.end-event.start>.055).sort((a,b)=>a.start-b.start);
+ const merged=[];
+ for(const event of sorted){
+  const prev=merged[merged.length-1];
+  if(prev&&prev.midi===event.midi&&event.start-prev.end<.22){
+   prev.end=Math.max(prev.end,event.end);
+  }else merged.push({...event});
+ }
+ if(!merged.length)return [];
+ const minMidi=Math.min(...merged.map(event=>event.midi));
+ const maxMidi=Math.max(...merged.map(event=>event.midi));
+ for(const event of merged){
+  event.x=maxMidi===minMidi?.5:.04+((event.midi-minMidi)/(maxMidi-minMidi))*.92;
+ }
+ return merged;
+}
+function fallbackWords(segments,duration){
+ const out=[];
+ for(const segment of segments){
+  const words=transcriptWords(segment.text);
+  const start=clamp(segment.time||0,0,duration);
+  const span=Math.min(words.length*.27,Math.max(.2,duration-start));
+  words.forEach((text,index)=>out.push({text,start:start+span*index/Math.max(1,words.length),end:start+span*(index+1)/Math.max(1,words.length)}));
+ }
+ return out.sort((a,b)=>a.start-b.start);
+}
+function wordsFromTranscript(result,duration){
+ const words=[];
+ if(Array.isArray(result?.chunks)){
+  let cursor=0;
+  for(const chunk of result.chunks){
+   const tokens=transcriptWords(chunk.text);
+   if(!tokens.length)continue;
+   const rawTimes=chunk.timestamp;
+   const hasStart=Array.isArray(rawTimes)&&Number.isFinite(rawTimes[0]);
+   const hasEnd=Array.isArray(rawTimes)&&Number.isFinite(rawTimes[1]);
+   const start=hasStart?clamp(rawTimes[0],0,duration):cursor;
+   const end=hasEnd?clamp(rawTimes[1],start,duration):Math.min(duration,start+tokens.length*.26);
+   const span=Math.max(0,end-start);
+   tokens.forEach((text,index)=>words.push({
+    text,
+    start:start+span*index/tokens.length,
+    end:start+span*(index+1)/tokens.length
+   }));
+   cursor=Math.max(cursor,end);
+  }
+ }
+ if(!words.length&&result?.text){
+  const tokens=transcriptWords(result.text),step=duration/Math.max(1,tokens.length);
+  tokens.forEach((text,index)=>words.push({text,start:index*step,end:(index+1)*step}));
+ }
+ return words;
+}
+function groupCaptionWords(words){
+ const groups=[];let current=[];
+ for(const word of words){
+  if(!word.text)continue;
+  const previous=current[current.length-1];
+  const pause=previous?word.start-previous.end:0;
+  if(current.length&&(pause>.62||/[.!?][\\"'”’)}\]]*$/.test(previous.text)||current.length>=9)){
+   groups.push({start:current[0].start,end:current[current.length-1].end+.32,words:current});
+   current=[];
+  }
+  current.push(word);
+ }
+ if(current.length)groups.push({start:current[0].start,end:current[current.length-1].end+.32,words:current});
+ return groups;
+}
+function resampleTo16k(buffer){
+ const rate=16000,sourceRate=buffer.sampleRate,channels=[];
+ for(let c=0;c<buffer.numberOfChannels;c++)channels.push(buffer.getChannelData(c));
+ const length=Math.max(1,Math.floor(buffer.length*rate/sourceRate));
+ const out=new Float32Array(length);
+ for(let i=0;i<length;i++){
+  const position=i*sourceRate/rate,index=Math.floor(position),mix=position-index;
+  let sample=0;
+  for(const channel of channels){
+   const a=channel[Math.min(index,channel.length-1)]||0;
+   const b=channel[Math.min(index+1,channel.length-1)]||0;
+   sample+=(a+(b-a)*mix)/channels.length;
+  }
+  out[i]=sample;
+ }
+ return out;
+}
+async function getLocalTranscriber(){
+ if(!transcriberPromise){
+  transcriberPromise=(async()=>{
+   message.textContent='Loading the on-device speech model. The first download may be large…';
+   const transformers=await import('https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.7.2');
+   transformers.env.useBrowserCache=true;
+   transformers.env.allowRemoteModels=true;
+   if(transformers.env.backends?.onnx?.wasm)transformers.env.backends.onnx.wasm.numThreads=1;
+   return transformers.pipeline('automatic-speech-recognition','onnx-community/whisper-tiny.en',{
+    dtype:'q8',
+    progress_callback:progress=>{
+     if(progress&&progress.status==='progress'&&Number.isFinite(progress.loaded)&&Number.isFinite(progress.total)&&progress.total>0){
+      message.textContent='Loading the local speech model: '+Math.round(progress.loaded/progress.total*100)+'%';
+     }
+    }
+   });
+  })().catch(error=>{transcriberPromise=null;throw error});
+ }
+ return transcriberPromise;
+}
+async function transcribeOnDevice(audioBuffer){
+ const transcriber=await getLocalTranscriber();
+ message.textContent='Transcribing locally and grouping spoken words…';
+ const mono=resampleTo16k(audioBuffer);
+ return await transcriber(mono,{sampling_rate:16000,return_timestamps:'word',chunk_length_s:20,stride_length_s:3});
+}
+function recordedVisualAt(time,frames,indexRef){
+ if(!frames.length)return {level:0,wave:[0,0,0,0,0],spot:false};
+ while(indexRef.index+1<frames.length&&frames[indexRef.index+1].t<=time)indexRef.index++;
+ const first=frames[indexRef.index]||frames[0],next=frames[Math.min(indexRef.index+1,frames.length-1)]||first;
+ const mix=next.t>first.t?clamp((time-first.t)/(next.t-first.t),0,1):0;
+ return {
+  level:first.level+(next.level-first.level)*mix,
+  wave:first.wave.map((value,i)=>value+((next.wave[i]??value)-value)*mix),
+  spot:first.spot
+ };
+}
+function drawExportCapsule(context,x,top,bottom,radius,alpha){
+ if(bottom<top){const swap=top;top=bottom;bottom=swap}
+ context.fillStyle='rgba(255,255,255,'+clamp(alpha,0,1).toFixed(3)+')';
+ if(bottom-top<=radius*2){
+  context.beginPath();context.arc(x,(top+bottom)/2,radius,0,Math.PI*2);context.fill();return;
+ }
+ context.beginPath();
+ context.moveTo(x-radius,top+radius);
+ context.arc(x,top+radius,radius,Math.PI,Math.PI*2);
+ context.lineTo(x+radius,bottom-radius);
+ context.arc(x,bottom-radius,radius,0,Math.PI);
+ context.closePath();context.fill();
+}
+function drawCaptionGroup(context,group,time,cx,cy,maxWidth,canvasWidth){
+ if(!group||!group.words.length)return;
+ const fontSize=clamp(canvasWidth*.064,27,48),lineHeight=fontSize*1.32;
+ context.font='650 '+fontSize+'px Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif';
+ context.textBaseline='middle';
+ const words=group.words.map((word,index)=>({...word,index,width:context.measureText(word.text).width}));
+ const lines=[];let line=[];
+ for(const word of words){
+  const currentWidth=line.reduce((sum,item)=>sum+item.width,0)+Math.max(0,line.length)*fontSize*.34;
+  if(line.length&&currentWidth+fontSize*.34+word.width>maxWidth){lines.push(line);line=[]}
+  line.push(word);
+ }
+ if(line.length)lines.push(line);
+ const totalHeight=lines.length*lineHeight,top=cy-totalHeight/2;
+ lines.forEach((items,lineIndex)=>{
+  const widthOfLine=items.reduce((sum,item)=>sum+item.width,0)+Math.max(0,items.length-1)*fontSize*.34;
+  let x=cx-widthOfLine/2;
+  const y=top+lineIndex*lineHeight;
+  for(const item of items){
+   const isActive=time>=item.start-.02&&time<Math.max(item.end,item.start+.10);
+   if(isActive){
+    const padX=fontSize*.12,padY=fontSize*.12;
+    context.fillStyle='#fff';
+    context.fillRect(x-padX,y-fontSize*.58-padY,item.width+padX*2,fontSize*1.16+padY*2);
+    context.fillStyle='#000';
+   }else context.fillStyle='#fff';
+   context.fillText(item.text,x,y);
+   x+=item.width+fontSize*.34;
+  }
+ });
+}
+function drawExportFrame(context,canvasWidth,canvasHeight,time,visual,notesForExport,captionGroups,indexRef){
+ context.fillStyle='#000';context.fillRect(0,0,canvasWidth,canvasHeight);
+ const cx=canvasWidth/2,cy=canvasHeight/2;
+ const scale=canvasWidth/Math.max(1,innerWidth),minViewport=Math.min(innerWidth,innerHeight);
+ const orbBase=clamp(minViewport*.34,160,290)*scale;
+ if(visual.spot){
+  const blend=(Math.sin(time*.31)+1)/2;
+  const r=125+30*blend,g=75+20*(1-blend),b=255;
+  const ox=cx+Math.sin(time*.27)*orbBase*.16,oy=cy+Math.cos(time*.21)*orbBase*.13;
+  const glow=context.createRadialGradient(ox,oy,2,cx,cy,orbBase*1.55);
+  glow.addColorStop(0,'rgba('+r+','+g+','+b+',0.15)');
+  glow.addColorStop(.48,'rgba(70,95,255,0.085)');
+  glow.addColorStop(1,'rgba(0,0,0,0)');
+  context.fillStyle=glow;context.beginPath();context.arc(cx,cy,orbBase*1.6,0,Math.PI*2);context.fill();
+ }else{
+  const speed=canvasHeight/(NOTE_DURATION/1000),radius=NOTE_WIDTH*scale/2;
+  for(const note of notesForExport){
+   if(time<note.start)continue;
+   const sounding=time<=note.end;
+   const activeDuration=sounding?time-note.start:note.end-note.start;
+   const length=clamp(activeDuration*speed,NOTE_WIDTH*scale,canvasHeight*.9);
+   const rise=sounding?0:(time-note.end)*speed;
+   const alpha=sounding?1:clamp(1-(time-note.end)/(NOTE_DURATION/1000),0,1);
+   if(alpha<=0)continue;
+   drawExportCapsule(context,note.x*canvasWidth,canvasHeight-length-rise,canvasHeight-rise,radius,alpha);
+  }
+ }
+ const orbRadius=orbBase*.5*(visual.spot?1:1+visual.level*.72);
+ context.fillStyle=visual.spot?'#000':'#fff';
+ context.beginPath();context.arc(cx,cy,orbRadius,0,Math.PI*2);context.fill();
+ if(!visual.spot){
+  const waveWidth=clamp(minViewport*.2788,130,238)*scale;
+  const gap=clamp(minViewport*.017,5,15)*scale;
+  const cell=(waveWidth-gap*4)/5;
+  const baseDiameter=clamp(minViewport*.014,6,9)*scale;
+  const extension=clamp(innerHeight*.24,80,150)*scale;
+  for(let i=0;i<5;i++){
+   const x=cx-waveWidth/2+cell/2+i*(cell+gap);
+   const barHeight=baseDiameter+(visual.wave[i]||0)*extension;
+   drawExportCapsule(context,x,cy-barHeight/2,cy+barHeight/2,baseDiameter/2,1);
+  }
+ }else{
+  const group=captionGroups.find(item=>time>=item.start-.15&&time<=item.end);
+  drawCaptionGroup(context,group,time,cx,cy,canvasWidth*.84,canvasWidth);
+ }
+}
+async function renderVideo(audioBuffer,cleanNotes,visualFrames,captionGroups){
+ if(!window.MediaRecorder)throw new Error('This browser does not support video recording.');
+ const exportCanvas=document.createElement('canvas');
+ const portrait=innerHeight>=innerWidth;
+ exportCanvas.width=portrait?720:1280;
+ exportCanvas.height=portrait?1280:720;
+ const exportCtx=exportCanvas.getContext('2d',{alpha:false});
+ if(!exportCtx||!exportCanvas.captureStream)throw new Error('This browser cannot export canvas video.');
+ const canvasStream=exportCanvas.captureStream(30);
+ const outputContext=new (window.AudioContext||window.webkitAudioContext)();
+ const destination=outputContext.createMediaStreamDestination();
+ const sourceNode=outputContext.createBufferSource();sourceNode.buffer=audioBuffer;sourceNode.connect(destination);
+ const mixedStream=new MediaStream([...canvasStream.getVideoTracks(),...destination.stream.getAudioTracks()]);
+ const mime=chooseMimeType(['video/mp4;codecs=h264,aac','video/mp4','video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm']);
+ let recorder;
+ try{recorder=mime?new MediaRecorder(mixedStream,{mimeType:mime}):new MediaRecorder(mixedStream)}
+ catch(error){canvasStream.getTracks().forEach(track=>track.stop());await outputContext.close();throw error}
+ const chunks=[];
+ let doneResolve,doneReject;
+ const done=new Promise((resolve,reject)=>{doneResolve=resolve;doneReject=reject});
+ recorder.ondataavailable=event=>{if(event.data&&event.data.size)chunks.push(event.data)};
+ recorder.onerror=event=>doneReject(event.error||new Error('The video recorder encountered an error.'));
+ recorder.onstop=()=>doneResolve(new Blob(chunks,{type:recorder.mimeType||mime||'video/webm'}));
+ const duration=audioBuffer.duration,frameCursor={index:0};
+ recorder.start(1000);
+ await outputContext.resume();
+ const beganAt=outputContext.currentTime;
+ let exportRaf=0,finished=false;
+ const draw=()=>{
+  const current=clamp(outputContext.currentTime-beganAt,0,duration);
+  const visual=recordedVisualAt(current,visualFrames,frameCursor);
+  drawExportFrame(exportCtx,exportCanvas.width,exportCanvas.height,current,visual,cleanNotes,captionGroups,frameCursor);
+ };
+ const tick=()=>{
+  draw();
+  if(!finished&&outputContext.currentTime-beganAt<duration)exportRaf=requestAnimationFrame(tick);
+ };
+ sourceNode.onended=()=>{
+  finished=true;
+  if(exportRaf)cancelAnimationFrame(exportRaf);
+  draw();
+  setTimeout(()=>{if(recorder.state!=='inactive')recorder.stop()},180);
+ };
+ sourceNode.start();
+ tick();
+ let videoBlob;
+ try{videoBlob=await done}
+ catch(error){if(recorder.state!=='inactive')recorder.stop();canvasStream.getTracks().forEach(track=>track.stop());destination.stream.getTracks().forEach(track=>track.stop());await outputContext.close();throw error}
+ canvasStream.getTracks().forEach(track=>track.stop());destination.stream.getTracks().forEach(track=>track.stop());
+ try{sourceNode.disconnect()}catch(_){}
+ await outputContext.close();
+ if(!videoBlob||videoBlob.size<1000)throw new Error('The exported video was empty. Try a slightly longer recording.');
+ return videoBlob;
+}
+async function makeVideo(audioBlob){
+ if(!audioBlob||!audioBlob.size)throw new Error('No audio was captured. Check microphone permission and try again.');
+ message.textContent='Decoding audio locally…';
+ const AC=window.AudioContext||window.webkitAudioContext;
+ if(!AC)throw new Error('This browser cannot decode audio for the video export.');
+ const decodeContext=new AC();
+ let audioBuffer;
+ try{audioBuffer=await decodeContext.decodeAudioData(await audioBlob.arrayBuffer())}
+ finally{try{await decodeContext.close()}catch(_){}}
+ let words=[],transcriptionWarning='';
+ try{
+  const result=await transcribeOnDevice(audioBuffer);
+  words=wordsFromTranscript(result,audioBuffer.duration);
+ }catch(error){
+  console.warn('Local transcription was unavailable; exporting without model-generated captions.',error);
+  words=fallbackWords(recordedSpeechSegments,audioBuffer.duration);
+  transcriptionWarning='Local transcription could not start in this browser, so this export may not include all spoken-word captions.';
+ }
+ const captions=groupCaptionWords(words);
+ const cleanedNotes=cleanNoteEvents(recordedNotes,audioBuffer.duration);
+ message.textContent='Polishing notes and rendering the video on this device…';
+ const videoBlob=await renderVideo(audioBuffer,cleanedNotes,recordedFrames,captions);
+ if(exportObjectUrl)URL.revokeObjectURL(exportObjectUrl);
+ exportObjectUrl=URL.createObjectURL(videoBlob);
+ exportPreview.src=exportObjectUrl;
+ const extension=videoBlob.type.includes('mp4')?'mp4':'webm';
+ downloadLink.href=exportObjectUrl;
+ downloadLink.download='abyssalbar-recording.'+extension;
+ exportTitle.textContent='Your video is ready';
+ exportStatus.textContent=transcriptionWarning||'Notes and word groups were cleaned up locally. Your audio was not uploaded.';
+ exportPanel.hidden=false;
+ exportPanel.scrollTop=0;
+ status.textContent='Video ready';status.classList.remove('live');
+ message.textContent='Your video is ready to preview or download.';
+}
+
 async function start(){
- if(starting||listening||stopping)return;starting=true;mic.disabled=true;message.textContent='Requesting microphone access…';
+ if(starting||listening||stopping)return;
+ starting=true;mic.disabled=true;message.textContent='Requesting microphone access…';
+ exportPanel.hidden=true;
+ if(exportObjectUrl){URL.revokeObjectURL(exportObjectUrl);exportObjectUrl=null}
  try{
   if(!navigator.mediaDevices?.getUserMedia)throw new Error('Microphone access is unavailable here. Open this page over HTTPS in a browser that supports microphone input.');
-  stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true},video:false});
+  if(!window.MediaRecorder)throw new Error('This browser cannot record media. Try a current browser that supports MediaRecorder.');
+  const activeStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true},video:false});
+  stream=activeStream;
   const AC=window.AudioContext||window.webkitAudioContext;if(!AC)throw new Error('Audio analysis is unavailable in this browser.');
   audio=new AC();if(audio.state==='suspended')await audio.resume();
   analyser=audio.createAnalyser();analyser.fftSize=2048;analyser.smoothingTimeConstant=.72;
   source=audio.createMediaStreamSource(stream);source.connect(analyser);
   timeData=new Uint8Array(analyser.fftSize);freqData=new Uint8Array(analyser.frequencyBinCount);
+  const audioOnly=new MediaStream(stream.getAudioTracks());
+  const audioMime=chooseMimeType(['audio/mp4','audio/webm;codecs=opus','audio/webm','audio/ogg;codecs=opus']);
+  audioRecorder=audioMime?new MediaRecorder(audioOnly,{mimeType:audioMime}):new MediaRecorder(audioOnly);
+  audioChunks=[];recordedFrames=[];recordedNotes=[];recordedSpeechSegments=[];lastRecordedFrameAt=-1;
+  recordingStartedAt=performance.now();isRecording=true;
+  audioRecorder.ondataavailable=event=>{if(event.data&&event.data.size)audioChunks.push(event.data)};
+  audioRecorder.start(1000);
   listening=true;level=0;pitchMinLog=null;pitchMaxLog=null;lastSpeech=0;lastPitchAt=0;lastValidPitchAt=0;candidateMidi=null;candidateCount=0;currentMidi=null;currentNote=null;previousTime=0;notes=[];dotLevels.fill(0);
-  mic.textContent='Stop listening';status.textContent='Listening';status.classList.add('live');message.textContent='Audio is analysed locally to animate the visuals.';
-  raf=requestAnimationFrame(frame)
- }catch(e){
-  listening=false;if(raf)cancelAnimationFrame(raf);raf=0;
-  if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;
+  mic.textContent='Stop & create video';status.textContent='Recording';status.classList.add('live');
+  message.textContent='Recording locally. Hold the screen for the purple-blue word mode.';
+  raf=requestAnimationFrame(frame);
+ }catch(error){
+  isRecording=false;listening=false;
+  if(audioRecorder&&audioRecorder.state!=='inactive')try{audioRecorder.stop()}catch(_){}
+  audioRecorder=null;
+  if(stream)stream.getTracks().forEach(track=>track.stop());stream=null;
   if(source)try{source.disconnect()}catch(_){}source=null;
   const failedAudio=audio;audio=null;analyser=null;timeData=null;freqData=null;
   if(failedAudio)try{await failedAudio.close()}catch(_){}
-  message.textContent=e.message||'Could not start microphone. Check site permissions.';
-  status.textContent='Microphone off';status.classList.remove('live');
-}finally{starting=false;mic.disabled=false}
+  message.textContent=error.message||'Could not start recording. Check microphone permission and recorder support.';
+  status.textContent='Ready';status.classList.remove('live');
+  mic.textContent='Start recording';
+ }finally{starting=false;mic.disabled=false}
 }
 async function stop(){
- if(stopping)return;stopping=true;mic.disabled=true;
+ if(stopping||!listening)return;
+ stopping=true;mic.disabled=true;
+ status.textContent='Processing locally';status.classList.remove('live');
+ message.textContent='Finishing the recording on this device…';
+ const stopAt=performance.now();
+ endCurrentNote(stopAt);
+ if(isRecording){
+  recordedFrames.push({t:Math.max(0,(stopAt-recordingStartedAt)/1000),level,wave:dotLevels.slice(),spot:spotlightMode});
+  lastRecordedFrameAt=stopAt;
+ }
+ if(spotlightMode)leaveSpotlight();
  listening=false;if(raf)cancelAnimationFrame(raf);raf=0;
- const activeStream=stream;stream=null;if(activeStream)activeStream.getTracks().forEach(t=>t.stop());
- if(source)try{source.disconnect()}catch(_){}source=null;
- const activeAudio=audio;audio=null;analyser=null;timeData=null;freqData=null;
- if(activeAudio)try{await activeAudio.close()}catch(_){}
- level=0;pitchMinLog=null;pitchMaxLog=null;lastSpeech=0;lastPitchAt=0;lastValidPitchAt=0;candidateMidi=null;candidateCount=0;currentMidi=null;currentNote=null;previousTime=0;notes=[];dotLevels.fill(0);
- orb.style.transform='translate3d(-50%,-50%,0) scale(1)';
- dots.forEach(d=>{d.style.height=''});
- drawNotes(performance.now());
- mic.textContent='Enable microphone';status.textContent='Microphone off';status.classList.remove('live');message.textContent='Microphone off. Press the button to start again.';
- stopping=false;mic.disabled=false;
+ if(recognition){
+  const old=recognition;recognition=null;old.onresult=null;old.onerror=null;old.onend=null;try{old.abort()}catch(_){}
+ }
+ recognitionLoading=false;isRecording=false;
+ let rawAudioBlob=null;
+ try{
+  const activeRecorder=audioRecorder;audioRecorder=null;
+  if(activeRecorder){
+   if(activeRecorder.state!=='inactive'){
+    await new Promise((resolve,reject)=>{
+     activeRecorder.addEventListener('stop',resolve,{once:true});
+     activeRecorder.addEventListener('error',event=>reject(event.error||new Error('The audio recording could not be finalized.')),{once:true});
+     activeRecorder.stop();
+    });
+   }
+   rawAudioBlob=new Blob(audioChunks,{type:activeRecorder.mimeType||'audio/webm'});
+  }
+  if(stream)stream.getTracks().forEach(track=>track.stop());stream=null;
+  if(source)try{source.disconnect()}catch(_){}source=null;
+  const activeAudio=audio;audio=null;analyser=null;timeData=null;freqData=null;
+  if(activeAudio)try{await activeAudio.close()}catch(_){}
+  if(!recordedFrames.length)recordedFrames=[{t:0,level:0,wave:[0,0,0,0,0],spot:false}];
+  await makeVideo(rawAudioBlob);
+  mic.textContent='Start recording';
+ }catch(error){
+  console.error('Video export failed.',error);
+  exportTitle.textContent='Video export could not finish';
+  exportStatus.textContent=(error&&error.message?error.message:'An unexpected error interrupted export')+' Your audio stays on this device.';
+  exportPanel.hidden=false;
+  status.textContent='Export failed';status.classList.remove('live');
+  message.textContent='The recording could not be exported. You can close this panel and try a shorter take.';
+  mic.textContent='Start recording';
+ }finally{
+  currentMidi=null;currentNote=null;previousTime=0;notes=[];dotLevels.fill(0);
+  dots.forEach(dot=>{dot.style.height=''});
+  orb.style.transform='translate3d(-50%,-50%,0) scale(1)';
+  stopping=false;mic.disabled=false;
+ }
 }
 mic.addEventListener('click',()=>listening?stop():start());
-document.addEventListener('pointerdown',event=>{
- if(!event.isPrimary||event.button!==0||spotlightMode)return;
- const target=event.target;
- if(target&&target.closest&&target.closest('.controls,button'))return;
- if(!listening){message.textContent='Enable the microphone before holding the screen to show spoken words.';return}
- holdPointerId=event.pointerId;
- enterSpotlight();
+closeExport.addEventListener('click',()=>{
+ exportPanel.hidden=true;exportPreview.pause();
 });
+stage.addEventListener('pointerdown',event=>{
+ if(!event.isPrimary||event.button!==0||spotlightMode)return;
+ event.preventDefault();
+ if(!listening){message.textContent='Press Start recording before holding the screen for the word mode.';return}
+ holdPointerId=event.pointerId;
+ try{stage.setPointerCapture(event.pointerId)}catch(_){}
+ enterSpotlight();
+},{passive:false});
 function releaseSpotlightPointer(event){
  if(holdPointerId===null||event.pointerId!==holdPointerId)return;
+ event.preventDefault();
  holdPointerId=null;
  leaveSpotlight();
 }
-document.addEventListener('pointerup',releaseSpotlightPointer);
-document.addEventListener('pointercancel',releaseSpotlightPointer);
-document.addEventListener('contextmenu',event=>{if(spotlightMode)event.preventDefault()});
-addEventListener('resize',resize,{passive:true});
-addEventListener('pagehide',()=>{listening=false;if(raf)cancelAnimationFrame(raf);raf=0;leaveSpotlight();if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;if(source)try{source.disconnect()}catch(_){}source=null;if(audio)audio.close().catch(()=>{});audio=null});
+stage.addEventListener('pointerup',releaseSpotlightPointer,{passive:false});
+stage.addEventListener('pointercancel',releaseSpotlightPointer,{passive:false});
+stage.addEventListener('lostpointercapture',event=>{
+ if(holdPointerId===event.pointerId){holdPointerId=null;leaveSpotlight()}
+});
+document.addEventListener('selectstart',event=>{if(event.target&&stage.contains(event.target))event.preventDefault()});
+document.addEventListener('contextmenu',event=>{if(stage.contains(event.target))event.preventDefault()});addEventListener('resize',resize,{passive:true});
+addEventListener('pagehide',()=>{listening=false;isRecording=false;if(raf)cancelAnimationFrame(raf);raf=0;leaveSpotlight();if(audioRecorder&&audioRecorder.state!=='inactive')try{audioRecorder.stop()}catch(_){}if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;if(source)try{source.disconnect()}catch(_){}source=null;if(audio)audio.close().catch(()=>{});audio=null;if(exportObjectUrl)URL.revokeObjectURL(exportObjectUrl)});
 resize();drawNotes(performance.now());
 })();
 </script>
