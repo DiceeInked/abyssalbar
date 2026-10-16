@@ -848,6 +848,7 @@ if(compilerMode){
    if(compileAudioContext.state!=='running')throw new Error('The browser kept audio rendering paused. Keep this page active and try compiling again.');
    await makeVideo(pendingTake.audioBlob,compileAudioContext);
    await clearTakeLocally();
+   closeExport.disabled=false;closeExport.textContent='Back to visualizer';
   }catch(error){
    console.error('Local video compilation failed',error);
    exportTitle.textContent='Could not compile this take';
