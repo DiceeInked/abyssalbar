@@ -351,14 +351,13 @@ input[type=range]{width:135px;accent-color:var(--teal)}
   function resolveParticleCollisions(){
     const ps=state.particles;
     if(ps.length<2)return;
-    // The default dot radius is 1 cm, so dot-centres aim to stay 2 cm apart.
-    // A few soft correction passes allow a tiny overlap, then push pairs apart
-    // before they can pass through one another.
+    // Last-resort anti-tunnelling correction. Most separation now comes from
+    // the spring-damper force above, so this only gently corrects leftover overlap.
     const maxRadius=Math.max.apply(null,species.map(s=>s.radius));
     const cellSize=Math.max(2,maxRadius*2);
     const cols=Math.max(1,Math.ceil(state.worldW/cellSize));
     const rows=Math.max(1,Math.ceil(state.worldH/cellSize));
-    for(let pass=0;pass<3;pass++){
+    for(let pass=0;pass<2;pass++){
       const buckets=new Map();
       for(let i=0;i<ps.length;i++){
         const p=ps[i],cx=Math.floor(p.x/cellSize),cy=Math.floor(p.y/cellSize),key=cx+','+cy;
@@ -376,25 +375,15 @@ input[type=range]{width:135px;accent-color:var(--teal)}
             for(let k=0;k<bucket.length;k++){
               const j=bucket[k];if(j<=i)continue;
               const b=ps[j],minimum=species[a.type].radius+species[b.type].radius;
-              let dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy);
+              let dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy),nxv,nyv;
               if(d>=minimum)continue;
-              let nxv,nyv;
               if(d<1e-8){
                 const angle=((i*31+j*17)%360)*Math.PI/180;
-                nxv=Math.cos(angle);nyv=Math.sin(angle);d=0;
+                nxv=Math.cos(angle);nyv=Math.sin(angle);
               }else{nxv=dx/d;nyv=dy/d;}
-              const overlap=minimum-d;
-              const correction=overlap*.85*.5;
+              const correction=(minimum-d)*.25;
               a.x-=nxv*correction;a.y-=nyv*correction;
               b.x+=nxv*correction;b.y+=nyv*correction;
-              // A gentle, low-bounce impulse removes closing velocity so dots
-              // do not immediately tunnel through the same pair next frame.
-              const closing=(b.vx-a.vx)*nxv+(b.vy-a.vy)*nyv;
-              if(closing<0){
-                const impulse=-(1+.25)*closing*.5;
-                a.vx-=nxv*impulse;a.vy-=nyv*impulse;
-                b.vx+=nxv*impulse;b.vy+=nyv*impulse;
-              }
               wrapParticle(a);wrapParticle(b);
             }
           }
@@ -415,17 +404,39 @@ input[type=range]{width:135px;accent-color:var(--teal)}
         for(let k=0;k<bucket.length;k++){
           const j=bucket[k];if(j===i)continue;
           const b=ps[j];
+          let dx=b.x-a.x,dy=b.y-a.y;
+          const d2=dx*dx+dy*dy;
+          let d,nx,ny;
+          if(d2<1e-10){
+            // Give coincident particles a deterministic opposite direction.
+            const low=Math.min(i,j),high=Math.max(i,j);
+            const angle=((low*31+high*17)%360)*Math.PI/180;
+            const sign=i<j?1:-1;
+            nx=Math.cos(angle)*sign;ny=Math.sin(angle)*sign;d=0;
+          }else{
+            d=Math.sqrt(d2);nx=dx/d;ny=dy/d;
+          }
+          // Soft, color-independent collision shield: spring force grows with
+          // overlap, while damping resists particles moving into one another.
+          // It runs before the interaction-mode filter, so every color collides.
+          const minimum=species[a.type].radius+species[b.type].radius;
+          if(d<minimum){
+            const overlap=minimum-d;
+            const closing=(b.vx-a.vx)*nx+(b.vy-a.vy)*ny;
+            const springForce=overlap*8;
+            const dampingForce=closing<0?-closing*3:0;
+            const shieldForce=springForce+dampingForce;
+            ax[i]-=nx*shieldForce;ay[i]-=ny*shieldForce;
+          }
           if(state.interactionMode==='self' && a.type!==b.type)continue;
           if(state.interactionMode==='other' && a.type===b.type)continue;
-          let dx=b.x-a.x,dy=b.y-a.y;
-          const d2=dx*dx+dy*dy;if(d2<.0001)continue;
-          const d=Math.sqrt(d2),setting=species[a.type];
+          const setting=species[a.type];
           if(d<setting.min||d>setting.max)continue;
           const rule=getRule(a.type,b.type).strength;if(rule===0)continue;
           const t=(d-setting.min)/(setting.max-setting.min);
-          const envelope=d<setting.min?d/setting.min:Math.max(0,1-t);
+          const envelope=Math.max(0,1-t);
           const force=rule*envelope;
-          ax[i]+=(dx/d)*force;ay[i]+=(dy/d)*force;
+          ax[i]+=nx*force;ay[i]+=ny*force;
         }
       }
     }
