@@ -173,11 +173,10 @@ input[type=range]{width:135px;accent-color:var(--teal)}
     {name:'Yellow', css:'#ffd53f'}
   ];
   const ruleOptions = [
-    {value:'none',label:'— None',strength:0},
-    {value:'strong-attract',label:'≫ Strong',strength:1},
+    {value:'strong-attract',label:'≫ Strong',strength:1.15},
     {value:'weak-attract',label:'› Weak',strength:.34},
     {value:'weak-repel',label:'‹ Weak',strength:-.34},
-    {value:'strong-repel',label:'≪ Strong',strength:-1}
+    {value:'strong-repel',label:'≪ Strong',strength:-1.15}
   ];
   const state = {
     particles:[], matrix:[], selectedColor:0, paintMode:false, paused:false, showRanges:false, sizeFollowsZoom:true, interactionMode:'both',
@@ -188,7 +187,7 @@ input[type=range]{width:135px;accent-color:var(--teal)}
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   const rand=(a,b)=>a+Math.random()*(b-a);
   const hypot=Math.hypot;
-  const getRule=(i,j)=>ruleOptions.find(x=>x.value===state.matrix[i][j])||ruleOptions[0];
+  const getRule=(i,j)=>ruleOptions.find(x=>x.value===state.matrix[i][j])||{strength:0};
   const scale=()=>Math.max(.0001,Math.min(Math.max(1,state.width-28)/state.worldW,Math.max(1,state.height-100)/state.worldH)*state.zoom);
   const shortest=(d,extent)=>d>extent/2?d-extent:d< -extent/2?d+extent:d;
 
@@ -260,7 +259,8 @@ input[type=range]{width:135px;accent-color:var(--teal)}
     } else if(name==='all'){
       for(let i=0;i<4;i++)for(let j=0;j<4;j++)m[i][j]=i===j?'strong-repel':'weak-attract';
     } else if(name==='random'){
-      const values=['none','weak-attract','strong-attract','weak-repel','strong-repel'];
+      // Every directed color pairing receives a real rule; "none" is not chosen.
+      const values=['weak-attract','strong-attract','weak-repel','strong-repel'];
       for(let i=0;i<4;i++)for(let j=0;j<4;j++)m[i][j]=values[Math.floor(Math.random()*values.length)];
     }
     state.matrix=m;buildMatrix();state.dirty=true;
@@ -538,7 +538,8 @@ input[type=range]{width:135px;accent-color:var(--teal)}
   });
   window.addEventListener('resize',resize,{passive:true});
 
-  setPreset('cycle');
+  // Roll a fresh, fully populated interaction matrix on every page load/refresh.
+  setPreset('random');
   buildSpeciesSettings();
   resize();
   // Populate a world larger than the viewport, so panning explores the world instead of one fixed screen.
