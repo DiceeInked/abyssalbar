@@ -712,6 +712,7 @@ async function makeVideo(audioBlob,outputContext){
  exportPreview.src=exportObjectUrl;exportPreview.hidden=false;
  const extension=videoBlob.type.includes('mp4')?'mp4':'webm';
  downloadLink.textContent='Download video';
+ downloadLink.style.display='inline-block';
  downloadLink.href=exportObjectUrl;
  downloadLink.download='abyssalbar-recording.'+extension;
  exportTitle.textContent='Your video is ready';
