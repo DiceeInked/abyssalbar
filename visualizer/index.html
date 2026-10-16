@@ -21,14 +21,26 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000;color:
 .status{position:fixed;top:max(20px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);color:#888;font-size:10px;letter-spacing:.15em;text-transform:uppercase;white-space:nowrap;z-index:10}
 .status.live{color:#fff}
 #message{position:fixed;z-index:10;bottom:max(78px,calc(env(safe-area-inset-bottom) + 64px));left:50%;transform:translateX(-50%);width:min(440px,calc(100vw - 34px));margin:0;text-align:center;color:#777;font-size:11px;line-height:1.5;pointer-events:none}
+#glow{position:absolute;left:50%;top:50%;width:clamp(220px,52vmin,440px);aspect-ratio:1;border-radius:50%;z-index:2;pointer-events:none;opacity:0;visibility:hidden;background:radial-gradient(circle,rgba(122,71,255,.18) 0%,rgba(73,100,255,.12) 38%,rgba(0,0,0,0) 72%);transform:translate3d(-50%,-50%,0);filter:blur(22px)}
+#caption-layer{position:absolute;left:50%;top:50%;width:min(88vw,640px);transform:translate3d(-50%,-50%,0);z-index:5;display:flex;align-items:center;justify-content:center;pointer-events:none;text-align:center}
+#caption-word{display:inline-block;max-width:100%;padding:.13em .27em;border-radius:2px;background:#fff;color:#000;font-size:clamp(25px,5.5vw,54px);font-weight:650;letter-spacing:-.045em;line-height:1.08;overflow-wrap:anywhere;opacity:0;transform:translateY(7px) scale(.98);will-change:opacity,transform}
+#caption-word.active{animation:caption-in 200ms cubic-bezier(.2,.75,.25,1) both}
+#stage.spotlight-mode #particles,#stage.spotlight-mode .wave{visibility:hidden}
+#stage.spotlight-mode #orb{background:#000;transform:translate3d(-50%,-50%,0) scale(1);z-index:4}
+#stage.spotlight-mode #glow{opacity:1;visibility:visible;animation:glow-drift 8s ease-in-out infinite}
+body.spotlight-mode #status,body.spotlight-mode #message{visibility:hidden}
+@keyframes glow-drift{0%,100%{filter:blur(22px) hue-rotate(-12deg);transform:translate3d(-50%,-50%,0) scale(.96)}50%{filter:blur(27px) hue-rotate(28deg);transform:translate3d(-50%,-50%,0) scale(1.04)}}
+@keyframes caption-in{from{opacity:0;transform:translateY(7px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
 
 </style>
 </head>
 <body>
 <main id="stage" aria-label="Combined voice visualizer">
 <canvas id="particles" aria-hidden="true"></canvas>
+<div id="glow" aria-hidden="true"></div>
 <div id="orb" class="orb" aria-hidden="true"></div>
 <div id="wave" class="wave" aria-hidden="true"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+<div id="caption-layer" aria-hidden="true"><span id="caption-word"></span></div>
 </main>
 <div class="status" id="status">Microphone off</div>
 <p id="message">Start the microphone to animate the orb, five-dot wave, and rising pitch notes.</p>
@@ -36,10 +48,12 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000;color:
 <script>
 (()=>{
 'use strict';
-const orb=document.getElementById('orb'),dots=[...document.querySelectorAll('.dot')],canvas=document.getElementById('particles'),ctx=canvas.getContext('2d'),mic=document.getElementById('mic'),status=document.getElementById('status'),message=document.getElementById('message');
+const stage=document.getElementById('stage'),orb=document.getElementById('orb'),dots=[...document.querySelectorAll('.dot')],canvas=document.getElementById('particles'),ctx=canvas.getContext('2d'),mic=document.getElementById('mic'),status=document.getElementById('status'),message=document.getElementById('message'),captionWord=document.getElementById('caption-word');
 const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const PITCH_INTERVAL=45,NOTE_RELEASE_MS=170,NOTE_DURATION=2400,NOTE_WIDTH=12,NOTE_MAX_COUNT=48,NOTE_PADDING=0.12;
 let stream=null,audio=null,analyser=null,source=null,timeData=null,freqData=null,raf=0,listening=false,starting=false,stopping=false,level=0,pitchMinLog=null,pitchMaxLog=null,lastSpeech=0,lastPitchAt=0,lastValidPitchAt=0,candidateMidi=null,candidateCount=0,currentMidi=null,currentNote=null,notes=[],width=0,height=0,dpr=1,previousTime=0,dotDiameters=[];
+let spotlightMode=false,recognition=null,recognitionBlocked=false,holdPointerId=null,wordQueue=[],activeWord=null,activeWordUntil=0,captionToken=0,finalSegments=new Map(),interimCounts=new Map();
+const SpeechRecognitionAPI=window.SpeechRecognition||window.webkitSpeechRecognition;
 const pitchScratch=new Float32Array(2048);
 const dotLevels=[0,0,0,0,0];
 function clamp(v,min,max){return Math.min(max,Math.max(min,v))}
@@ -159,7 +173,7 @@ function frame(now){
  if(raw>.075)lastSpeech=now;
  const speaking=now-lastSpeech<155;
  analyser.getByteFrequencyData(freqData);
- orb.style.transform='translate3d(-50%,-50%,0) scale('+(1+level*.72).toFixed(3)+')';
+ orb.style.transform=spotlightMode?'translate3d(-50%,-50%,0) scale(1)':'translate3d(-50%,-50%,0) scale('+(1+level*.72).toFixed(3)+')';
  updateWave(reducedMotion ? 0.08 : 0.16,speaking);
 
  if(now-lastPitchAt>=PITCH_INTERVAL){
@@ -191,8 +205,124 @@ function frame(now){
   endCurrentNote(now);
   candidateMidi=null;candidateCount=0;
  }
+ updateCaption(now);
  drawNotes(now);
  raf=requestAnimationFrame(frame);
+}
+
+function transcriptWords(text){
+ return String(text||'').trim().split(/\s+/).filter(word=>/[a-z0-9]/i.test(word));
+}
+function enqueueWords(words){
+ for(const word of words){
+  if(wordQueue.length<100)wordQueue.push(word);
+ }
+}
+function handleSpeechResult(event,instance){
+ if(!spotlightMode||recognition!==instance)return;
+ for(let i=0;i<event.results.length;i++){
+  const result=event.results[i],transcript=result[0]?.transcript||'',words=transcriptWords(transcript);
+  if(result.isFinal){
+   if(!finalSegments.has(i)){
+    const alreadyQueued=interimCounts.get(i)||0;
+    if(words.length>alreadyQueued)enqueueWords(words.slice(alreadyQueued));
+    finalSegments.set(i,transcript);
+    interimCounts.delete(i);
+   }
+  }else{
+   const alreadyQueued=interimCounts.get(i)||0;
+   if(words.length>alreadyQueued)enqueueWords(words.slice(alreadyQueued));
+   interimCounts.set(i,Math.max(alreadyQueued,words.length));
+  }
+ }
+}
+function showSpeechNotice(text){
+ captionWord.classList.remove('active');
+ captionWord.textContent=text;
+ activeWord=null;
+ const token=++captionToken;
+ requestAnimationFrame(()=>{if(spotlightMode&&token===captionToken)captionWord.classList.add('active')});
+}
+function updateCaption(now){
+ if(!spotlightMode)return;
+ if(activeWord&&now>=activeWordUntil){
+  activeWord=null;
+  captionWord.classList.remove('active');
+  captionWord.textContent='';
+  captionToken++;
+ }
+ if(!activeWord&&wordQueue.length){
+  activeWord=wordQueue.shift();
+  captionWord.classList.remove('active');
+  captionWord.textContent=activeWord;
+  activeWordUntil=now+clamp(285+activeWord.length*15,320,480);
+  const token=++captionToken;
+  requestAnimationFrame(()=>{if(spotlightMode&&token===captionToken)captionWord.classList.add('active')});
+ }
+}
+function startWordRecognition(){
+ if(!SpeechRecognitionAPI){
+  showSpeechNotice('Speech recognition is not supported here');
+  return;
+ }
+ recognitionBlocked=false;
+ finalSegments=new Map();interimCounts=new Map();wordQueue=[];activeWord=null;
+ let instance;
+ try{
+  instance=new SpeechRecognitionAPI();
+  recognition=instance;
+  instance.lang='en-US';
+  instance.continuous=true;
+  instance.interimResults=true;
+  instance.maxAlternatives=1;
+  instance.onresult=event=>handleSpeechResult(event,instance);
+  instance.onerror=event=>{
+   if(recognition!==instance||!spotlightMode)return;
+   if(event.error==='not-allowed'||event.error==='service-not-allowed'||event.error==='audio-capture'){
+    recognitionBlocked=true;
+    showSpeechNotice('Allow speech recognition to show words');
+   }
+  };
+  instance.onend=()=>{
+   if(recognition!==instance)return;
+   if(spotlightMode&&listening&&!recognitionBlocked){
+    try{instance.start()}catch(_){}
+   }else if(recognition===instance){
+    recognition=null;
+   }
+  };
+  instance.start();
+ }catch(_){
+  recognition=null;
+  showSpeechNotice('Speech recognition could not start');
+ }
+}
+function enterSpotlight(){
+ if(spotlightMode||!listening)return;
+ spotlightMode=true;
+ stage.classList.add('spotlight-mode');
+ document.body.classList.add('spotlight-mode');
+ captionWord.textContent='';
+ captionWord.classList.remove('active');
+ activeWord=null;activeWordUntil=0;captionToken++;
+ startWordRecognition();
+}
+function leaveSpotlight(){
+ if(!spotlightMode)return;
+ spotlightMode=false;
+ stage.classList.remove('spotlight-mode');
+ document.body.classList.remove('spotlight-mode');
+ wordQueue=[];activeWord=null;activeWordUntil=0;captionToken++;
+ captionWord.textContent='';
+ captionWord.classList.remove('active');
+ if(recognition){
+  const oldRecognition=recognition;
+  recognition=null;
+  oldRecognition.onresult=null;oldRecognition.onerror=null;oldRecognition.onend=null;
+  try{oldRecognition.abort()}catch(_){}
+ }
+ recognitionBlocked=false;
+ if(listening){status.textContent='Listening';status.classList.add('live')}
 }
 
 async function start(){
@@ -233,8 +363,24 @@ async function stop(){
  stopping=false;mic.disabled=false;
 }
 mic.addEventListener('click',()=>listening?stop():start());
+document.addEventListener('pointerdown',event=>{
+ if(!event.isPrimary||event.button!==0||spotlightMode)return;
+ const target=event.target;
+ if(target&&target.closest&&target.closest('.controls,button'))return;
+ if(!listening){message.textContent='Enable the microphone before holding the screen to show spoken words.';return}
+ holdPointerId=event.pointerId;
+ enterSpotlight();
+});
+function releaseSpotlightPointer(event){
+ if(holdPointerId===null||event.pointerId!==holdPointerId)return;
+ holdPointerId=null;
+ leaveSpotlight();
+}
+document.addEventListener('pointerup',releaseSpotlightPointer);
+document.addEventListener('pointercancel',releaseSpotlightPointer);
+document.addEventListener('contextmenu',event=>{if(spotlightMode)event.preventDefault()});
 addEventListener('resize',resize,{passive:true});
-addEventListener('pagehide',()=>{listening=false;if(raf)cancelAnimationFrame(raf);raf=0;if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;if(source)try{source.disconnect()}catch(_){}source=null;if(audio)audio.close().catch(()=>{});audio=null});
+addEventListener('pagehide',()=>{listening=false;if(raf)cancelAnimationFrame(raf);raf=0;leaveSpotlight();if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;if(source)try{source.disconnect()}catch(_){}source=null;if(audio)audio.close().catch(()=>{});audio=null});
 resize();drawNotes(performance.now());
 })();
 </script>
