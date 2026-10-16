@@ -41,7 +41,7 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000;color:
 const orb=document.getElementById('orb'),flame=document.getElementById('flame'),dots=[...document.querySelectorAll('.dot')],canvas=document.getElementById('particles'),ctx=canvas.getContext('2d'),mic=document.getElementById('mic'),status=document.getElementById('status'),message=document.getElementById('message');
 const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const TRAIL_INTERVAL=68,TRAIL_DURATION=1200;
-let stream=null,audio=null,analyser=null,source=null,timeData=null,freqData=null,raf=0,listening=false,starting=false,stopping=false,level=0,pitch=.5,lastSpeech=0,lastPitchAt=0,nextCloneAt=0,trails=[],width=0,height=0,dpr=1,flameX=.5,flameY=.5,previousTime=0,flameDiameter=100;
+let stream=null,audio=null,analyser=null,source=null,timeData=null,freqData=null,raf=0,listening=false,starting=false,stopping=false,level=0,pitchLog=Math.log(150),pitchMinLog=null,pitchMaxLog=null,lastSpeech=0,lastPitchAt=0,nextCloneAt=0,trails=[],width=0,height=0,dpr=1,flameX=.5,flameY=.5,previousTime=0,flameDiameter=100;
 const dotLevels=[0,0,0,0,0];
 function clamp(v,min,max){return Math.min(max,Math.max(min,v))}
 function resize(){width=innerWidth;height=innerHeight;dpr=Math.min(window.devicePixelRatio||1,2);canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);canvas.style.width=width+'px';canvas.style.height=height+'px';ctx.setTransform(dpr,0,0,dpr,0,0);flameDiameter=flame.getBoundingClientRect().width||100;trails.length=0;drawTrails(performance.now())}
@@ -57,8 +57,8 @@ function estimatePitch(bytes,sampleRate){
  for(let lag=minLag;lag<=maxLag;lag++){let cross=0,a2=0,b2=0;for(let i=0;i<limit;i+=3){const a=data[i],b=data[i+lag];cross+=a*b;a2+=a*a;b2+=b*b}const correlation=cross/Math.sqrt((a2*b2)||1);if(correlation>bestCorrelation){bestCorrelation=correlation;bestLag=lag}}
  if(bestCorrelation<.36||!bestLag)return null;
  const hz=sampleRate/bestLag;if(hz<75||hz>700)return null;
- // Map a broader singing range logarithmically across the full screen.
- return clamp((Math.log(hz)-Math.log(75))/(Math.log(700)-Math.log(75)),0,1)
+ // Return frequency so the visualizer can learn this speaker's range.
+ return hz
 }
 function emitTrail(now){trails.push({x:flameX*width,y:flameY*height,createdAt:now});if(trails.length>24)trails.shift();nextCloneAt=now+TRAIL_INTERVAL}
 function drawTrails(now){
@@ -106,10 +106,21 @@ function frame(now){
   if(now-lastPitchAt>=45){
    lastPitchAt=now;
    const detected=estimatePitch(timeData,audio.sampleRate);
-   if(detected!==null)pitch+=(detected-pitch)*0.4;
+   if(detected!==null){
+    const detectedLog=Math.log(detected);
+    pitchLog+=(detectedLog-pitchLog)*0.4;
+    if(pitchMinLog===null||pitchLog<pitchMinLog)pitchMinLog=pitchLog;
+    else pitchMinLog+=(pitchLog-pitchMinLog)*0.001;
+    if(pitchMaxLog===null||pitchLog>pitchMaxLog)pitchMaxLog=pitchLog;
+    else pitchMaxLog+=(pitchLog-pitchMaxLog)*0.001;
+   }
   }
-  // Pitch steers left/right; volume steers up/down, with generous safe margins.
-  const targetX=clamp(.5+(pitch-.5)*2.0,.035,.965);
+  // Learn this speaker's pitch range as they talk; leave a little breathing room beyond both extremes.
+  const pitchPadding=0.12;
+  const pitchLow=(pitchMinLog??pitchLog)-pitchPadding;
+  const pitchHigh=(pitchMaxLog??pitchLog)+pitchPadding;
+  const pitchPosition=clamp((pitchLog-pitchLow)/(pitchHigh-pitchLow),0,1);
+  const targetX=.035+pitchPosition*.93;
   const targetY=clamp(.5-level*.34,.16,.83);
   const move=1-Math.pow(1-(reducedMotion ? 0.12 : 0.34),dt);
   flameX+=(targetX-flameX)*move;flameY+=(targetY-flameY)*move;
@@ -129,7 +140,7 @@ async function start(){
   analyser=audio.createAnalyser();analyser.fftSize=2048;analyser.smoothingTimeConstant=.72;
   source=audio.createMediaStreamSource(stream);source.connect(analyser);
   timeData=new Uint8Array(analyser.fftSize);freqData=new Uint8Array(analyser.frequencyBinCount);
-  listening=true;level=0;pitch=.5;lastSpeech=0;lastPitchAt=0;nextCloneAt=0;previousTime=0;trails=[];dotLevels.fill(0);
+  listening=true;level=0;pitchLog=Math.log(150);pitchMinLog=null;pitchMaxLog=null;lastSpeech=0;lastPitchAt=0;nextCloneAt=0;previousTime=0;trails=[];dotLevels.fill(0);
   mic.textContent='Stop listening';status.textContent='Listening';status.classList.add('live');message.textContent='Audio is analysed locally to animate the visuals.';
   raf=requestAnimationFrame(frame)
  }catch(e){
@@ -149,7 +160,7 @@ async function stop(){
  if(source)try{source.disconnect()}catch(_){}source=null;
  const activeAudio=audio;audio=null;analyser=null;timeData=null;freqData=null;
  if(activeAudio)try{await activeAudio.close()}catch(_){}
- level=0;pitch=.5;lastSpeech=0;lastPitchAt=0;previousTime=0;trails=[];dotLevels.fill(0);
+ level=0;pitchLog=Math.log(150);pitchMinLog=null;pitchMaxLog=null;lastSpeech=0;lastPitchAt=0;previousTime=0;trails=[];dotLevels.fill(0);
  flameX=.5;flameY=.5;flame.style.left='50%';flame.style.top='50%';
  orb.style.transform='translate3d(-50%,-50%,0) scale(1)';
  dots.forEach(d=>{d.style.height=''});
