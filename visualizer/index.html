@@ -15,7 +15,7 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000;color:
 .orb{position:absolute;left:50%;top:50%;width:clamp(160px,34vmin,290px);aspect-ratio:1;border-radius:50%;background:var(--white);transform:translate3d(-50%,-50%,0) scale(1);z-index:3;will-change:transform}
 .wave{position:absolute;left:50%;top:50%;width:clamp(130px,27.88vmin,238px);height:clamp(100px,28vmin,230px);transform:translate3d(-50%,-50%,0);display:grid;grid-template-columns:repeat(5,minmax(0,1fr));align-items:center;justify-items:center;gap:clamp(5px,1.7vmin,15px);z-index:4;pointer-events:none}
 .dot{display:block;width:clamp(6px,1.4vmin,9px);height:clamp(6px,1.4vmin,9px);border-radius:999px;background:#000;will-change:height}
-.controls{position:fixed;z-index:10;left:50%;bottom:max(26px,env(safe-area-inset-bottom));transform:translateX(-50%);display:flex;align-items:center}
+.controls{position:fixed;z-index:10;left:50%;bottom:max(26px,env(safe-area-inset-bottom));transform:translateX(-50%);display:flex;align-items:center;gap:8px}
 .controls button{border:2px solid #fff;border-radius:0;padding:12px 17px;background:#fff;color:#000;font:inherit;font-size:11px;font-weight:650;white-space:nowrap;cursor:pointer;transition:none}
 .controls button:hover{background:#000;color:#fff;border-color:#fff}
 .controls button:disabled{cursor:wait}
@@ -55,7 +55,7 @@ body.spotlight-mode #status,body.spotlight-mode #message{visibility:hidden}
 </main>
 <div class="status" id="status">Microphone off</div>
 <p id="message">Start recording to capture your audio and visualizer locally. Stop to clean up the notes and create a downloadable video.</p>
-<div class="controls"><button id="mic" type="button">Start recording</button></div>
+<div class="controls"><button id="permission" type="button">Enable microphone</button><button id="mic" type="button" disabled>Start recording</button></div>
 <section id="export-panel" hidden aria-live="polite" aria-label="Recording export">
  <div class="export-card">
   <h2 id="export-title">Your video is ready</h2>
@@ -70,14 +70,37 @@ body.spotlight-mode #status,body.spotlight-mode #message{visibility:hidden}
 <script>
 (()=>{
 'use strict';
-const stage=document.getElementById('stage'),orb=document.getElementById('orb'),dots=[...document.querySelectorAll('.dot')],canvas=document.getElementById('particles'),ctx=canvas.getContext('2d'),mic=document.getElementById('mic'),status=document.getElementById('status'),message=document.getElementById('message'),captionWord=document.getElementById('caption-word'),exportPanel=document.getElementById('export-panel'),exportTitle=document.getElementById('export-title'),exportStatus=document.getElementById('export-status'),exportPreview=document.getElementById('export-preview'),downloadLink=document.getElementById('download-link'),closeExport=document.getElementById('close-export');
+const stage=document.getElementById('stage'),orb=document.getElementById('orb'),dots=[...document.querySelectorAll('.dot')],canvas=document.getElementById('particles'),ctx=canvas.getContext('2d'),permissionButton=document.getElementById('permission'),mic=document.getElementById('mic'),status=document.getElementById('status'),message=document.getElementById('message'),captionWord=document.getElementById('caption-word'),exportPanel=document.getElementById('export-panel'),exportTitle=document.getElementById('export-title'),exportStatus=document.getElementById('export-status'),exportPreview=document.getElementById('export-preview'),downloadLink=document.getElementById('download-link'),closeExport=document.getElementById('close-export');
 const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const PITCH_INTERVAL=45,NOTE_RELEASE_MS=170,NOTE_DURATION=2400,NOTE_WIDTH=12,NOTE_MAX_COUNT=48,NOTE_PADDING=0.12;
 let stream=null,audio=null,analyser=null,source=null,timeData=null,freqData=null,raf=0,listening=false,starting=false,stopping=false,level=0,pitchMinLog=null,pitchMaxLog=null,lastSpeech=0,lastPitchAt=0,lastValidPitchAt=0,candidateMidi=null,candidateCount=0,currentMidi=null,currentNote=null,notes=[],width=0,height=0,dpr=1,previousTime=0,dotDiameters=[];
 let spotlightMode=false,recognition=null,recognitionBlocked=false,recognitionLoading=false,holdPointerId=null,wordQueue=[],activeWord=null,activeWordUntil=0,captionToken=0,finalSegments=new Map(),interimCounts=new Map();
-let isRecording=false,audioRecorder=null,audioChunks=[],recordingStartedAt=0,lastRecordedFrameAt=-1,recordedFrames=[],recordedNotes=[],recordedSpeechSegments=[],exportObjectUrl=null,transcriberPromise=null;
+let isRecording=false,audioRecorder=null,audioChunks=[],recordingStartedAt=0,lastRecordedFrameAt=-1,recordedFrames=[],recordedNotes=[],recordedSpeechSegments=[],exportObjectUrl=null,transcriberPromise=null,microphoneEnabled=false,compilerMode=new URLSearchParams(location.search).has('compile');
 const SpeechRecognitionAPI=window.SpeechRecognition||window.webkitSpeechRecognition;
 const pitchScratch=new Float32Array(2048);
+
+const TAKE_DB='abyssalbar-local-takes',TAKE_STORE='takes',TAKE_KEY='latest';
+function openTakeDb(){
+ return new Promise((resolve,reject)=>{
+  const request=indexedDB.open(TAKE_DB,1);
+  request.onupgradeneeded=()=>{if(!request.result.objectStoreNames.contains(TAKE_STORE))request.result.createObjectStore(TAKE_STORE)};
+  request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error||new Error('Local recording storage is unavailable.'));
+ });
+}
+async function saveTakeLocally(take){
+ const db=await openTakeDb();
+ try{await new Promise((resolve,reject)=>{const tx=db.transaction(TAKE_STORE,'readwrite');tx.objectStore(TAKE_STORE).put(take,TAKE_KEY);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error||new Error('Could not save the local take.'))})}
+ finally{db.close()}
+}
+async function loadTakeLocally(){
+ const db=await openTakeDb();
+ try{return await new Promise((resolve,reject)=>{const tx=db.transaction(TAKE_STORE,'readonly'),request=tx.objectStore(TAKE_STORE).get(TAKE_KEY);request.onsuccess=()=>resolve(request.result||null);request.onerror=()=>reject(request.error)})}
+ finally{db.close()}
+}
+async function clearTakeLocally(){
+ try{const db=await openTakeDb();try{await new Promise((resolve,reject)=>{const tx=db.transaction(TAKE_STORE,'readwrite');tx.objectStore(TAKE_STORE).delete(TAKE_KEY);tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)})}finally{db.close()}}catch(_){}
+}
+
 const dotLevels=[0,0,0,0,0];
 function clamp(v,min,max){return Math.min(max,Math.max(min,v))}
 function resize(){
@@ -684,16 +707,28 @@ async function makeVideo(audioBlob){
  message.textContent='Your video is ready to preview or download.';
 }
 
+async function enableMicrophone(){
+ if(microphoneEnabled||starting||listening)return;
+ permissionButton.disabled=true;message.textContent='Requesting microphone permission…';
+ try{
+  if(!navigator.mediaDevices?.getUserMedia)throw new Error('Microphone access is unavailable here. Open this page over HTTPS in a supported browser.');
+  if(!window.MediaRecorder)throw new Error('This browser does not support recording.');
+  stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true},video:false});
+  microphoneEnabled=true;permissionButton.textContent='Microphone enabled';permissionButton.disabled=true;mic.disabled=false;
+  status.textContent='Microphone ready';message.textContent='Microphone permission is enabled. Press Start recording when you are ready.';
+ }catch(error){
+  message.textContent=error.message||'Microphone permission was not granted.';
+  permissionButton.disabled=false;
+ } 
+}
 async function start(){
  if(starting||listening||stopping)return;
- starting=true;mic.disabled=true;message.textContent='Requesting microphone access…';
+ if(!microphoneEnabled||!stream){message.textContent='Enable microphone permission first.';return}
+ starting=true;mic.disabled=true;permissionButton.disabled=true;
  exportPanel.hidden=true;exportPreview.hidden=false;downloadLink.textContent='Download video';downloadLink.style.display='inline-block';
  if(exportObjectUrl){URL.revokeObjectURL(exportObjectUrl);exportObjectUrl=null}
  try{
-  if(!navigator.mediaDevices?.getUserMedia)throw new Error('Microphone access is unavailable here. Open this page over HTTPS in a browser that supports microphone input.');
-  if(!window.MediaRecorder)throw new Error('This browser cannot record media. Try a current browser that supports MediaRecorder.');
-  const activeStream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true,autoGainControl:true},video:false});
-  stream=activeStream;
+  if(!window.MediaRecorder)throw new Error('This browser cannot record media.');
   const AC=window.AudioContext||window.webkitAudioContext;if(!AC)throw new Error('Audio analysis is unavailable in this browser.');
   audio=new AC();if(audio.state==='suspended')await audio.resume();
   analyser=audio.createAnalyser();analyser.fftSize=2048;analyser.smoothingTimeConstant=.72;
@@ -707,87 +742,80 @@ async function start(){
   audioRecorder.ondataavailable=event=>{if(event.data&&event.data.size)audioChunks.push(event.data)};
   audioRecorder.start(1000);
   listening=true;level=0;pitchMinLog=null;pitchMaxLog=null;lastSpeech=0;lastPitchAt=0;lastValidPitchAt=0;candidateMidi=null;candidateCount=0;currentMidi=null;currentNote=null;previousTime=0;notes=[];dotLevels.fill(0);
-  mic.textContent='Stop & create video';status.textContent='Recording';status.classList.add('live');
+  mic.textContent='Stop recording';status.textContent='Recording';status.classList.add('live');
   message.textContent='Recording locally. Hold the screen for the purple-blue word mode.';
   raf=requestAnimationFrame(frame);
  }catch(error){
   isRecording=false;listening=false;
   if(audioRecorder&&audioRecorder.state!=='inactive')try{audioRecorder.stop()}catch(_){}
   audioRecorder=null;
-  if(stream)stream.getTracks().forEach(track=>track.stop());stream=null;
   if(source)try{source.disconnect()}catch(_){}source=null;
   const failedAudio=audio;audio=null;analyser=null;timeData=null;freqData=null;
   if(failedAudio)try{await failedAudio.close()}catch(_){}
-  message.textContent=error.message||'Could not start recording. Check microphone permission and recorder support.';
-  status.textContent='Ready';status.classList.remove('live');
+  message.textContent=error.message||'Could not start recording.';
+  status.textContent='Microphone ready';status.classList.remove('live');
   mic.textContent='Start recording';
- }finally{starting=false;mic.disabled=false}
+ }finally{starting=false;mic.disabled=false;permissionButton.disabled=false}
 }
 async function stop(){
  if(stopping||!listening)return;
- stopping=true;mic.disabled=true;
- status.textContent='Processing locally';status.classList.remove('live');
- message.textContent='Finishing the recording on this device…';
+ stopping=true;mic.disabled=true;permissionButton.disabled=true;
  const stopAt=performance.now();
  endCurrentNote(stopAt);
- if(isRecording){
-  recordedFrames.push({t:Math.max(0,(stopAt-recordingStartedAt)/1000),level,wave:dotLevels.slice(),spot:spotlightMode});
-  lastRecordedFrameAt=stopAt;
- }
+ if(isRecording)recordedFrames.push({t:Math.max(0,(stopAt-recordingStartedAt)/1000),level,wave:dotLevels.slice(),spot:spotlightMode});
  if(spotlightMode)leaveSpotlight();
  listening=false;if(raf)cancelAnimationFrame(raf);raf=0;
- if(recognition){
-  const old=recognition;recognition=null;old.onresult=null;old.onerror=null;old.onend=null;try{old.abort()}catch(_){}
- }
+ if(recognition){const old=recognition;recognition=null;old.onresult=null;old.onerror=null;old.onend=null;try{old.abort()}catch(_){}}
  recognitionLoading=false;isRecording=false;
- let rawAudioBlob=null;
  try{
-  const activeRecorder=audioRecorder;audioRecorder=null;
+  const activeRecorder=audioRecorder;audioRecorder=null;let rawAudioBlob=null;
   if(activeRecorder){
-   if(activeRecorder.state!=='inactive'){
-    await new Promise((resolve,reject)=>{
-     activeRecorder.addEventListener('stop',resolve,{once:true});
-     activeRecorder.addEventListener('error',event=>reject(event.error||new Error('The audio recording could not be finalized.')),{once:true});
-     activeRecorder.stop();
-    });
-   }
+   if(activeRecorder.state!=='inactive')await new Promise((resolve,reject)=>{
+    activeRecorder.addEventListener('stop',resolve,{once:true});
+    activeRecorder.addEventListener('error',event=>reject(event.error||new Error('The audio recording could not be finalized.')),{once:true});
+    activeRecorder.stop();
+   });
    rawAudioBlob=new Blob(audioChunks,{type:activeRecorder.mimeType||'audio/webm'});
   }
-  if(stream)stream.getTracks().forEach(track=>track.stop());stream=null;
+  if(!rawAudioBlob||!rawAudioBlob.size)throw new Error('No audio was captured. Please try recording again.');
   if(source)try{source.disconnect()}catch(_){}source=null;
   const activeAudio=audio;audio=null;analyser=null;timeData=null;freqData=null;
   if(activeAudio)try{await activeAudio.close()}catch(_){}
   if(!recordedFrames.length)recordedFrames=[{t:0,level:0,wave:[0,0,0,0,0],spot:false}];
-  await makeVideo(rawAudioBlob);
-  mic.textContent='Start recording';
+  await saveTakeLocally({audioBlob:rawAudioBlob,frames:recordedFrames,notes:recordedNotes,speech:recordedSpeechSegments,savedAt:Date.now()});
+  status.textContent='Opening video compiler';status.classList.remove('live');
+  message.textContent='Opening the local video compiler…';
+  location.href='compile.html?compile=1';
  }catch(error){
-  console.error('Video export failed.',error);
-  exportTitle.textContent='Video export could not finish';
-  exportStatus.textContent=(error&&error.message?error.message:'An unexpected error interrupted export')+' Your audio stays on this device.';
-  if(rawAudioBlob&&rawAudioBlob.size){
-   if(exportObjectUrl)URL.revokeObjectURL(exportObjectUrl);
-   exportObjectUrl=URL.createObjectURL(rawAudioBlob);
-   const audioExtension=rawAudioBlob.type.includes('mp4')?'m4a':'webm';
-   downloadLink.href=exportObjectUrl;
-   downloadLink.download='abyssalbar-audio-backup.'+audioExtension;
-   downloadLink.textContent='Download audio backup';
-   exportPreview.hidden=true;
-  }else{
-   downloadLink.removeAttribute('href');
-   downloadLink.style.display='none';
-  }
-  exportPanel.hidden=false;
-  status.textContent='Export failed';status.classList.remove('live');
-  message.textContent='The video could not be exported. If audio was captured, a backup download is available.';
-  mic.textContent='Start recording';
- }finally{
-  currentMidi=null;currentNote=null;previousTime=0;notes=[];dotLevels.fill(0);
-  dots.forEach(dot=>{dot.style.height=''});
-  orb.style.transform='translate3d(-50%,-50%,0) scale(1)';
-  stopping=false;mic.disabled=false;
+  console.error('Could not prepare local take',error);
+  message.textContent=(error&&error.message)||'Could not prepare this recording.';
+  status.textContent='Recording stopped';mic.textContent='Start recording';mic.disabled=false;permissionButton.disabled=false;stopping=false;
  }
 }
+permissionButton.addEventListener('click',enableMicrophone);
 mic.addEventListener('click',()=>listening?stop():start());
+if(compilerMode){
+ document.body.classList.add('compiler-mode');
+ stage.style.display='none';status.style.display='none';message.style.display='none';
+ document.querySelector('.controls').style.display='none';
+ exportPanel.hidden=false;exportTitle.textContent='Preparing your recording';exportStatus.textContent='Loading the take from local device storage…';
+ exportPreview.hidden=true;downloadLink.style.display='none';closeExport.textContent='Back to visualizer';
+ closeExport.addEventListener('click',()=>location.href='./');
+ (async()=>{
+  try{
+   const take=await loadTakeLocally();
+   if(!take||!take.audioBlob)throw new Error('No saved recording was found on this device. Return to the visualizer and record a new take.');
+   recordedFrames=take.frames||[];recordedNotes=take.notes||[];recordedSpeechSegments=take.speech||[];
+   exportTitle.textContent='Compiling your video';exportStatus.textContent='Transcribing speech, polishing notes, and rendering locally. Keep this page open.';
+   await makeVideo(take.audioBlob);
+   await clearTakeLocally();
+  }catch(error){
+   exportTitle.textContent='Could not compile this take';
+   exportStatus.textContent=(error&&error.message)||'The local compiler encountered an error.';
+   exportPanel.hidden=false;closeExport.textContent='Back to visualizer';downloadLink.style.display='none';
+  }
+ })();
+}
 closeExport.addEventListener('click',()=>{
  exportPanel.hidden=true;exportPreview.pause();
 });
