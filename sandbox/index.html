@@ -16,6 +16,10 @@ button,input,select{font:inherit}
 button{color:inherit;cursor:pointer;touch-action:manipulation}
 button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
 #field{position:fixed;inset:0;width:100%;height:100%;display:block;background:#000;touch-action:none;cursor:grab}
+#settings{display:none!important}.toolbar,#bottomtip{display:none!important}
+.controls{position:fixed;z-index:10;left:50%;bottom:calc(14px + var(--safe-bottom));transform:translateX(-50%);display:flex;align-items:center;gap:10px;width:min(390px,calc(100vw - 24px));padding:10px 12px;background:rgba(12,12,12,.94);border:1px solid #333;border-radius:12px;box-shadow:0 8px 32px #0009;backdrop-filter:blur(12px)}
+.controls label{font-size:12px;color:#bbb;white-space:nowrap}.controls input{width:100%;min-width:60px;accent-color:var(--teal)}#speedReadout{min-width:34px;font-size:12px;text-align:right;font-variant-numeric:tabular-nums}
+@media(max-width:420px){.controls{gap:8px;padding:9px}.controls .btn{min-height:34px;padding:7px 10px}}
 #field.is-panning{cursor:grabbing}
 .toolbar{position:fixed;z-index:5;top:calc(10px + var(--safe-top));left:10px;right:10px;display:flex;align-items:center;justify-content:space-between;gap:8px;pointer-events:none}
 .toolgroup{display:flex;align-items:center;gap:6px;min-width:0;pointer-events:auto}
@@ -80,8 +84,9 @@ input[type=range]{width:135px;accent-color:var(--teal)}
 </style>
 </head>
 <body>
-<canvas id="field" aria-label="Particle sandbox. Drag to move the view. Use the zoom buttons or pinch to zoom."></canvas>
-<div class="toolbar" aria-label="Sandbox controls">
+<canvas id="field" aria-label="Particle life simulation. Drag to move the view and pinch or scroll to zoom."></canvas>
+<div class="controls" aria-label="Simulation playback controls"><button class="btn" id="playButton" type="button">Ⅱ Pause</button><label for="speedControl">Speed</label><input id="speedControl" type="range" min="0.1" max="3" step="0.1" value="1"><span id="speedReadout">1.0×</span></div>
+<div class="toolbar" aria-label="Sandbox controls" hidden>
   <div class="toolgroup">
     <span class="brand">ABYSSAL BAR / SANDBOX</span>
     <button class="btn icon" id="settingsButton" type="button" aria-label="Open settings" title="Settings">☰</button>
@@ -149,7 +154,7 @@ input[type=range]{width:135px;accent-color:var(--teal)}
   </div>
   <div class="hint" style="margin-top:15px">Move around: drag an empty area. Zoom: pinch, use the wheel, or tap +/−. Switch on “Tap to add” to place your selected color by tapping or dragging through the world.</div>
 </aside>
-<div id="bottomtip">Drag to move · Pinch / wheel to zoom · Open ☰ to add dots and change rules</div>
+<div id="bottomtip" hidden></div>
 
 <script>
 (() => {
@@ -172,7 +177,7 @@ input[type=range]{width:135px;accent-color:var(--teal)}
   ];
   const state = {
     particles:[], matrix:[], selectedColor:0, paintMode:false, paused:false, showRanges:false, sizeFollowsZoom:true,
-    speed:1, forceMultiplier:1.5, damping:.035, boundaryMode:"wrap", baseScale:7, zoom:1, camX:0, camY:0, worldW:0, worldH:0, width:0, height:0, dpr:1, countOnStart:500,
+    speed:1, forceMultiplier:1.5, damping:.035, boundaryMode:"bounce", baseScale:7, zoom:1, camX:0, camY:0, worldW:0, worldH:0, width:0, height:0, dpr:1, countOnStart:500,
     pointerMap:new Map(), gesture:null, lastTime:0, accumulator:0, frame:0, dirty:true
   };
   let species = colors.map((c)=>({radius:1,min:2,max:5}));
@@ -180,7 +185,7 @@ input[type=range]{width:135px;accent-color:var(--teal)}
   const rand=(a,b)=>a+Math.random()*(b-a);
   const hypot=Math.hypot;
   const getRule=(i,j)=>ruleOptions.find(x=>x.value===state.matrix[i][j])||ruleOptions[0];
-  const scale=()=>state.baseScale*state.zoom;
+  const scale=()=>Math.min((state.width-28)/state.worldW,(state.height-100)/state.worldH)*state.zoom;
   const shortest=(d,extent)=>d>extent/2?d-extent:d< -extent/2?d+extent:d;
 
   function buildMatrix(){
@@ -258,8 +263,8 @@ input[type=range]{width:135px;accent-color:var(--teal)}
     canvas.width=Math.max(1,Math.round(state.width*state.dpr));canvas.height=Math.max(1,Math.round(state.height*state.dpr));
     ctx.setTransform(state.dpr,0,0,state.dpr,0,0);
     const viewW=state.width/state.baseScale,viewH=state.height/state.baseScale;
-    state.worldW=Math.max(state.worldW,viewW*2.4,180);
-    state.worldH=Math.max(state.worldH,viewH*2.4,120);
+    state.worldW=180;
+    state.worldH=110;
     if(!oldW&&!oldH){state.camX=state.worldW/2;state.camY=state.worldH/2;}
     state.camX=clamp(state.camX,viewW/(2*state.zoom),state.worldW-viewW/(2*state.zoom));
     state.camY=clamp(state.camY,viewH/(2*state.zoom),state.worldH-viewH/(2*state.zoom));
@@ -347,7 +352,6 @@ input[type=range]{width:135px;accent-color:var(--teal)}
         for(let k=0;k<bucket.length;k++){
           const j=bucket[k];if(j===i)continue;
           const b=ps[j];let dx=b.x-a.x,dy=b.y-a.y;
-          dx=shortest(dx,state.worldW);dy=shortest(dy,state.worldH);
           const d2=dx*dx+dy*dy;if(d2<.0001)continue;
           const d=Math.sqrt(d2),setting=species[a.type];
           if(d<setting.min||d>setting.max)continue;
@@ -404,8 +408,7 @@ input[type=range]{width:135px;accent-color:var(--teal)}
   function openSettings(){settings.classList.add('open');document.getElementById('settingsButton').classList.add('active');}
   function closeSettings(){settings.classList.remove('open');document.getElementById('settingsButton').classList.remove('active');}
 
-  document.getElementById('settingsButton').addEventListener('click',()=>settings.classList.contains('open')?closeSettings():openSettings());
-  document.getElementById('closeSettings').addEventListener('click',closeSettings);
+  // Settings are intentionally removed from the visible interface.
   document.getElementById('playButton').addEventListener('click',()=>{
     state.paused=!state.paused;const b=document.getElementById('playButton');b.textContent=state.paused?'▶ Play':'Ⅱ Pause';b.classList.toggle('active',state.paused);
   });
@@ -428,7 +431,7 @@ input[type=range]{width:135px;accent-color:var(--teal)}
   document.getElementById('preset').addEventListener('change',e=>setPreset(e.target.value));
   document.getElementById('randomRules').addEventListener('click',()=>{setPreset('random');document.getElementById('preset').value='random';});
   document.getElementById('neutralRules').addEventListener('click',()=>{setPreset('neutral');document.getElementById('preset').value='neutral';});
-  document.getElementById('speed').addEventListener('input',e=>{state.speed=Number(e.target.value);document.getElementById('speedValue').textContent=state.speed.toFixed(1)+'×';});
+  document.getElementById('speedControl').addEventListener('input',e=>{state.speed=Number(e.target.value);document.getElementById('speedReadout').textContent=state.speed.toFixed(1)+'×';});
   document.getElementById('particleCount').addEventListener('input',e=>setParticleCount(Number(e.target.value)));
   document.getElementById('forceMultiplier').addEventListener('input',e=>{state.forceMultiplier=Number(e.target.value);document.getElementById('forceValue').textContent=state.forceMultiplier.toFixed(1)+'×';});
   document.getElementById('damping').addEventListener('input',e=>{state.damping=Number(e.target.value);document.getElementById('dampingValue').textContent=state.damping.toFixed(3);});
