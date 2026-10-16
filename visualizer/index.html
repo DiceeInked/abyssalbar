@@ -755,7 +755,7 @@ async function start(){
   message.textContent=error.message||'Could not start recording.';
   status.textContent='Microphone ready';status.classList.remove('live');
   mic.textContent='Start recording';
- }finally{starting=false;mic.disabled=false;permissionButton.disabled=false}
+ }finally{starting=false;mic.disabled=false;permissionButton.disabled=microphoneEnabled}
 }
 async function stop(){
  if(stopping||!listening)return;
