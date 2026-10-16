@@ -2,530 +2,483 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="dark">
-<title>Four-Dot Force Lab</title>
+<meta name="theme-color" content="#000000">
+<meta name="description" content="A full-screen particle sandbox with simple dots and independently configurable interaction rules.">
+<title>Sandbox | Abyssal Bar</title>
 <style>
-  :root {
-    --bg: #080b10;
-    --panel: #10151d;
-    --panel-2: #0c1118;
-    --line: #222d39;
-    --line-strong: #334252;
-    --text: #edf5f5;
-    --muted: #9aaab5;
-    --teal: #00ffc8;
-    --red: #ff4b5c;
-    --green: #43f58b;
-    --blue: #4d8dff;
-    --yellow: #ffd84d;
-    --radius: 18px;
-  }
-  * { box-sizing: border-box; }
-  html { background: var(--bg); }
-  body {
-    margin: 0; color: var(--text); background:
-      radial-gradient(ellipse at 12% 0%, rgba(0,255,200,.07), transparent 34rem),
-      var(--bg);
-    font: 14px/1.45 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-    min-height: 100vh;
-  }
-  button, select, input { font: inherit; }
-  button, select, input[type="number"] { color: var(--text); }
-  .shell { width: min(1440px, 100%); margin: 0 auto; padding: 24px clamp(14px, 3vw, 36px) 32px; }
-  header { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; margin-bottom: 22px; }
-  .eyebrow { color: var(--teal); font-size: 11px; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; display:flex; gap:9px; align-items:center; }
-  .eyebrow::before { content:""; height:7px; width:7px; border-radius:50%; background:var(--teal); box-shadow:0 0 12px rgba(0,255,200,.75); }
-  h1 { font-size: clamp(28px, 4vw, 42px); line-height:1.05; letter-spacing:-.045em; margin:10px 0 9px; }
-  .subtitle { color: var(--muted); max-width: 690px; margin:0; font-size:14px; }
-  .header-pill { border:1px solid rgba(0,255,200,.25); color:#cafff2; background:rgba(0,255,200,.055); border-radius:999px; padding:9px 13px; font-size:11px; font-weight:750; letter-spacing:.08em; white-space:nowrap; }
-  .layout { display:grid; grid-template-columns:minmax(0, 1.35fr) minmax(360px, .9fr); gap:16px; align-items:start; }
-  .panel { background:linear-gradient(180deg, rgba(18,24,33,.96), rgba(12,17,24,.98)); border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; box-shadow:0 12px 38px rgba(0,0,0,.14); }
-  .panel-head { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:17px 19px; border-bottom:1px solid var(--line); }
-  .panel-title { font-size:13px; font-weight:800; letter-spacing:.04em; }
-  .panel-kicker { margin-top:3px; font-size:11px; color:var(--muted); }
-  .stage-tools { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
-  .btn { border:1px solid var(--line-strong); background:#151d27; border-radius:10px; padding:9px 12px; font-size:12px; font-weight:750; cursor:pointer; transition:background .15s,border-color .15s,transform .15s; }
-  .btn:hover { background:#202b38; border-color:#526476; }
-  .btn:active { transform:translateY(1px); }
-  .btn.primary { background:var(--teal); border-color:var(--teal); color:#04120f; }
-  .btn.primary:hover { background:#64ffdf; }
-  .stage-wrap { padding:14px; }
-  .stage {
-    position:relative; overflow:hidden; border-radius:12px; border:1px solid #26313e;
-    background-color:#080d13;
-    background-image:linear-gradient(rgba(127,160,178,.075) 1px, transparent 1px),linear-gradient(90deg, rgba(127,160,178,.075) 1px, transparent 1px),radial-gradient(ellipse at 50% 45%, rgba(0,255,200,.06), transparent 70%);
-    background-size:5% 5%, 5% 5%, auto;
-  }
-  canvas { display:block; width:100%; aspect-ratio:16 / 10; touch-action:none; }
-  .stage-badge { position:absolute; top:12px; left:12px; pointer-events:none; padding:6px 9px; border:1px solid rgba(153,177,192,.18); border-radius:8px; background:rgba(5,10,15,.76); color:#a8bac7; font-size:10px; font-weight:750; letter-spacing:.09em; backdrop-filter:blur(8px); }
-  .stage-bottom { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:13px 3px 1px; color:var(--muted); font-size:11px; flex-wrap:wrap; }
-  .legend { display:flex; align-items:center; gap:13px; flex-wrap:wrap; }
-  .legend-item { display:flex; align-items:center; gap:6px; white-space:nowrap; }
-  .swatch { display:inline-block; width:8px; height:8px; border-radius:50%; box-shadow:0 0 8px currentColor; }
-  .switchrow { display:flex; align-items:center; gap:8px; cursor:pointer; user-select:none; }
-  .switchrow input { accent-color:var(--teal); }
-  .controls { display:flex; flex-direction:column; gap:16px; }
-  .matrix-panel { padding-bottom:15px; }
-  .matrix-content { padding:14px 14px 0; }
-  .matrix-note { color:var(--muted); font-size:11px; margin:0 3px 12px; }
-  .matrix-scroll { overflow-x:auto; padding-bottom:2px; }
-  table { border-collapse:separate; border-spacing:4px; width:100%; min-width:330px; table-layout:fixed; }
-  th { color:#9eb0bd; font-size:10px; font-weight:800; text-align:center; padding:4px 2px 7px; }
-  th:first-child { width:68px; text-align:left; }
-  td { padding:0; }
-  .row-head { text-align:left; padding-left:5px; white-space:nowrap; font-size:11px; font-weight:800; }
-  .color-dot { display:inline-block; width:7px; height:7px; border-radius:50%; margin-right:5px; vertical-align:1px; }
-  .cell-select { width:100%; min-width:0; display:block; border:1px solid #2a3644; background:#0c1219; border-radius:8px; padding:8px 3px; text-align:center; font-size:12px; font-weight:850; appearance:none; cursor:pointer; }
-  .cell-select:focus, input:focus-visible, button:focus-visible, select:focus-visible { outline:2px solid var(--teal); outline-offset:2px; }
-  .cell-select[data-value="none"] { color:#a0acb7; }
-  .cell-select[data-value="strong-attract"] { color:#76ffcf; border-color:#246a59; }
-  .cell-select[data-value="weak-attract"] { color:#76b9a8; }
-  .cell-select[data-value="weak-repel"] { color:#ffab83; }
-  .cell-select[data-value="strong-repel"] { color:#ff6f7e; border-color:#713340; }
-  .self-cell { text-align:center; padding:9px 0; color:#526170; }
-  .legend-rules { display:flex; flex-wrap:wrap; gap:8px; margin:12px 3px 0; }
-  .rule-key { color:var(--muted); font-size:10px; display:flex; gap:5px; align-items:center; }
-  .rule-symbol { font-weight:950; font-size:12px; }
-  .distance-panel .panel-head { border-bottom:0; }
-  .distance-list { padding:0 14px 14px; display:grid; grid-template-columns:1fr 1fr; gap:9px; }
-  .distance-card { border:1px solid var(--line); background:rgba(5,10,15,.3); border-radius:12px; padding:12px; min-width:0; }
-  .distance-name { display:flex; align-items:center; gap:7px; font-weight:800; font-size:12px; margin-bottom:11px; }
-  .big-dot { display:inline-block; width:11px; height:11px; border-radius:50%; box-shadow:0 0 10px currentColor; }
-  .dot-radius { margin-left:auto; color:#91a1ad; font-size:10px; font-weight:600; }
-  .fields { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
-  .field label { display:block; color:var(--muted); font-size:10px; margin:0 0 5px 1px; }
-  .input-wrap { display:flex; align-items:center; gap:5px; background:#080d13; border:1px solid #2b3744; border-radius:8px; padding:0 8px; }
-  .input-wrap:focus-within { border-color:var(--teal); }
-  .input-wrap input { width:100%; min-width:0; padding:8px 0; border:0; outline:0; background:transparent; font-weight:750; font-size:12px; }
-  .unit { color:#788b98; font-size:10px; }
-  .note-line { color:#8295a2; font-size:11px; padding:0 17px 15px; }
-  .footer { display:flex; justify-content:space-between; gap:15px; color:#71828e; font-size:10px; padding:17px 3px 0; flex-wrap:wrap; }
-  .footer strong { color:#b9c6cd; font-weight:750; }
-  .toast { position:fixed; bottom:18px; left:50%; transform:translate(-50%,12px); background:#14241f; border:1px solid #246b56; border-radius:10px; padding:10px 14px; color:#c8fff1; box-shadow:0 8px 28px #0008; opacity:0; pointer-events:none; transition:opacity .2s, transform .2s; z-index:5; font-size:12px; }
-  .toast.show { opacity:1; transform:translate(-50%,0); }
-  @media (max-width:980px) { .layout { grid-template-columns:1fr; } .controls { display:grid; grid-template-columns:1fr; } }
-  @media (max-width:540px) {
-    .shell { padding:18px 10px 22px; }
-    header { display:block; }
-    .header-pill { display:inline-block; margin-top:14px; }
-    .panel-head { padding:14px; align-items:flex-start; }
-    .stage-tools { max-width:150px; }
-    .btn { padding:8px 10px; }
-    .stage-wrap { padding:8px; }
-    .distance-list { grid-template-columns:1fr; padding:0 8px 10px; gap:7px; }
-    .distance-card { padding:9px; }
-    .fields { gap:5px; }
-    .field label { font-size:9px; }
-    .input-wrap { padding:0 5px; }
-    .input-wrap input { font-size:11px; }
-    .row-head { font-size:10px; }
-    table { border-spacing:3px; min-width:300px; }
-  }
-  @media (prefers-reduced-motion: reduce) { *,*::before,*::after { transition:none !important; } }
+:root{color-scheme:dark;--bg:#000;--panel:#101010;--line:#303030;--text:#f5f5f5;--muted:#a4a4a4;--teal:#00ffc8;--red:#ff4658;--green:#35ed83;--blue:#438bff;--yellow:#ffd53f;--safe-top:env(safe-area-inset-top,0px);--safe-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000;color:var(--text);font:13px/1.4 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+body{overscroll-behavior:none}
+button,input,select{font:inherit}
+button{color:inherit;cursor:pointer;touch-action:manipulation}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
+#field{position:fixed;inset:0;width:100%;height:100%;display:block;background:#000;touch-action:none;cursor:grab}
+#field.is-panning{cursor:grabbing}
+.toolbar{position:fixed;z-index:5;top:calc(10px + var(--safe-top));left:10px;right:10px;display:flex;align-items:center;justify-content:space-between;gap:8px;pointer-events:none}
+.toolgroup{display:flex;align-items:center;gap:6px;min-width:0;pointer-events:auto}
+.brand{font-size:11px;font-weight:800;letter-spacing:.12em;color:#fff;padding:0 8px;white-space:nowrap}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:36px;padding:8px 11px;border:1px solid #333;border-radius:8px;background:#111;color:#eee;font-weight:650;white-space:nowrap;user-select:none}
+.btn:hover{background:#202020;border-color:#555}
+.btn.active{background:#e9e9e9;border-color:#fff;color:#080808}
+.btn.accent{border-color:var(--teal);color:var(--teal)}
+.btn.small{min-height:30px;padding:5px 8px;font-size:11px;border-radius:7px}
+.btn.icon{width:36px;padding:0;font-size:18px}
+.pill{min-height:28px;display:inline-flex;align-items:center;gap:7px;padding:5px 9px;border:1px solid #292929;border-radius:999px;background:#090909;color:#bdbdbd;font-size:11px;white-space:nowrap}
+.status-dot{width:7px;height:7px;border-radius:50%;background:var(--teal)}
+#status{font-variant-numeric:tabular-nums}
+#settings{position:fixed;z-index:6;top:calc(58px + var(--safe-top));right:10px;bottom:calc(10px + var(--safe-bottom));width:min(410px,calc(100vw - 20px));overflow:auto;overscroll-behavior:contain;background:rgba(12,12,12,.97);border:1px solid #333;border-radius:12px;box-shadow:0 14px 45px rgba(0,0,0,.55);padding:15px;display:none}
+#settings.open{display:block}
+.panel-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 12px}
+h1{font-size:17px;line-height:1.2;margin:0;font-weight:780}
+h2{font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:#ddd;margin:17px 0 9px}
+.hint{color:var(--muted);font-size:11px;margin:5px 0 10px}
+.section{border-top:1px solid #292929;padding-top:2px;margin-top:14px}
+.matrix-wrap{overflow-x:auto}
+.matrix{border-collapse:separate;border-spacing:4px;width:100%;min-width:320px}
+.matrix th{font-size:10px;color:#a7a7a7;font-weight:700;text-align:center;padding:3px 1px;white-space:nowrap}
+.matrix th:first-child{text-align:left;padding-left:3px}
+.matrix td{padding:0;text-align:center}
+.rowname{display:flex;align-items:center;gap:6px;white-space:nowrap;font-weight:750;font-size:11px}
+.swatch{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--dot);flex:none}
+.matrix select{width:100%;min-width:62px;border:1px solid #333;border-radius:6px;background:#171717;color:#eee;padding:7px 4px;font-size:10px}
+.rule-explain{font-size:10px;color:#aaa;line-height:1.45;margin:7px 1px 0}
+.rule-explain b{color:#eee}
+.color-picker{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.color-choice{display:flex;align-items:center;justify-content:center;gap:6px;border:1px solid #333;border-radius:7px;padding:8px 5px;background:#151515;font-size:11px;font-weight:700}
+.color-choice[aria-pressed=true]{border-color:var(--dot);background:#242424;box-shadow:inset 0 0 0 1px var(--dot)}
+.color-choice .swatch{width:8px;height:8px}
+.add-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.species-settings{display:grid;gap:7px}
+.species-row{display:grid;grid-template-columns:74px repeat(3,minmax(0,1fr));gap:6px;align-items:center}
+.species-title{display:flex;align-items:center;gap:6px;font-size:11px;font-weight:750}
+.number-field{display:grid;gap:3px;min-width:0}
+.number-field label{font-size:9px;color:#a0a0a0;white-space:nowrap}
+.number-field input{width:100%;min-width:0;border:1px solid #333;background:#161616;border-radius:6px;padding:7px 5px;color:#fff;font-size:11px}
+.footer-actions{display:flex;gap:6px;flex-wrap:wrap}
+.option-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:9px 0;color:#ddd;font-size:12px}
+input[type=checkbox]{accent-color:var(--teal)}
+input[type=range]{width:135px;accent-color:var(--teal)}
+#bottomtip{position:fixed;z-index:3;left:50%;bottom:calc(12px + var(--safe-bottom));transform:translateX(-50%);max-width:calc(100vw - 20px);padding:8px 11px;border:1px solid #252525;border-radius:999px;background:rgba(0,0,0,.72);color:#c5c5c5;font-size:11px;white-space:nowrap;pointer-events:none;transition:opacity .2s}
+#bottomtip.hidden{opacity:0}
+#zoomlabel{min-width:46px;text-align:center;font-size:11px;color:#c6c6c6;font-variant-numeric:tabular-nums}
+#fullscreen{display:inline-flex}
+@media(max-width:650px){
+ .toolbar{top:calc(7px + var(--safe-top));left:7px;right:7px;align-items:flex-start}
+ .brand{display:none}
+ .btn{min-height:34px;padding:7px 9px;font-size:11px}
+ .btn.icon{width:34px}
+ .toolgroup{gap:4px}
+ .pill{min-height:27px;padding:4px 7px;font-size:10px}
+ #settings{top:auto;left:6px;right:6px;bottom:calc(6px + var(--safe-bottom));width:auto;max-height:76dvh;border-radius:12px;padding:12px}
+ .species-row{grid-template-columns:65px repeat(3,minmax(0,1fr))}
+ #bottomtip{bottom:calc(9px + var(--safe-bottom));font-size:10px}
+}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
 </style>
 </head>
 <body>
-<div class="shell">
-  <header>
-    <div>
-      <div class="eyebrow">Interactive physics toy</div>
-      <h1>Four-Dot Force Lab</h1>
-      <p class="subtitle">Four dots, four little minds. Each one chooses how it moves in response to every other color, independently of the others.</p>
-    </div>
-    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:10px"><a href="../" style="color:#a9c1c4;text-decoration:none;font-size:12px">← Abyssal Bar</a><div class="header-pill">4 DOTS&nbsp; / &nbsp;CENTIMETERS</div></div>
-  </header>
-
-  <main class="layout">
-    <section class="panel">
-      <div class="panel-head">
-        <div><div class="panel-title">THE SIMULATION</div><div class="panel-kicker">Drag a dot to give the system a nudge.</div></div>
-        <div class="stage-tools">
-          <button class="btn primary" id="pauseBtn" type="button">Ⅱ Pause</button>
-          <button class="btn" id="resetBtn" type="button">↺ Reset</button>
-        </div>
-      </div>
-      <div class="stage-wrap">
-        <div class="stage" id="stage">
-          <canvas id="world" aria-label="A live simulation with one red, green, blue, and yellow dot. You can drag the dots with a mouse or finger."></canvas>
-          <div class="stage-badge">WORLD&nbsp; 32 × 20 CM</div>
-        </div>
-        <div class="stage-bottom">
-          <div class="legend" aria-label="Dot colors">
-            <span class="legend-item"><i class="swatch" style="color:var(--red);background:var(--red)"></i>Red</span>
-            <span class="legend-item"><i class="swatch" style="color:var(--green);background:var(--green)"></i>Green</span>
-            <span class="legend-item"><i class="swatch" style="color:var(--blue);background:var(--blue)"></i>Blue</span>
-            <span class="legend-item"><i class="swatch" style="color:var(--yellow);background:var(--yellow)"></i>Yellow</span>
-          </div>
-          <label class="switchrow"><input id="showFields" type="checkbox" checked> Show force-field rings</label>
-        </div>
-      </div>
-    </section>
-
-    <div class="controls">
-      <section class="panel matrix-panel">
-        <div class="panel-head">
-          <div><div class="panel-title">INTERACTION RULES</div><div class="panel-kicker">Choose what each dot does toward each color.</div></div>
-          <button class="btn" id="mixBtn" type="button" title="Randomize all interaction rules">⤨ Mix rules</button>
-        </div>
-        <div class="matrix-content">
-          <p class="matrix-note">Read across a row: “Red → Blue” controls Red’s own movement around Blue. The Blue → Red setting is separate. A dot never applies its interaction force to another dot.</p>
-          <div class="matrix-scroll">
-            <table aria-label="Directional color interaction matrix">
-              <thead><tr><th scope="col">DOT ↓</th><th scope="col"><span style="color:var(--red)">●</span> Red</th><th scope="col"><span style="color:var(--green)">●</span> Green</th><th scope="col"><span style="color:var(--blue)">●</span> Blue</th><th scope="col"><span style="color:var(--yellow)">●</span> Yellow</th></tr></thead>
-              <tbody id="matrixBody"></tbody>
-            </table>
-          </div>
-          <div class="legend-rules">
-            <span class="rule-key"><b class="rule-symbol" style="color:#8797a4">—</b> No response</span>
-            <span class="rule-key"><b class="rule-symbol" style="color:#76ffcf">&gt;&gt;</b> Strong attract</span>
-            <span class="rule-key"><b class="rule-symbol" style="color:#76b9a8">&gt;</b> Weak attract</span>
-            <span class="rule-key"><b class="rule-symbol" style="color:#ffab83">&lt;</b> Weak repel</span>
-            <span class="rule-key"><b class="rule-symbol" style="color:#ff6f7e">&lt;&lt;</b> Strong repel</span>
-          </div>
-        </div>
-      </section>
-
-      <section class="panel distance-panel">
-        <div class="panel-head">
-          <div><div class="panel-title">FORCE-FIELD DISTANCES</div><div class="panel-kicker">Set the interaction range for each dot.</div></div>
-        </div>
-        <div id="distanceList" class="distance-list"></div>
-        <div class="note-line">Each dot starts with radius <strong>1 cm</strong> and an inner/outer range of <strong>2–5 cm</strong>. There is no dot-to-dot collision push: circles can overlap, and each dot changes only its own motion. Centimeters are virtual simulation units, not a calibrated screen ruler.</div>
-      </section>
-    </div>
-  </main>
-  <div class="footer"><span><strong>Model note:</strong> a playful, simplified force model, not a scientific measurement device.</span><span>Changes apply live. Nothing is uploaded.</span></div>
+<canvas id="field" aria-label="Particle sandbox. Drag to move the view. Use the zoom buttons or pinch to zoom."></canvas>
+<div class="toolbar" aria-label="Sandbox controls">
+  <div class="toolgroup">
+    <span class="brand">ABYSSAL BAR / SANDBOX</span>
+    <button class="btn icon" id="settingsButton" type="button" aria-label="Open settings" title="Settings">☰</button>
+    <button class="btn" id="playButton" type="button">Ⅱ Pause</button>
+    <span class="pill"><span class="status-dot"></span><span id="status">500 dots</span></span>
+  </div>
+  <div class="toolgroup">
+    <button class="btn icon" id="zoomOut" type="button" aria-label="Zoom out" title="Zoom out">−</button>
+    <span id="zoomlabel">100%</span>
+    <button class="btn icon" id="zoomIn" type="button" aria-label="Zoom in" title="Zoom in">+</button>
+    <button class="btn" id="resetView" type="button" title="Center the view">Center</button>
+    <button class="btn icon" id="fullscreen" type="button" aria-label="Fullscreen" title="Fullscreen">⛶</button>
+  </div>
 </div>
-<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<aside id="settings" aria-label="Sandbox settings">
+  <div class="panel-head"><div><h1>Sandbox settings</h1><div class="hint" style="margin-bottom:0">Simple dots. Complicated little worlds.</div></div><button class="btn icon" id="closeSettings" type="button" aria-label="Close settings">×</button></div>
+
+  <h2>Add particles</h2>
+  <div class="hint">Choose a color, then add one, ten, or one hundred dots near your current view.</div>
+  <div class="color-picker" id="colorPicker">
+    <button class="color-choice" type="button" data-color="0" aria-pressed="true" style="--dot:var(--red)"><span class="swatch"></span>Red</button>
+    <button class="color-choice" type="button" data-color="1" aria-pressed="false" style="--dot:var(--green)"><span class="swatch"></span>Green</button>
+    <button class="color-choice" type="button" data-color="2" aria-pressed="false" style="--dot:var(--blue)"><span class="swatch"></span>Blue</button>
+    <button class="color-choice" type="button" data-color="3" aria-pressed="false" style="--dot:var(--yellow)"><span class="swatch"></span>Yellow</button>
+  </div>
+  <div class="add-row">
+    <button class="btn small" id="add1" type="button">+1 dot</button>
+    <button class="btn small" id="add10" type="button">+10 dots</button>
+    <button class="btn small accent" id="add100" type="button">+100 dots</button>
+    <button class="btn small" id="paintMode" type="button" aria-pressed="false">Tap to add: Off</button>
+  </div>
+
+  <div class="section">
+    <h2>Each color's own rules</h2>
+    <p class="hint">A row describes how that color moves in response to another color. The reverse direction is a separate rule.</p>
+    <div class="matrix-wrap"><table class="matrix" id="matrix" aria-label="Directional interaction rules">
+      <thead><tr><th scope="col">Responding dot ↓</th><th scope="col">Red</th><th scope="col">Green</th><th scope="col">Blue</th><th scope="col">Yellow</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+    <div class="rule-explain"><b>Strong attraction</b> moves the row's dots toward the column's dots. <b>Repulsion</b> makes the row's dots move away. <b>No response</b> means this rule adds no acceleration. A dot never directly pushes another dot, and there is no automatic collision-push.</div>
+    <div class="option-row"><label for="preset">Rule starter</label><select id="preset" class="btn small"><option value="cycle">Chase / avoid</option><option value="all">Attract all</option><option value="neutral">No interactions</option><option value="random">Random rules</option></select></div>
+    <div class="footer-actions"><button class="btn small" id="randomRules" type="button">Randomize rules</button><button class="btn small" id="neutralRules" type="button">Clear rules</button></div>
+  </div>
+
+  <div class="section">
+    <h2>Size and distance per color</h2>
+    <p class="hint">Distances are in simulated centimeters. Rules act between the inner and outer distance, then fade smoothly to zero at either edge. These are virtual units, not a measurement of your physical screen.</p>
+    <div class="species-settings" id="speciesSettings"></div>
+  </div>
+
+  <div class="section">
+    <h2>Simulation</h2>
+    <div class="option-row"><label for="speed">Motion speed</label><input id="speed" type="range" min="0.1" max="2.5" step="0.1" value="1"><span id="speedValue">1.0×</span></div>
+    <div class="option-row"><label for="showRanges">Show interaction ranges</label><input id="showRanges" type="checkbox"></div>
+    <div class="option-row"><label for="sizeWorld">Dot size follows zoom</label><input id="sizeWorld" type="checkbox" checked></div>
+    <div class="footer-actions">
+      <button class="btn small" id="scatter" type="button">Scatter particles</button>
+      <button class="btn small" id="clearParticles" type="button">Clear all</button>
+      <button class="btn small" id="resetParticles" type="button">Reset population</button>
+    </div>
+  </div>
+  <div class="hint" style="margin-top:15px">Move around: drag an empty area. Zoom: pinch, use the wheel, or tap +/−. Switch on “Tap to add” to place your selected color by tapping or dragging through the world.</div>
+</aside>
+<div id="bottomtip">Drag to move · Pinch / wheel to zoom · Open ☰ to add dots and change rules</div>
 
 <script>
 (() => {
   'use strict';
-  const COLORS = [
-    { name: 'Red', color: '#ff4b5c', key: 'red' },
-    { name: 'Green', color: '#43f58b', key: 'green' },
-    { name: 'Blue', color: '#4d8dff', key: 'blue' },
-    { name: 'Yellow', color: '#ffd84d', key: 'yellow' }
+  const canvas = document.getElementById('field');
+  const ctx = canvas.getContext('2d', { alpha: false });
+  const settings = document.getElementById('settings');
+  const colors = [
+    {name:'Red', css:'#ff4658'},
+    {name:'Green', css:'#35ed83'},
+    {name:'Blue', css:'#438bff'},
+    {name:'Yellow', css:'#ffd53f'}
   ];
-  const WORLD_W = 32;
-  const WORLD_H = 20;
-  const DOT_R = 1;
-  const OPTIONS = [
-    { value: 'none', symbol: '—', label: 'No response', strength: 0, sign: 0 },
-    { value: 'strong-attract', symbol: '>>', label: 'Strong attraction', strength: 19, sign: 1 },
-    { value: 'weak-attract', symbol: '>', label: 'Weak attraction', strength: 7.5, sign: 1 },
-    { value: 'weak-repel', symbol: '<', label: 'Weak repulsion', strength: 7.5, sign: -1 },
-    { value: 'strong-repel', symbol: '<<', label: 'Strong repulsion', strength: 19, sign: -1 }
+  const ruleOptions = [
+    {value:'none',label:'— None',strength:0},
+    {value:'strong-attract',label:'≫ Strong',strength:1},
+    {value:'weak-attract',label:'› Weak',strength:.34},
+    {value:'weak-repel',label:'‹ Weak',strength:-.34},
+    {value:'strong-repel',label:'≪ Strong',strength:-1}
   ];
-  const defaults = [
-    ['strong-attract','weak-attract','strong-repel','weak-repel'],
-    ['weak-attract','strong-repel','weak-repel','strong-attract'],
-    ['strong-repel','weak-repel','strong-attract','weak-attract'],
-    ['weak-repel','strong-attract','weak-attract','strong-repel']
-  ];
-  let matrix = defaults.map(row => row.slice());
-  let ranges = COLORS.map(() => ({ radius: 1, min: 2, max: 5 }));
-  let running = true;
-  let showFields = true;
-  let frameHandle = 0;
-  let lastTime = 0;
-  let toastTimer = 0;
-  let canvas, ctx, cssW = 640, cssH = 400, dpr = 1, scale = 20, offsetX = 0, offsetY = 0;
-  const dots = [
-    { x: 6.2, y: 5.0, vx: 0.2, vy: 0.0, r: DOT_R, index: 0 },
-    { x: 25.2, y: 5.8, vx: -0.2, vy: 0.1, r: DOT_R, index: 1 },
-    { x: 9.2, y: 15.0, vx: 0.15, vy: -0.1, r: DOT_R, index: 2 },
-    { x: 24.0, y: 14.1, vx: -0.1, vy: -0.15, r: DOT_R, index: 3 }
-  ];
-  let dragIndex = -1;
-  let pointerId = null;
-  let lastPointer = null;
+  const state = {
+    particles:[], matrix:[], selectedColor:0, paintMode:false, paused:false, showRanges:false, sizeFollowsZoom:true,
+    speed:1, baseScale:7, zoom:1, camX:0, camY:0, worldW:0, worldH:0, width:0, height:0, dpr:1, countOnStart:500,
+    pointerMap:new Map(), gesture:null, lastTime:0, accumulator:0, frame:0, dirty:true
+  };
+  let species = colors.map((c)=>({radius:1,min:2,max:5}));
+  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+  const rand=(a,b)=>a+Math.random()*(b-a);
+  const hypot=Math.hypot;
+  const getRule=(i,j)=>ruleOptions.find(x=>x.value===state.matrix[i][j])||ruleOptions[0];
+  const scale=()=>state.baseScale*state.zoom;
+  const shortest=(d,extent)=>d>extent/2?d-extent:d< -extent/2?d+extent:d;
 
-  const $ = (id) => document.getElementById(id);
-  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
-  const smooth = (t) => { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); };
-
-  function makeMatrix() {
-    const body = $('matrixBody');
-    body.textContent = '';
-    COLORS.forEach((rowColor, i) => {
-      const tr = document.createElement('tr');
-      const th = document.createElement('th');
-      th.scope = 'row'; th.className = 'row-head';
-      th.innerHTML = `<span class="color-dot" style="background:${rowColor.color};color:${rowColor.color}"></span>${rowColor.name}`;
+  function buildMatrix(){
+    const tbody=document.querySelector('#matrix tbody');
+    tbody.innerHTML='';
+    for(let i=0;i<4;i++){
+      const tr=document.createElement('tr');
+      const th=document.createElement('th');th.scope='row';
+      th.innerHTML='<span class="rowname"><span class="swatch" style="--dot:'+colors[i].css+'"></span>'+colors[i].name+'</span>';
       tr.appendChild(th);
-      COLORS.forEach((colColor, j) => {
-        const td = document.createElement('td');
-        if (i === j) {
-          td.className = 'self-cell'; td.textContent = '—'; td.title = 'There is only one dot of each color';
-        } else {
-          const select = document.createElement('select');
-          select.className = 'cell-select';
-          select.setAttribute('aria-label', `${rowColor.name} response to ${colColor.name}`);
-          select.title = `${rowColor.name} → ${colColor.name}`;
-          OPTIONS.forEach(option => {
-            const opt = document.createElement('option');
-            opt.value = option.value; opt.textContent = option.symbol; opt.title = option.label;
-            opt.setAttribute('aria-label', option.label);
-            select.appendChild(opt);
-          });
-          select.value = matrix[i][j];
-          select.dataset.value = select.value;
-          select.addEventListener('change', () => {
-            matrix[i][j] = select.value;
-            select.dataset.value = select.value;
-          });
-          td.appendChild(select);
-        }
-        tr.appendChild(td);
-      });
-      body.appendChild(tr);
-    });
-  }
-
-  function makeRanges() {
-    const list = $('distanceList');
-    list.textContent = '';
-    COLORS.forEach((color, i) => {
-      const card = document.createElement('div');
-      card.className = 'distance-card';
-      const top = document.createElement('div');
-      top.className = 'distance-name';
-      top.innerHTML = `<i class="big-dot" style="color:${color.color};background:${color.color}"></i>${color.name}<span class="dot-radius" id="${color.key}-radius-display">dot r = ${ranges[i].radius} cm</span>`;
-      card.appendChild(top);
-      const fields = document.createElement('div'); fields.className = 'fields';
-      [['radius','Dot radius'],['min','Inner edge'],['max','Outer edge']].forEach(([key,label]) => {
-        const field = document.createElement('div'); field.className = 'field';
-        const lab = document.createElement('label'); lab.textContent = label; lab.htmlFor = `${color.key}-${key}`;
-        const wrap = document.createElement('div'); wrap.className = 'input-wrap';
-        const input = document.createElement('input'); input.type = 'number'; input.id = `${color.key}-${key}`;
-        input.min = key === 'radius' ? '0.25' : key === 'min' ? String(Math.max(0.5, ranges[i].radius * 2)) : String(ranges[i].min + 0.5);
-        input.max = key === 'radius' ? '2.5' : key === 'min' ? '14.5' : '15';
-        input.step = key === 'radius' ? '0.25' : '0.5'; input.value = ranges[i][key]; input.inputMode = 'decimal';
-        input.setAttribute('aria-label', `${color.name} ${key === 'radius' ? 'dot radius' : key === 'min' ? 'inner interaction edge' : 'outer interaction edge'} in centimeters`);
-        input.addEventListener('change', () => changeRange(i, key, input));
-        input.addEventListener('keydown', (event) => { if (event.key === 'Enter') input.blur(); });
-        const unit = document.createElement('span'); unit.className = 'unit'; unit.textContent = 'cm';
-        wrap.append(input, unit); field.append(lab,wrap); fields.appendChild(field);
-      });
-      card.appendChild(fields); list.appendChild(card);
-    });
-  }
-
-  function changeRange(index, key, input) {
-    const row = ranges[index];
-    let value = Number(input.value);
-    if (!Number.isFinite(value)) value = row[key];
-    if (key === 'radius') {
-      value = clamp(Math.round(value * 4) / 4, 0.25, 2.5);
-      row.radius = value;
-      dots[index].r = value;
-      const minimumAllowed = Math.max(0.5, Math.ceil((row.radius * 2) * 2) / 2);
-      if (row.min < minimumAllowed) row.min = minimumAllowed;
-      if (row.max < row.min + 0.5) row.max = row.min + 0.5;
-    } else if (key === 'min') {
-      const minimumAllowed = Math.max(0.5, Math.ceil((row.radius * 2) * 2) / 2);
-      value = clamp(Math.round(value * 2) / 2, minimumAllowed, 14.5);
-      row.min = value;
-      if (row.max < value + 0.5) row.max = value + 0.5;
-    } else {
-      value = clamp(Math.round(value * 2) / 2, row.min + 0.5, 15);
-      row.max = value;
+      for(let j=0;j<4;j++){
+        const td=document.createElement('td');
+        const select=document.createElement('select');
+        select.setAttribute('aria-label',colors[i].name+' response to '+colors[j].name);
+        select.dataset.from=String(i);select.dataset.to=String(j);
+        ruleOptions.forEach((r)=>{
+          const option=document.createElement('option');option.value=r.value;option.textContent=r.label;select.appendChild(option);
+        });
+        select.value=state.matrix[i][j];
+        select.addEventListener('change',()=>{
+          state.matrix[i][j]=select.value;state.dirty=true;
+          if(i===j && i===j) { /* Self-interactions are intentionally editable too. */ }
+        });
+        td.appendChild(select);tr.appendChild(td);
+      }
+      tbody.appendChild(tr);
     }
-    ['radius','min','max'].forEach(field => {
-      const control = $(`${COLORS[index].key}-${field}`);
-      if (!control) return;
-      control.value = row[field];
-      if (field === 'min') control.min = Math.max(0.5, Math.ceil((row.radius * 2) * 2) / 2);
-      if (field === 'max') control.min = row.min + 0.5;
+  }
+  function buildSpeciesSettings(){
+    const holder=document.getElementById('speciesSettings');
+    holder.innerHTML='';
+    species.forEach((s,i)=>{
+      const row=document.createElement('div');row.className='species-row';
+      const name=document.createElement('div');name.className='species-title';name.innerHTML='<span class="swatch" style="--dot:'+colors[i].css+'"></span>'+colors[i].name;row.appendChild(name);
+      [['radius','Dot radius'],['min','Inner cm'],['max','Outer cm']].forEach(([key,label])=>{
+        const wrap=document.createElement('div');wrap.className='number-field';
+        const l=document.createElement('label');l.textContent=label;wrap.appendChild(l);
+        const input=document.createElement('input');input.type='number';input.min=key==='radius'?'0.2':key==='min'?'0.1':'0.2';input.max='30';input.step='0.1';input.value=String(s[key]);input.setAttribute('aria-label',colors[i].name+' '+label.toLowerCase());
+        input.addEventListener('change',()=>{
+          let val=Number(input.value);if(!Number.isFinite(val))val=s[key];
+          val=clamp(val,Number(input.min),Number(input.max));s[key]=val;
+          if(key==='min' && s.max<=val){s.max=Math.round((val+.1)*10)/10;}
+          if(key==='max' && s.min>=val){s.min=Math.max(.1,Math.round((val-.1)*10)/10);}
+          if(key!=='radius' && s.max-s.min<.1){if(key==='max')s.min=Math.max(.1,s.max-.1);else s.max=s.min+.1;}
+          buildSpeciesSettings();state.dirty=true;
+        });
+        wrap.appendChild(input);row.appendChild(wrap);
+      });
+      holder.appendChild(row);
     });
-    const display = $(`${COLORS[index].key}-radius-display`);
-    if (display) display.textContent = `dot r = ${row.radius} cm`;
-    draw();
   }
-
-  function resize() {
-    const rect = canvas.getBoundingClientRect();
-    cssW = Math.max(1, rect.width); cssH = Math.max(1, rect.height);
-    dpr = Math.min(2, window.devicePixelRatio || 1);
-    canvas.width = Math.round(cssW * dpr); canvas.height = Math.round(cssH * dpr);
-    scale = Math.min(cssW / WORLD_W, cssH / WORLD_H);
-    offsetX = (cssW - WORLD_W * scale) / 2;
-    offsetY = (cssH - WORLD_H * scale) / 2;
-    draw();
+  function setPreset(name){
+    const m=Array.from({length:4},()=>Array(4).fill('none'));
+    if(name==='cycle'){
+      for(let i=0;i<4;i++)m[i][i]='strong-repel';
+      for(let i=0;i<4;i++){
+        const next=(i+1)%4;m[i][next]='strong-attract';m[next][i]='strong-repel';
+      }
+    } else if(name==='all'){
+      for(let i=0;i<4;i++)for(let j=0;j<4;j++)m[i][j]=i===j?'strong-repel':'weak-attract';
+    } else if(name==='random'){
+      const values=['none','weak-attract','strong-attract','weak-repel','strong-repel'];
+      for(let i=0;i<4;i++)for(let j=0;j<4;j++)m[i][j]=values[Math.floor(Math.random()*values.length)];
+    }
+    state.matrix=m;buildMatrix();state.dirty=true;
   }
-
-  function relation(i, j) { return OPTIONS.find(o => o.value === matrix[i][j]) || OPTIONS[1]; }
-
-  function applyForces(dt) {
-    const ax = [0,0,0,0], ay = [0,0,0,0];
-    for (let i = 0; i < dots.length; i++) {
-      const a = dots[i];
-      for (let j = 0; j < dots.length; j++) {
-        if (i === j) continue;
-        const b = dots[j];
-        let dx = b.x - a.x, dy = b.y - a.y;
-        let d = Math.hypot(dx,dy);
-        if (d < 0.0001) { dx = (i + 1) * 0.11; dy = (j + 1) * 0.09; d = Math.hypot(dx,dy); }
-        const range = ranges[i];
-        const option = relation(i,j);
-        // Each row belongs to the dot that is moving. Neutral means this dot ignores that target.
-        if (option.sign === 0) continue;
-        if (option.sign > 0) {
-          // Attraction fades smoothly at the outer edge and stops before dot centers overlap.
-          if (d > range.min && d < range.max) {
-            const t = smooth((range.max - d) / (range.max - range.min));
-            const strength = option.strength * t;
-            ax[i] += dx / d * strength; ay[i] += dy / d * strength;
-          }
-        } else {
-          // Repulsion grows toward the inner edge, and remains protective at close range.
-          if (d < range.max) {
-            let magnitude;
-            if (d <= range.min) magnitude = option.strength * (1 + 0.75 * (range.min - d) / Math.max(range.min,0.5));
-            else {
-              const t = smooth((range.max - d) / (range.max - range.min));
-              magnitude = option.strength * t;
-            }
-            ax[i] -= dx / d * magnitude; ay[i] -= dy / d * magnitude;
-          }
+  function resize(){
+    const oldW=state.width,oldH=state.height;
+    state.width=window.innerWidth;state.height=window.innerHeight;state.dpr=Math.min(window.devicePixelRatio||1,2);
+    canvas.width=Math.max(1,Math.round(state.width*state.dpr));canvas.height=Math.max(1,Math.round(state.height*state.dpr));
+    ctx.setTransform(state.dpr,0,0,state.dpr,0,0);
+    const viewW=state.width/state.baseScale,viewH=state.height/state.baseScale;
+    state.worldW=Math.max(state.worldW,viewW*2.4,180);
+    state.worldH=Math.max(state.worldH,viewH*2.4,120);
+    if(!oldW&&!oldH){state.camX=state.worldW/2;state.camY=state.worldH/2;}
+    state.camX=clamp(state.camX,viewW/(2*state.zoom),state.worldW-viewW/(2*state.zoom));
+    state.camY=clamp(state.camY,viewH/(2*state.zoom),state.worldH-viewH/(2*state.zoom));
+    state.dirty=true;draw();
+  }
+  function screenToWorld(sx,sy){
+    const s=scale();return{x:state.camX+(sx-state.width/2)/s,y:state.camY+(sy-state.height/2)/s};
+  }
+  function worldToScreen(x,y){
+    const s=scale();return{x:(x-state.camX)*s+state.width/2,y:(y-state.camY)*s+state.height/2};
+  }
+  function wrapParticle(p){
+    p.x=((p.x%state.worldW)+state.worldW)%state.worldW;
+    p.y=((p.y%state.worldH)+state.worldH)%state.worldH;
+  }
+  function addParticle(color,x,y){
+    const p={x:Number.isFinite(x)?x:state.camX+rand(-state.width/scale()*.35,state.width/scale()*.35),y:Number.isFinite(y)?y:state.camY+rand(-state.height/scale()*.35,state.height/scale()*.35),vx:rand(-.035,.035),vy:rand(-.035,.035),type:color};
+    wrapParticle(p);state.particles.push(p);updateStatus();return p;
+  }
+  function spawnCluster(n,color){
+    for(let i=0;i<n;i++){
+      const p=addParticle(color,rand(state.camX-state.width/scale()*.46,state.camX+state.width/scale()*.46),rand(state.camY-state.height/scale()*.42,state.camY+state.height/scale()*.42));
+      p.vx=rand(-.08,.08);p.vy=rand(-.08,.08);
+    }
+    state.dirty=true;
+  }
+  function seedPopulation(n){
+    state.particles.length=0;
+    for(let i=0;i<n;i++)addParticle(i%4,rand(0,state.worldW),rand(0,state.worldH));
+    state.dirty=true;updateStatus();
+  }
+  function updateStatus(){
+    document.getElementById('status').textContent=state.particles.length+' dots';
+  }
+  function setZoom(next,sx=state.width/2,sy=state.height/2){
+    const before=screenToWorld(sx,sy);
+    state.zoom=clamp(next,.12,8);
+    state.camX=before.x-(sx-state.width/2)/scale();
+    state.camY=before.y-(sy-state.height/2)/scale();
+    const viewW=state.width/scale(),viewH=state.height/scale();
+    state.camX=clamp(state.camX,Math.min(viewW/2,state.worldW/2),Math.max(state.worldW-viewW/2,state.worldW/2));
+    state.camY=clamp(state.camY,Math.min(viewH/2,state.worldH/2),Math.max(state.worldH-viewH/2,state.worldH/2));
+    updateZoomLabel();state.dirty=true;
+  }
+  function updateZoomLabel(){document.getElementById('zoomlabel').textContent=Math.round(state.zoom*100)+'%';}
+  function cameraMove(dx,dy){
+    state.camX-=dx/scale();state.camY-=dy/scale();
+    const vw=state.width/scale(),vh=state.height/scale();
+    state.camX=clamp(state.camX,vw/2,state.worldW-vw/2);
+    state.camY=clamp(state.camY,vh/2,state.worldH-vh/2);
+    state.dirty=true;
+  }
+  function buildBuckets(){
+    const cellSize=Math.max(1,Math.max.apply(null,species.map(s=>s.max)));
+    const cols=Math.max(1,Math.ceil(state.worldW/cellSize)),rows=Math.max(1,Math.ceil(state.worldH/cellSize));
+    const buckets=new Map();
+    for(let i=0;i<state.particles.length;i++){
+      const p=state.particles[i],cx=Math.floor(p.x/cellSize),cy=Math.floor(p.y/cellSize),key=cx+','+cy;
+      if(!buckets.has(key))buckets.set(key,[]);buckets.get(key).push(i);
+    }
+    return{buckets,cellSize,cols,rows};
+  }
+  function step(dt){
+    const ps=state.particles;if(ps.length<1)return;
+    const grid=buildBuckets(),{buckets,cellSize,cols,rows}=grid;
+    const ax=new Float32Array(ps.length),ay=new Float32Array(ps.length);
+    for(let i=0;i<ps.length;i++){
+      const a=ps[i],range=species[a.type].max,reach=Math.ceil(range/cellSize);
+      const cx=Math.floor(a.x/cellSize),cy=Math.floor(a.y/cellSize);
+      for(let oy=-reach;oy<=reach;oy++)for(let ox=-reach;ox<=reach;ox++){
+        const nx=(cx+ox%cols+cols)%cols,ny=(cy+oy%rows+rows)%rows;
+        const bucket=buckets.get(nx+','+ny);if(!bucket)continue;
+        for(let k=0;k<bucket.length;k++){
+          const j=bucket[k];if(j===i)continue;
+          const b=ps[j];let dx=b.x-a.x,dy=b.y-a.y;
+          dx=shortest(dx,state.worldW);dy=shortest(dy,state.worldH);
+          const d2=dx*dx+dy*dy;if(d2<.0001)continue;
+          const d=Math.sqrt(d2),setting=species[a.type];
+          if(d<setting.min||d>setting.max)continue;
+          const rule=getRule(a.type,b.type).strength;if(rule===0)continue;
+          const t=(d-setting.min)/(setting.max-setting.min);
+          const envelope=Math.sin(Math.PI*t);
+          const force=rule*envelope;
+          ax[i]+=(dx/d)*force;ay[i]+=(dy/d)*force;
         }
       }
     }
-    for (let i = 0; i < dots.length; i++) {
-      const p = dots[i];
-      if (i === dragIndex) { p.vx = 0; p.vy = 0; continue; }
-      p.vx = (p.vx + ax[i] * dt) * Math.pow(0.965, dt * 60);
-      p.vy = (p.vy + ay[i] * dt) * Math.pow(0.965, dt * 60);
-      // Keep the four dots lively without letting an extreme setting destabilize the canvas.
-      const speed = Math.hypot(p.vx,p.vy);
-      if (speed > 11) { p.vx *= 11/speed; p.vy *= 11/speed; }
-      p.x += p.vx * dt; p.y += p.vy * dt;
-      if (p.x < p.r) { p.x=p.r; p.vx=Math.abs(p.vx)*0.65; }
-      if (p.x > WORLD_W-p.r) { p.x=WORLD_W-p.r; p.vx=-Math.abs(p.vx)*0.65; }
-      if (p.y < p.r) { p.y=p.r; p.vy=Math.abs(p.vy)*0.65; }
-      if (p.y > WORLD_H-p.r) { p.y=WORLD_H-p.r; p.vy=-Math.abs(p.vy)*0.65; }
+    const accel=.018*state.speed,friction=Math.pow(.965,dt*state.speed),maxSpeed=.36*state.speed;
+    for(let i=0;i<ps.length;i++){
+      const p=ps[i];p.vx=(p.vx+ax[i]*accel*dt)*friction;p.vy=(p.vy+ay[i]*accel*dt)*friction;
+      const v=hypot(p.vx,p.vy);if(v>maxSpeed){p.vx=p.vx/v*maxSpeed;p.vy=p.vy/v*maxSpeed;}
+      p.x+=p.vx*dt;p.y+=p.vy*dt;wrapParticle(p);
     }
-    // No pair-collision correction: each dot controls only its own acceleration and motion.
   }
-
-  function draw() {
-    if (!ctx) return;
-    ctx.setTransform(dpr,0,0,dpr,0,0);
-    ctx.clearRect(0,0,cssW,cssH);
-    ctx.setTransform(dpr*scale,0,0,dpr*scale,dpr*offsetX,dpr*offsetY);
-    // Faint centimeter lattice.
-    ctx.strokeStyle = 'rgba(125,153,173,.09)'; ctx.lineWidth = 0.012;
-    ctx.beginPath();
-    for (let x=0; x<=WORLD_W; x+=1) { ctx.moveTo(x,0); ctx.lineTo(x,WORLD_H); }
-    for (let y=0; y<=WORLD_H; y+=1) { ctx.moveTo(0,y); ctx.lineTo(WORLD_W,y); }
-    ctx.stroke();
-    ctx.strokeStyle='rgba(0,255,200,.16)'; ctx.lineWidth=.035;
-    ctx.strokeRect(0.025,0.025,WORLD_W-.05,WORLD_H-.05);
-
-    if (showFields) {
-      dots.forEach(p => {
-        const col=COLORS[p.index].color;
-        const range=ranges[p.index];
-        ctx.save();
-        ctx.strokeStyle=hexToRgba(col,.35); ctx.lineWidth=.025; ctx.setLineDash([.13,.12]);
-        ctx.beginPath(); ctx.arc(p.x,p.y,range.max,0,Math.PI*2); ctx.stroke();
-        ctx.setLineDash([]); ctx.strokeStyle=hexToRgba(col,.72); ctx.lineWidth=.045;
-        ctx.beginPath(); ctx.arc(p.x,p.y,range.min,0,Math.PI*2); ctx.stroke();
-        ctx.restore();
-      });
+  function draw(){
+    const w=state.width,h=state.height;
+    ctx.setTransform(state.dpr,0,0,state.dpr,0,0);
+    ctx.fillStyle='#000';ctx.fillRect(0,0,w,h);
+    const s=scale(),dots=state.particles;
+    if(state.showRanges){
+      for(let i=0;i<dots.length;i++){
+        const p=dots[i],at=worldToScreen(p.x,p.y),sp=species[p.type];
+        if(at.x+sp.max*s<0||at.x-sp.max*s>w||at.y+sp.max*s<0||at.y-sp.max*s>h)continue;
+        ctx.beginPath();ctx.arc(at.x,at.y,sp.max*s,0,Math.PI*2);ctx.strokeStyle=colors[p.type].css+'28';ctx.lineWidth=1;ctx.stroke();
+        ctx.beginPath();ctx.arc(at.x,at.y,sp.min*s,0,Math.PI*2);ctx.strokeStyle=colors[p.type].css+'45';ctx.lineWidth=1;ctx.stroke();
+      }
     }
-    dots.forEach(p => {
-      const color=COLORS[p.index].color;
-      ctx.save();
-      ctx.shadowColor=color; ctx.shadowBlur=1.0;
-      const glow=ctx.createRadialGradient(p.x-p.r*.25,p.y-p.r*.3,.05,p.x,p.y,p.r*1.25);
-      glow.addColorStop(0, '#ffffff'); glow.addColorStop(.18,color); glow.addColorStop(1,hexToRgba(color,.12));
-      ctx.fillStyle=glow; ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill();
-      ctx.shadowBlur=0; ctx.strokeStyle=hexToRgba(color,.95); ctx.lineWidth=.055; ctx.stroke();
-      // Tiny highlight makes the sphere-like dot easier to read on touch screens.
-      ctx.fillStyle='rgba(255,255,255,.8)'; ctx.beginPath(); ctx.arc(p.x-p.r*.28,p.y-p.r*.3,Math.max(.06,p.r*.12),0,Math.PI*2); ctx.fill();
-      ctx.font='700 .62px ui-sans-serif, system-ui, sans-serif'; ctx.textAlign='center'; ctx.textBaseline='top';
-      ctx.fillStyle='rgba(235,245,250,.92)'; ctx.fillText(COLORS[p.index].name.toUpperCase(),p.x,p.y+p.r+.18);
-      ctx.restore();
-    });
-  }
-
-  function hexToRgba(hex, alpha) {
-    const h=hex.replace('#','');
-    const n=parseInt(h,16);
-    return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${alpha})`;
-  }
-
-  function animate(time) {
-    frameHandle = requestAnimationFrame(animate);
-    if (!lastTime) lastTime = time;
-    const dt=clamp((time-lastTime)/1000,0,0.032); lastTime=time;
-    if (running && dt>0) applyForces(dt);
-    draw();
-  }
-
-  function resetPositions() {
-    const initial = [[6.2,5],[25.2,5.8],[9.2,15],[24,14.1]];
-    dots.forEach((p,i) => { p.x=initial[i][0]; p.y=initial[i][1]; p.vx=0; p.vy=0; });
-    showToast('Positions reset. Your force rules were kept.');
-  }
-  function mixRules() {
-    COLORS.forEach((_,i) => COLORS.forEach((__,j) => {
-      if (i!==j) matrix[i][j]=OPTIONS[Math.floor(Math.random()*OPTIONS.length)].value;
-    }));
-    makeMatrix(); showToast('Fresh rules mixed.');
-  }
-  function showToast(message) {
-    const el=$('toast'); el.textContent=message; el.classList.add('show');
-    clearTimeout(toastTimer); toastTimer=setTimeout(()=>el.classList.remove('show'),1900);
-  }
-  function pointFromEvent(event) {
-    const rect=canvas.getBoundingClientRect();
-    const sx=event.clientX-rect.left, sy=event.clientY-rect.top;
-    return { x:(sx-offsetX)/scale, y:(sy-offsetY)/scale };
-  }
-  canvas = $('world'); ctx = canvas.getContext('2d');
-  canvas.addEventListener('pointerdown', event => {
-    const p=pointFromEvent(event);
-    let nearest=-1, best=Infinity;
-    dots.forEach((dot,i) => { const d=Math.hypot(dot.x-p.x,dot.y-p.y); if (d < Math.max(dot.r+0.55, 1.1) && d<best) {best=d;nearest=i;} });
-    if (nearest>=0) {
-      dragIndex=nearest; pointerId=event.pointerId; lastPointer=p;
-      dots[nearest].vx=0; dots[nearest].vy=0;
-      canvas.setPointerCapture(event.pointerId); event.preventDefault();
+    for(let i=0;i<dots.length;i++){
+      const p=dots[i],at=worldToScreen(p.x,p.y),r=species[p.type].radius*s;
+      if(at.x+r<0||at.x-r>w||at.y+r<0||at.y-r>h)continue;
+      ctx.beginPath();ctx.arc(at.x,at.y,Math.max(.7,r),0,Math.PI*2);ctx.fillStyle=colors[p.type].css;ctx.fill();
     }
+    document.getElementById('status').textContent=dots.length+' dots';
+  }
+  function animate(time){
+    if(!state.paused){
+      const dt=state.lastTime?clamp((time-state.lastTime)/16.667,0,2.5):1;state.accumulator+=dt;
+      let loops=0;while(state.accumulator>=1&&loops<2){step(1);state.accumulator-=1;loops++;}
+    }
+    state.lastTime=time;draw();state.frame=requestAnimationFrame(animate);
+  }
+  function setToolPaint(enabled){
+    state.paintMode=enabled;const b=document.getElementById('paintMode');
+    b.classList.toggle('active',enabled);b.setAttribute('aria-pressed',String(enabled));b.textContent='Tap to add: '+(enabled?'On':'Off');
+    canvas.style.cursor=enabled?'crosshair':'grab';
+  }
+  function openSettings(){settings.classList.add('open');document.getElementById('settingsButton').classList.add('active');}
+  function closeSettings(){settings.classList.remove('open');document.getElementById('settingsButton').classList.remove('active');}
+
+  document.getElementById('settingsButton').addEventListener('click',()=>settings.classList.contains('open')?closeSettings():openSettings());
+  document.getElementById('closeSettings').addEventListener('click',closeSettings);
+  document.getElementById('playButton').addEventListener('click',()=>{
+    state.paused=!state.paused;const b=document.getElementById('playButton');b.textContent=state.paused?'▶ Play':'Ⅱ Pause';b.classList.toggle('active',state.paused);
   });
-  canvas.addEventListener('pointermove', event => {
-    if (dragIndex<0 || event.pointerId!==pointerId) return;
-    const p=pointFromEvent(event), dot=dots[dragIndex];
-    dot.x=clamp(p.x,dot.r,WORLD_W-dot.r); dot.y=clamp(p.y,dot.r,WORLD_H-dot.r);
-    dot.vx=0; dot.vy=0; lastPointer=p; draw();
+  document.getElementById('zoomIn').addEventListener('click',()=>setZoom(state.zoom*1.25));
+  document.getElementById('zoomOut').addEventListener('click',()=>setZoom(state.zoom/1.25));
+  document.getElementById('resetView').addEventListener('click',()=>{
+    state.zoom=1;state.camX=state.worldW/2;state.camY=state.worldH/2;updateZoomLabel();state.dirty=true;
   });
-  function stopDrag(event) {
-    if (dragIndex>=0 && (!event || event.pointerId===pointerId)) {
-      dots[dragIndex].vx=0; dots[dragIndex].vy=0;
-      dragIndex=-1; pointerId=null; lastPointer=null;
+  document.getElementById('fullscreen').addEventListener('click',async()=>{
+    try{if(!document.fullscreenElement&&document.documentElement.requestFullscreen)await document.documentElement.requestFullscreen();else if(document.exitFullscreen)await document.exitFullscreen();}catch(_){}
+  });
+  document.getElementById('add1').addEventListener('click',()=>spawnCluster(1,state.selectedColor));
+  document.getElementById('add10').addEventListener('click',()=>spawnCluster(10,state.selectedColor));
+  document.getElementById('add100').addEventListener('click',()=>spawnCluster(100,state.selectedColor));
+  document.getElementById('paintMode').addEventListener('click',()=>setToolPaint(!state.paintMode));
+  document.querySelectorAll('[data-color]').forEach(b=>b.addEventListener('click',()=>{
+    state.selectedColor=Number(b.dataset.color);
+    document.querySelectorAll('[data-color]').forEach(q=>{const on=q===b;q.setAttribute('aria-pressed',String(on));q.classList.toggle('active',on);});
+  }));
+  document.getElementById('preset').addEventListener('change',e=>setPreset(e.target.value));
+  document.getElementById('randomRules').addEventListener('click',()=>{setPreset('random');document.getElementById('preset').value='random';});
+  document.getElementById('neutralRules').addEventListener('click',()=>{setPreset('neutral');document.getElementById('preset').value='neutral';});
+  document.getElementById('speed').addEventListener('input',e=>{state.speed=Number(e.target.value);document.getElementById('speedValue').textContent=state.speed.toFixed(1)+'×';});
+  document.getElementById('showRanges').addEventListener('change',e=>{state.showRanges=e.target.checked;});
+  document.getElementById('sizeWorld').addEventListener('change',e=>{state.sizeFollowsZoom=e.target.checked;});
+  document.getElementById('scatter').addEventListener('click',()=>{
+    state.particles.forEach(p=>{p.vx=rand(-.22,.22);p.vy=rand(-.22,.22);});state.dirty=true;
+  });
+  document.getElementById('clearParticles').addEventListener('click',()=>{state.particles.length=0;updateStatus();});
+  document.getElementById('resetParticles').addEventListener('click',()=>seedPopulation(state.countOnStart));
+  document.getElementById('showRanges').checked=false;
+
+  const pointers=state.pointerMap;
+  function pointerDown(e){
+    if(e.target!==canvas)return;
+    e.preventDefault();canvas.setPointerCapture(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY,prevX:e.clientX,prevY:e.clientY});
+    if(pointers.size===1){
+      if(state.paintMode){
+        const w=screenToWorld(e.clientX,e.clientY);addParticle(state.selectedColor,w.x,w.y);
+        state.gesture={kind:'paint',lastX:e.clientX,lastY:e.clientY};
+      }else state.gesture={kind:'pan',lastX:e.clientX,lastY:e.clientY};
+    }else if(pointers.size===2){
+      const a=Array.from(pointers.values());state.gesture={kind:'pinch',distance:hypot(a[0].x-a[1].x,a[0].y-a[1].y),zoom:state.zoom,midX:(a[0].x+a[1].x)/2,midY:(a[0].y+a[1].y)/2};
     }
   }
-  canvas.addEventListener('pointerup', stopDrag);
-  canvas.addEventListener('pointercancel', stopDrag);
-  $('pauseBtn').addEventListener('click', () => {
-    running=!running;
-    $('pauseBtn').textContent=running?'Ⅱ Pause':'▶ Resume';
-    $('pauseBtn').classList.toggle('primary',running);
-    if (!running) showToast('Simulation paused.'); else showToast('Simulation running.');
+  function pointerMove(e){
+    if(!pointers.has(e.pointerId))return;
+    e.preventDefault();const p=pointers.get(e.pointerId);p.prevX=p.x;p.prevY=p.y;p.x=e.clientX;p.y=e.clientY;
+    if(pointers.size>=2){
+      const a=Array.from(pointers.values());if(a.length<2)return;
+      if(!state.gesture||state.gesture.kind!=='pinch')state.gesture={kind:'pinch',distance:hypot(a[0].x-a[1].x,a[0].y-a[1].y),zoom:state.zoom,midX:(a[0].x+a[1].x)/2,midY:(a[0].y+a[1].y)/2};
+      const g=state.gesture,dist=Math.max(1,hypot(a[0].x-a[1].x,a[0].y-a[1].y)),mx=(a[0].x+a[1].x)/2,my=(a[0].y+a[1].y)/2;
+      setZoom(g.zoom*dist/Math.max(1,g.distance),mx,my);return;
+    }
+    if(!state.gesture)return;
+    const dx=e.clientX-p.prevX,dy=e.clientY-p.prevY;
+    if(state.gesture.kind==='pan')cameraMove(dx,dy);
+    else if(state.gesture.kind==='paint'){
+      const dist=hypot(e.clientX-state.gesture.lastX,e.clientY-state.gesture.lastY);
+      if(dist>=12){
+        const w=screenToWorld(e.clientX,e.clientY);addParticle(state.selectedColor,w.x,w.y);
+        state.gesture.lastX=e.clientX;state.gesture.lastY=e.clientY;
+      }
+    }
+  }
+  function pointerUp(e){
+    pointers.delete(e.pointerId);
+    if(pointers.size===0){state.gesture=null;return;}
+    if(pointers.size===1){
+      const p=Array.from(pointers.values())[0];state.gesture={kind:state.paintMode?'paint':'pan',lastX:p.x,lastY:p.y};
+    }else{
+      const a=Array.from(pointers.values());state.gesture={kind:'pinch',distance:hypot(a[0].x-a[1].x,a[0].y-a[1].y),zoom:state.zoom,midX:(a[0].x+a[1].x)/2,midY:(a[0].y+a[1].y)/2};
+    }
+  }
+  canvas.addEventListener('pointerdown',pointerDown);
+  canvas.addEventListener('pointermove',pointerMove);
+  canvas.addEventListener('pointerup',pointerUp);
+  canvas.addEventListener('pointercancel',pointerUp);
+  canvas.addEventListener('lostpointercapture',pointerUp);
+  canvas.addEventListener('wheel',e=>{
+    e.preventDefault();setZoom(state.zoom*Math.exp(-e.deltaY*.0015),e.clientX,e.clientY);
+  },{passive:false});
+  window.addEventListener('keydown',e=>{
+    if(e.target instanceof HTMLInputElement||e.target instanceof HTMLSelectElement||e.target instanceof HTMLButtonElement)return;
+    if(e.code==='Space'){e.preventDefault();document.getElementById('playButton').click();}
+    if(e.key==='+'||e.key==='=')setZoom(state.zoom*1.2);
+    if(e.key==='-')setZoom(state.zoom/1.2);
+    if(e.key==='Escape')closeSettings();
   });
-  $('resetBtn').addEventListener('click', resetPositions);
-  $('mixBtn').addEventListener('click', mixRules);
-  $('showFields').addEventListener('change', event => { showFields=event.target.checked; draw(); });
-  makeMatrix(); makeRanges();
-  if ('ResizeObserver' in window) new ResizeObserver(resize).observe(canvas);
-  else window.addEventListener('resize',resize);
+  window.addEventListener('resize',resize,{passive:true});
+
+  setPreset('cycle');
+  buildSpeciesSettings();
   resize();
-  frameHandle=requestAnimationFrame(animate);
-  window.addEventListener('pagehide', () => { cancelAnimationFrame(frameHandle); });
+  // Populate a world larger than the viewport, so panning explores the world instead of one fixed screen.
+  seedPopulation(state.countOnStart);
+  state.frame=requestAnimationFrame(animate);
 })();
 </script>
 </body>
