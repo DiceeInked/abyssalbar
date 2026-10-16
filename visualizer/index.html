@@ -393,7 +393,7 @@ function cleanNoteEvents(events,duration){
  const minMidi=Math.min(...merged.map(event=>event.midi));
  const maxMidi=Math.max(...merged.map(event=>event.midi));
  for(const event of merged){
-  event.x=maxMidi===minMidi?.5:.04+((event.midi-minMidi)/(maxMidi-minMidi))*.92;
+  event.x=maxMidi===minMidi ? 0.5 : .04+((event.midi-minMidi)/(maxMidi-minMidi))*.92;
  }
  return merged;
 }
@@ -671,8 +671,9 @@ async function makeVideo(audioBlob){
  const videoBlob=await renderVideo(audioBuffer,cleanedNotes,recordedFrames,captions);
  if(exportObjectUrl)URL.revokeObjectURL(exportObjectUrl);
  exportObjectUrl=URL.createObjectURL(videoBlob);
- exportPreview.src=exportObjectUrl;
+ exportPreview.src=exportObjectUrl;exportPreview.hidden=false;
  const extension=videoBlob.type.includes('mp4')?'mp4':'webm';
+ downloadLink.textContent='Download video';
  downloadLink.href=exportObjectUrl;
  downloadLink.download='abyssalbar-recording.'+extension;
  exportTitle.textContent='Your video is ready';
@@ -686,7 +687,7 @@ async function makeVideo(audioBlob){
 async function start(){
  if(starting||listening||stopping)return;
  starting=true;mic.disabled=true;message.textContent='Requesting microphone access…';
- exportPanel.hidden=true;
+ exportPanel.hidden=true;exportPreview.hidden=false;downloadLink.textContent='Download video';
  if(exportObjectUrl){URL.revokeObjectURL(exportObjectUrl);exportObjectUrl=null}
  try{
   if(!navigator.mediaDevices?.getUserMedia)throw new Error('Microphone access is unavailable here. Open this page over HTTPS in a browser that supports microphone input.');
@@ -763,9 +764,21 @@ async function stop(){
   console.error('Video export failed.',error);
   exportTitle.textContent='Video export could not finish';
   exportStatus.textContent=(error&&error.message?error.message:'An unexpected error interrupted export')+' Your audio stays on this device.';
+  if(rawAudioBlob&&rawAudioBlob.size){
+   if(exportObjectUrl)URL.revokeObjectURL(exportObjectUrl);
+   exportObjectUrl=URL.createObjectURL(rawAudioBlob);
+   const audioExtension=rawAudioBlob.type.includes('mp4')?'m4a':'webm';
+   downloadLink.href=exportObjectUrl;
+   downloadLink.download='abyssalbar-audio-backup.'+audioExtension;
+   downloadLink.textContent='Download audio backup';
+   exportPreview.hidden=true;
+  }else{
+   downloadLink.removeAttribute('href');
+   downloadLink.style.display='none';
+  }
   exportPanel.hidden=false;
   status.textContent='Export failed';status.classList.remove('live');
-  message.textContent='The recording could not be exported. You can close this panel and try a shorter take.';
+  message.textContent='The video could not be exported. If audio was captured, a backup download is available.';
   mic.textContent='Start recording';
  }finally{
   currentMidi=null;currentNote=null;previousTime=0;notes=[];dotLevels.fill(0);
