@@ -203,15 +203,18 @@ input[type=range]{width:135px;accent-color:var(--teal)}
     state.minRadiusMatrix=minMatrix;state.maxRadiusMatrix=maxMatrix;
   }
   function interactionForce(rule,minRadius,maxRadius,distance){
-    // All active pairings repel inside their inner radius. Between the inner
-    // and outer radii, the chosen rule ramps up to its signed peak at the
-    // midpoint and smoothly falls back to zero at the outer radius.
-    if(distance<minRadius)return distance/minRadius-1;
-    if(distance>=maxRadius)return 0;
-    const midpoint=(minRadius+maxRadius)*.5;
-    const halfRange=midpoint-minRadius;
-    if(halfRange<=0)return 0;
-    return rule*(1-Math.abs(distance-midpoint)/halfRange);
+    // A soft short-range repulsion prevents dots from collapsing together.
+    // Squaring the curve lets it ease gently to zero at the inner boundary.
+    if(distance<minRadius){
+      const compression=1-distance/minRadius;
+      return -(compression*compression);
+    }
+    if(distance>=maxRadius||maxRadius<=minRadius)return 0;
+    // A smooth bell curve peaks halfway through the interaction band, then
+    // eases back to zero at the outer edge without sharp changes in force.
+    const t=(distance-minRadius)/(maxRadius-minRadius);
+    const bell=16*t*t*(1-t)*(1-t);
+    return rule*bell;
   }
   const shortest=(d,extent)=>d>extent/2?d-extent:d< -extent/2?d+extent:d;
 
@@ -420,6 +423,13 @@ input[type=range]{width:135px;accent-color:var(--teal)}
     const ps=state.particles;if(ps.length<1)return;
     const grid=buildBuckets(),{buckets,cellSize,cols,rows}=grid;
     const ax=new Float32Array(ps.length),ay=new Float32Array(ps.length);
+    // Small local flocking terms help nearby particles move like a group:
+    // velocity alignment smooths direction, while very light cohesion keeps
+    // neighbors loosely connected without overpowering their color rules.
+    const alignX=new Float32Array(ps.length),alignY=new Float32Array(ps.length);
+    const cohesionX=new Float32Array(ps.length),cohesionY=new Float32Array(ps.length);
+    const socialWeight=new Float32Array(ps.length);
+    const socialRadius=6.5;
     for(let i=0;i<ps.length;i++){
       const a=ps[i],rowMax=Math.max(...state.maxRadiusMatrix[a.type]),reach=Math.ceil(rowMax/cellSize);
       const cx=Math.floor(a.x/cellSize),cy=Math.floor(a.y/cellSize);
@@ -456,8 +466,18 @@ input[type=range]{width:135px;accent-color:var(--teal)}
             const shieldForce=springForce+dampingForce;
             ax[i]-=nx*shieldForce;ay[i]-=ny*shieldForce;
           }
-          if(state.interactionMode==='self' && a.type!==b.type)continue;
-          if(state.interactionMode==='other' && a.type===b.type)continue;
+          const modeAllowsPair=
+            state.interactionMode==='both' ||
+            (state.interactionMode==='self' && a.type===b.type) ||
+            (state.interactionMode==='other' && a.type!==b.type);
+          if(modeAllowsPair&&d<socialRadius){
+            const falloff=1-d/socialRadius;
+            const weight=falloff*falloff;
+            alignX[i]+=b.vx*weight;alignY[i]+=b.vy*weight;
+            cohesionX[i]+=dx*weight;cohesionY[i]+=dy*weight;
+            socialWeight[i]+=weight;
+          }
+          if(!modeAllowsPair)continue;
           const minRadius=state.minRadiusMatrix[a.type][b.type];
           const maxRadius=state.maxRadiusMatrix[a.type][b.type];
           if(d>=maxRadius)continue;
@@ -468,8 +488,16 @@ input[type=range]{width:135px;accent-color:var(--teal)}
       }
     }
     const accel=.018*state.forceMultiplier,friction=Math.pow(1-state.damping,dt),maxSpeed=.36;
+    const alignmentGain=.018*dt,cohesionGain=.00028*dt;
     for(let i=0;i<ps.length;i++){
       const p=ps[i];p.vx=(p.vx+ax[i]*accel*dt)*friction;p.vy=(p.vy+ay[i]*accel*dt)*friction;
+      if(socialWeight[i]>0){
+        const avgVx=alignX[i]/socialWeight[i],avgVy=alignY[i]/socialWeight[i];
+        const centerDx=cohesionX[i]/socialWeight[i],centerDy=cohesionY[i]/socialWeight[i];
+        // Blend only a little toward local flow and neighborhood center.
+        p.vx+=(avgVx-p.vx)*alignmentGain+centerDx*cohesionGain;
+        p.vy+=(avgVy-p.vy)*alignmentGain+centerDy*cohesionGain;
+      }
       const v=hypot(p.vx,p.vy);if(v>maxSpeed){p.vx=p.vx/v*maxSpeed;p.vy=p.vy/v*maxSpeed;}
       p.x+=p.vx*dt;p.y+=p.vy*dt;wrapParticle(p);
     }
