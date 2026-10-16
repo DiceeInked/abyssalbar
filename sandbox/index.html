@@ -266,20 +266,20 @@ input[type=range]{width:135px;accent-color:var(--teal)}
     p.x=((p.x%state.worldW)+state.worldW)%state.worldW;
     p.y=((p.y%state.worldH)+state.worldH)%state.worldH;
   }
-  function addParticle(color,x,y){
+  function addParticle(color,x,y,quiet=false){
     const p={x:Number.isFinite(x)?x:state.camX+rand(-state.width/scale()*.35,state.width/scale()*.35),y:Number.isFinite(y)?y:state.camY+rand(-state.height/scale()*.35,state.height/scale()*.35),vx:rand(-.035,.035),vy:rand(-.035,.035),type:color};
-    wrapParticle(p);state.particles.push(p);updateStatus();return p;
+    wrapParticle(p);state.particles.push(p);if(!quiet)updateStatus();return p;
   }
   function spawnCluster(n,color){
     for(let i=0;i<n;i++){
-      const p=addParticle(color,rand(state.camX-state.width/scale()*.46,state.camX+state.width/scale()*.46),rand(state.camY-state.height/scale()*.42,state.camY+state.height/scale()*.42));
+      const p=addParticle(color,rand(state.camX-state.width/scale()*.46,state.camX+state.width/scale()*.46),rand(state.camY-state.height/scale()*.42,state.camY+state.height/scale()*.42),true);
       p.vx=rand(-.08,.08);p.vy=rand(-.08,.08);
     }
-    state.dirty=true;
+    state.dirty=true;updateStatus();
   }
   function seedPopulation(n){
     state.particles.length=0;
-    for(let i=0;i<n;i++)addParticle(i%4,rand(0,state.worldW),rand(0,state.worldH));
+    for(let i=0;i<n;i++)addParticle(i%4,rand(0,state.worldW),rand(0,state.worldH),true);
     state.dirty=true;updateStatus();
   }
   function updateStatus(){
@@ -359,7 +359,7 @@ input[type=range]{width:135px;accent-color:var(--teal)}
       }
     }
     for(let i=0;i<dots.length;i++){
-      const p=dots[i],at=worldToScreen(p.x,p.y),r=species[p.type].radius*s;
+      const p=dots[i],at=worldToScreen(p.x,p.y),r=species[p.type].radius*(state.sizeFollowsZoom?s:state.baseScale);
       if(at.x+r<0||at.x-r>w||at.y+r<0||at.y-r>h)continue;
       ctx.beginPath();ctx.arc(at.x,at.y,Math.max(.7,r),0,Math.PI*2);ctx.fillStyle=colors[p.type].css;ctx.fill();
     }
