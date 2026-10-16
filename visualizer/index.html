@@ -390,8 +390,8 @@ function cleanNoteEvents(events,duration){
   }else merged.push({...event});
  }
  if(!merged.length)return [];
- const minMidi=Math.min(...merged.map(event=>event.midi));
- const maxMidi=Math.max(...merged.map(event=>event.midi));
+ let minMidi=Infinity,maxMidi=-Infinity;
+ for(const event of merged){minMidi=Math.min(minMidi,event.midi);maxMidi=Math.max(maxMidi,event.midi)}
  for(const event of merged){
   event.x=maxMidi===minMidi ? 0.5 : .04+((event.midi-minMidi)/(maxMidi-minMidi))*.92;
  }
@@ -687,7 +687,7 @@ async function makeVideo(audioBlob){
 async function start(){
  if(starting||listening||stopping)return;
  starting=true;mic.disabled=true;message.textContent='Requesting microphone access…';
- exportPanel.hidden=true;exportPreview.hidden=false;downloadLink.textContent='Download video';
+ exportPanel.hidden=true;exportPreview.hidden=false;downloadLink.textContent='Download video';downloadLink.style.display='inline-block';
  if(exportObjectUrl){URL.revokeObjectURL(exportObjectUrl);exportObjectUrl=null}
  try{
   if(!navigator.mediaDevices?.getUserMedia)throw new Error('Microphone access is unavailable here. Open this page over HTTPS in a browser that supports microphone input.');
