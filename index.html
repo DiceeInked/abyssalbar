@@ -45,6 +45,7 @@ button{font:inherit}
     <button class="dot active" type="button" aria-label="Open Test dictation studio"></button>
     <button class="dot active" type="button" aria-label="Open Pride attraction label finder"></button>
     <button class="dot active" type="button" aria-label="Open website template showcase"></button>
+    <button class="dot active" type="button" aria-label="Open Four-Dot Force Lab sandbox"></button>
     <button class="dot" type="button" aria-label="Unavailable experience" disabled></button>
     <button class="dot" type="button" aria-label="Unavailable experience" disabled></button>
     <button class="dot" type="button" aria-label="Unavailable experience" disabled></button>
@@ -254,7 +255,7 @@ button{font:inherit}
 
   dots.forEach((dot,index)=>{
     dot.addEventListener('click',()=>{
-      if(index>6||opened)return;
+      if(index>7||opened)return;if(index===7){window.location.href=new URL('sandbox/',window.location.href).href;return;}
       mode=index===0?'blob':index===1?'ripples':index===2?'particles':index===3?'voice':index===4?'test':index===5?'pride':'template';
       opened=true;
       experience.setAttribute('aria-label',mode==='blob'?'Elastic blob fidget':mode==='ripples'?'Ripple ring sensory experience':mode==='particles'?'Drifting particle field':mode==='test'?'Test dictation studio':mode==='pride'?'Pride attraction label finder':mode==='template'?'Reusable website template showcase':'Voice visualizer');
