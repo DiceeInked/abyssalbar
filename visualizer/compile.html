@@ -70,6 +70,7 @@ body.spotlight-mode #status,body.spotlight-mode #message{visibility:hidden}
   <p id="export-status">Your recording has been processed on this device.</p>
   <video id="export-preview" controls playsinline preload="metadata"></video>
   <div class="export-actions">
+   <button id="compile-start" type="button" hidden disabled>Start compiling</button>
    <a id="download-link" href="#" download="abyssalbar-recording.webm">Download video</a>
    <button id="close-export" type="button">Close</button>
   </div>
@@ -78,12 +79,13 @@ body.spotlight-mode #status,body.spotlight-mode #message{visibility:hidden}
 <script>
 (()=>{
 'use strict';
-const stage=document.getElementById('stage'),orb=document.getElementById('orb'),dots=[...document.querySelectorAll('.dot')],canvas=document.getElementById('particles'),ctx=canvas.getContext('2d'),permissionButton=document.getElementById('permission'),mic=document.getElementById('mic'),status=document.getElementById('status'),message=document.getElementById('message'),captionWord=document.getElementById('caption-word'),exportPanel=document.getElementById('export-panel'),exportTitle=document.getElementById('export-title'),exportStatus=document.getElementById('export-status'),exportPreview=document.getElementById('export-preview'),downloadLink=document.getElementById('download-link'),closeExport=document.getElementById('close-export');
+const stage=document.getElementById('stage'),orb=document.getElementById('orb'),dots=[...document.querySelectorAll('.dot')],canvas=document.getElementById('particles'),ctx=canvas.getContext('2d'),permissionButton=document.getElementById('permission'),mic=document.getElementById('mic'),status=document.getElementById('status'),message=document.getElementById('message'),captionWord=document.getElementById('caption-word'),exportPanel=document.getElementById('export-panel'),exportTitle=document.getElementById('export-title'),exportStatus=document.getElementById('export-status'),exportPreview=document.getElementById('export-preview'),downloadLink=document.getElementById('download-link'),closeExport=document.getElementById('close-export'),compileStartButton=document.getElementById('compile-start');
 const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const PITCH_INTERVAL=45,NOTE_RELEASE_MS=170,NOTE_DURATION=2400,NOTE_WIDTH=12,NOTE_MAX_COUNT=48,NOTE_PADDING=0.12;
 let stream=null,audio=null,analyser=null,source=null,timeData=null,freqData=null,raf=0,listening=false,starting=false,stopping=false,level=0,pitchMinLog=null,pitchMaxLog=null,lastSpeech=0,lastPitchAt=0,lastValidPitchAt=0,candidateMidi=null,candidateCount=0,currentMidi=null,currentNote=null,notes=[],width=0,height=0,dpr=1,previousTime=0,dotDiameters=[];
 let spotlightMode=false,recognition=null,recognitionBlocked=false,recognitionLoading=false,holdPointerId=null,wordQueue=[],activeWord=null,activeWordUntil=0,captionToken=0,finalSegments=new Map(),interimCounts=new Map();
 let isRecording=false,audioRecorder=null,audioChunks=[],recordingStartedAt=0,lastRecordedFrameAt=-1,recordedFrames=[],recordedNotes=[],recordedSpeechSegments=[],exportObjectUrl=null,transcriberPromise=null,microphoneEnabled=false,compilerMode=new URLSearchParams(location.search).has('compile');
+let pendingTake=null,compileAudioContext=null,compileStarted=false;
 const SpeechRecognitionAPI=window.SpeechRecognition||window.webkitSpeechRecognition;
 const pitchScratch=new Float32Array(2048);
 
@@ -625,7 +627,7 @@ function drawExportFrame(context,canvasWidth,canvasHeight,time,visual,notesForEx
   drawCaptionGroup(context,group,time,cx,cy,canvasWidth*.84,canvasWidth);
  }
 }
-async function renderVideo(audioBuffer,cleanNotes,visualFrames,captionGroups){
+async function renderVideo(audioBuffer,cleanNotes,visualFrames,captionGroups,outputContext){
  if(!window.MediaRecorder)throw new Error('This browser does not support video recording.');
  const exportCanvas=document.createElement('canvas');
  const portrait=innerHeight>=innerWidth;
@@ -634,7 +636,7 @@ async function renderVideo(audioBuffer,cleanNotes,visualFrames,captionGroups){
  const exportCtx=exportCanvas.getContext('2d',{alpha:false});
  if(!exportCtx||!exportCanvas.captureStream)throw new Error('This browser cannot export canvas video.');
  const canvasStream=exportCanvas.captureStream(30);
- const outputContext=new (window.AudioContext||window.webkitAudioContext)();
+ if(!outputContext||outputContext.state==='closed')throw new Error('The audio renderer is unavailable. Tap Try compiling again.');
  const destination=outputContext.createMediaStreamDestination();
  const sourceNode=outputContext.createBufferSource();sourceNode.buffer=audioBuffer;sourceNode.connect(destination);
  const mixedStream=new MediaStream([...canvasStream.getVideoTracks(),...destination.stream.getAudioTracks()]);
@@ -679,7 +681,7 @@ async function renderVideo(audioBuffer,cleanNotes,visualFrames,captionGroups){
  if(!videoBlob||videoBlob.size<1000)throw new Error('The exported video was empty. Try a slightly longer recording.');
  return videoBlob;
 }
-async function makeVideo(audioBlob){
+async function makeVideo(audioBlob,outputContext){
  if(!audioBlob||!audioBlob.size)throw new Error('No audio was captured. Check microphone permission and try again.');
  message.textContent='Decoding audio locally…';if(compilerMode)exportStatus.textContent='Decoding your recording on this device…';
  const AC=window.AudioContext||window.webkitAudioContext;
@@ -700,7 +702,7 @@ async function makeVideo(audioBlob){
  const captions=groupCaptionWords(words);
  const cleanedNotes=cleanNoteEvents(recordedNotes,audioBuffer.duration);
  message.textContent='Polishing notes and rendering the video on this device…';if(compilerMode)exportStatus.textContent='Polishing note timing and rendering the video on this device…';
- const videoBlob=await renderVideo(audioBuffer,cleanedNotes,recordedFrames,captions);
+ const videoBlob=await renderVideo(audioBuffer,cleanedNotes,recordedFrames,captions,outputContext);
  if(exportObjectUrl)URL.revokeObjectURL(exportObjectUrl);
  exportObjectUrl=URL.createObjectURL(videoBlob);
  exportPreview.src=exportObjectUrl;exportPreview.hidden=false;
@@ -809,26 +811,58 @@ if(compilerMode){
  stage.style.display='none';status.style.display='none';message.style.display='none';
  document.querySelector('.controls').style.display='none';
  exportPanel.hidden=false;exportTitle.textContent='Preparing your recording';exportStatus.textContent='Loading the take from local device storage…';
- exportPreview.hidden=true;downloadLink.style.display='none';closeExport.textContent='Back to visualizer';
- closeExport.addEventListener('click',()=>location.href='./');
+ exportPreview.hidden=true;downloadLink.style.display='none';compileStartButton.hidden=true;compileStartButton.disabled=true;
+ closeExport.textContent='Back to visualizer';
  (async()=>{
   try{
-   const take=await loadTakeLocally();
-   if(!take||!take.audioBlob)throw new Error('No saved recording was found on this device. Return to the visualizer and record a new take.');
-   recordedFrames=take.frames||[];recordedNotes=take.notes||[];recordedSpeechSegments=take.speech||[];
-   exportTitle.textContent='Compiling your video';exportStatus.textContent='Transcribing speech, polishing notes, and rendering locally. Keep this page open.';
-   await makeVideo(take.audioBlob);
-   await clearTakeLocally();
+   pendingTake=await loadTakeLocally();
+   if(!pendingTake||!pendingTake.audioBlob)throw new Error('No saved recording was found on this device. Return to the visualizer and record a new take.');
+   recordedFrames=pendingTake.frames||[];recordedNotes=pendingTake.notes||[];recordedSpeechSegments=pendingTake.speech||[];
+   exportTitle.textContent='Recording ready';
+   exportStatus.textContent='Your recording is saved on this device. Tap Start compiling to transcribe the speech and render your video.';
+   compileStartButton.textContent='Start compiling';
+   compileStartButton.hidden=false;compileStartButton.disabled=false;
+   document.body.classList.remove('compiling');
   }catch(error){
-   exportTitle.textContent='Could not compile this take';
-   exportStatus.textContent=(error&&error.message)||'The local compiler encountered an error.';
-   exportPanel.hidden=false;document.body.classList.remove('compiling');closeExport.textContent='Back to visualizer';downloadLink.style.display='none';
+   exportTitle.textContent='Could not load this take';
+   exportStatus.textContent=(error&&error.message)||'The local recording could not be loaded.';
+   exportPanel.hidden=false;compileStartButton.hidden=true;document.body.classList.remove('compiling');
   }
  })();
+ compileStartButton.addEventListener('click',async()=>{
+  if(compileStarted||!pendingTake)return;
+  compileStarted=true;compileStartButton.disabled=true;compileStartButton.hidden=true;
+  closeExport.disabled=true;closeExport.textContent='Compiling…';
+  exportTitle.textContent='Compiling your video';
+  exportStatus.textContent='Transcribing speech, polishing notes, and rendering locally. Keep this page open.';
+  document.body.classList.add('compiling');
+  try{
+   const AC=window.AudioContext||window.webkitAudioContext;
+   if(!AC)throw new Error('This browser cannot render audio for the video.');
+   compileAudioContext=new AC();
+   await compileAudioContext.resume();
+   if(compileAudioContext.state!=='running')throw new Error('The browser kept audio rendering paused. Keep this page active and try compiling again.');
+   await makeVideo(pendingTake.audioBlob,compileAudioContext);
+   await clearTakeLocally();
+  }catch(error){
+   console.error('Local video compilation failed',error);
+   exportTitle.textContent='Could not compile this take';
+   exportStatus.textContent=(error&&error.message)||'The local compiler encountered an error.';
+   document.body.classList.remove('compiling');
+   compileStartButton.textContent='Try compiling again';
+   compileStartButton.hidden=false;compileStartButton.disabled=false;
+   closeExport.disabled=false;closeExport.textContent='Back to visualizer';
+   compileStarted=false;
+  }finally{
+   if(compileAudioContext&&compileAudioContext.state!=='closed')try{await compileAudioContext.close()}catch(_){}
+   compileAudioContext=null;
+  }
+ });
+ closeExport.addEventListener('click',()=>{
+  if(compilerMode){location.href='./';return}
+  exportPanel.hidden=true;exportPreview.pause();
+ });
 }
-closeExport.addEventListener('click',()=>{
- exportPanel.hidden=true;exportPreview.pause();
-});
 stage.addEventListener('pointerdown',event=>{
  if(!event.isPrimary||event.button!==0||spotlightMode)return;
  event.preventDefault();
