@@ -154,15 +154,15 @@ function frame(now){
  for(let i=0;i<timeData.length;i++){const sample=(timeData[i]-128)/128;sum+=sample*sample}
  const rms=Math.sqrt(sum/timeData.length);
  const raw=clamp((rms-.007)*18*1.6,0,1);
- const attack=reducedMotion?.09:.18,release=reducedMotion?.07:.085;
+ const attack=reducedMotion ? 0.09 : 0.13,release=reducedMotion ? 0.06 : 0.075;
  level+=(raw-level)*(raw>level?1-Math.pow(1-attack,dt):1-Math.pow(1-release,dt));
  if(raw>.075)lastSpeech=now;
  const speaking=now-lastSpeech<155;
  analyser.getByteFrequencyData(freqData);
  orb.style.transform='translate3d(-50%,-50%,0) scale('+(1+level*.72).toFixed(3)+')';
- updateWave(reducedMotion?.08:.16,speaking);
+ updateWave(reducedMotion ? 0.08 : 0.16,speaking);
 
- if(speaking&&now-lastPitchAt>=PITCH_INTERVAL){
+ if(now-lastPitchAt>=PITCH_INTERVAL){
   lastPitchAt=now;
   const detectedHz=estimatePitch(timeData,audio.sampleRate);
   if(detectedHz!==null){
