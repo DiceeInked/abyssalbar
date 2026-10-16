@@ -38,48 +38,98 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000;color:
 'use strict';
 const orb=document.getElementById('orb'),dots=[...document.querySelectorAll('.dot')],canvas=document.getElementById('particles'),ctx=canvas.getContext('2d'),mic=document.getElementById('mic'),status=document.getElementById('status'),message=document.getElementById('message');
 const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
-const NOTE_INTERVAL=125,NOTE_DURATION=2400;
-let stream=null,audio=null,analyser=null,source=null,timeData=null,freqData=null,raf=0,listening=false,starting=false,stopping=false,level=0,pitchLog=Math.log(150),pitchMinLog=null,pitchMaxLog=null,lastSpeech=0,lastPitchAt=0,lastValidPitchAt=0,nextNoteAt=0,notes=[],width=0,height=0,dpr=1,previousTime=0;
+const PITCH_INTERVAL=45,NOTE_RELEASE_MS=170,NOTE_DURATION=2400,NOTE_WIDTH=12,NOTE_MAX_COUNT=48,NOTE_PADDING=0.12;
+let stream=null,audio=null,analyser=null,source=null,timeData=null,freqData=null,raf=0,listening=false,starting=false,stopping=false,level=0,pitchMinLog=null,pitchMaxLog=null,lastSpeech=0,lastPitchAt=0,lastValidPitchAt=0,candidateMidi=null,candidateCount=0,currentMidi=null,currentNote=null,notes=[],width=0,height=0,dpr=1,previousTime=0,dotDiameters=[];
+const pitchScratch=new Float32Array(2048);
 const dotLevels=[0,0,0,0,0];
 function clamp(v,min,max){return Math.min(max,Math.max(min,v))}
-function resize(){width=innerWidth;height=innerHeight;dpr=Math.min(window.devicePixelRatio||1,2);canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);canvas.style.width=width+'px';canvas.style.height=height+'px';ctx.setTransform(dpr,0,0,dpr,0,0);drawNotes(performance.now())}
-// Pitch estimator adapted from the original Pattern prototype.
+function resize(){
+ width=innerWidth;height=innerHeight;dpr=Math.min(window.devicePixelRatio||1,2);
+ canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);
+ canvas.style.width=width+'px';canvas.style.height=height+'px';
+ ctx.setTransform(dpr,0,0,dpr,0,0);
+ dotDiameters=dots.map(dot=>dot.getBoundingClientRect().width||8);
+ drawNotes(performance.now());
+}
+
+// Reuse the pitch buffer so microphone analysis does not allocate on every check.
 function estimatePitch(bytes,sampleRate){
- const data=new Float32Array(bytes.length);let mean=0;
+ const data=pitchScratch;
+ if(data.length!==bytes.length)return null;
+ let mean=0;
  for(let i=0;i<bytes.length;i++)mean+=(bytes[i]-128)/128;
- mean/=bytes.length;let energy=0;
+ mean/=bytes.length;
+ let energy=0;
  for(let i=0;i<bytes.length;i++){data[i]=(bytes[i]-128)/128-mean;energy+=data[i]*data[i]}
  if(Math.sqrt(energy/data.length)<.012)return null;
- const minLag=Math.max(20,Math.floor(sampleRate/700)),maxLag=Math.min(Math.floor(sampleRate/75),Math.floor(data.length*.44)),limit=data.length-maxLag;
+ const minLag=Math.max(20,Math.floor(sampleRate/700));
+ const maxLag=Math.min(Math.floor(sampleRate/75),Math.floor(data.length*.44));
+ const limit=data.length-maxLag;
  let bestLag=0,bestCorrelation=0;
- for(let lag=minLag;lag<=maxLag;lag++){let cross=0,a2=0,b2=0;for(let i=0;i<limit;i+=3){const a=data[i],b=data[i+lag];cross+=a*b;a2+=a*a;b2+=b*b}const correlation=cross/Math.sqrt((a2*b2)||1);if(correlation>bestCorrelation){bestCorrelation=correlation;bestLag=lag}}
+ for(let lag=minLag;lag<=maxLag;lag++){
+  let cross=0,a2=0,b2=0;
+  for(let i=0;i<limit;i+=3){
+   const a=data[i],b=data[i+lag];
+   cross+=a*b;a2+=a*a;b2+=b*b;
+  }
+  const correlation=cross/Math.sqrt((a2*b2)||1);
+  if(correlation>bestCorrelation){bestCorrelation=correlation;bestLag=lag}
+ }
  if(bestCorrelation<.36||!bestLag)return null;
- const hz=sampleRate/bestLag;if(hz<75||hz>700)return null;
- // Return frequency so the visualizer can learn this speaker's range.
- return hz
+ const hz=sampleRate/bestLag;
+ return hz>=75&&hz<=700?hz:null;
 }
-function spawnNote(now,pitchPosition){
- const radius=clamp(5+Math.sqrt(level)*8,5,14);
- notes.push({x:pitchPosition,radius,createdAt:now});
- if(notes.length>42)notes.shift();
- nextNoteAt=now+NOTE_INTERVAL;
+
+function startNote(now,midi,pitchPosition){
+ const note={midi,x:clamp(pitchPosition,.025,.975),startedAt:now,lastSeen:now,endedAt:null};
+ notes.push(note);
+ currentNote=note;currentMidi=midi;
+ if(notes.length>NOTE_MAX_COUNT)notes.splice(0,notes.length-NOTE_MAX_COUNT);
+}
+function endCurrentNote(now){
+ if(!currentNote)return;
+ currentNote.endedAt=now;
+ currentNote=null;currentMidi=null;
+}
+function pitchToPosition(midiLog){
+ if(pitchMinLog===null)pitchMinLog=midiLog;
+ if(pitchMaxLog===null)pitchMaxLog=midiLog;
+ pitchMinLog=Math.min(pitchMinLog,midiLog);
+ pitchMaxLog=Math.max(pitchMaxLog,midiLog);
+ const low=pitchMinLog-NOTE_PADDING,high=pitchMaxLog+NOTE_PADDING;
+ return clamp((midiLog-low)/(high-low),.025,.975);
+}
+function drawCapsule(x,top,bottom,radius,alpha){
+ ctx.fillStyle='rgba(255,255,255,'+alpha.toFixed(3)+')';
+ if(bottom-top<=radius*2){
+  ctx.beginPath();ctx.arc(x,(top+bottom)*.5,radius,0,Math.PI*2);ctx.fill();
+  return;
+ }
+ ctx.beginPath();
+ ctx.moveTo(x-radius,top+radius);
+ ctx.arc(x,top+radius,radius,Math.PI,Math.PI*2);
+ ctx.lineTo(x+radius,bottom-radius);
+ ctx.arc(x,bottom-radius,radius,0,Math.PI);
+ ctx.closePath();ctx.fill();
 }
 function drawNotes(now){
  ctx.clearRect(0,0,width,height);
+ const speed=height/(NOTE_DURATION/1000);
+ const maxLength=Math.max(NOTE_WIDTH,height*.9);
  for(let i=notes.length-1;i>=0;i--){
-  const note=notes[i],age=(now-note.createdAt)/NOTE_DURATION;
-  if(age>=1){notes.splice(i,1);continue}
-  const x=note.x*width,r=note.radius;
-  const y=height+r-age*(height+r*2);
-  const fade=age>.78?clamp((1-age)/.22,0,1):1;
-  // A restrained little wake gives each rising pitch a sense of motion without glow or 3D effects.
-  ctx.beginPath();ctx.moveTo(x,y+r*.65);ctx.lineTo(x,y+r*2.05);
-  ctx.lineCap='round';ctx.lineWidth=Math.max(1,r*.14);
-  ctx.strokeStyle='rgba(255,255,255,'+(fade*.18).toFixed(3)+')';ctx.stroke();
-  ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);
-  ctx.fillStyle='rgba(255,255,255,'+fade.toFixed(3)+')';ctx.fill();
+  const note=notes[i],ended=note.endedAt!==null;
+  const duration=Math.max(0,(ended?note.endedAt:now)-note.startedAt);
+  const length=clamp(duration*speed/1000,NOTE_WIDTH,maxLength);
+  const rise=ended?(now-note.endedAt)*speed/1000:0;
+  const top=height-length-rise,bottom=height-rise;
+  const alpha=ended?clamp(1-(now-note.endedAt)/NOTE_DURATION,0,1):1;
+  drawCapsule(note.x*width,top,bottom,NOTE_WIDTH*.5,alpha);
+  if(ended&&(now-note.endedAt>=NOTE_DURATION||bottom < -NOTE_WIDTH)){
+   notes.splice(i,1);
+  }
  }
 }
+
 function updateWave(responsiveness,speaking){
  if(!freqData||!audio)return;
  const nyquist=audio.sampleRate/2,minHz=65,maxHz=Math.min(9000,audio.sampleRate*.46);
@@ -90,47 +140,61 @@ function updateWave(responsiveness,speaking){
   const changeRate=magnitude>dotLevels[i]?responsiveness*1.25:Math.max(.12,responsiveness*.78);
   dotLevels[i]+=(magnitude-dotLevels[i])*Math.min(.45,changeRate);
   // Height changes symmetrically around the grid's fixed vertical center.
-  const diameter=dots[i].getBoundingClientRect().width;
+  const diameter=dotDiameters[i]||8;
   const extension=Math.min(150,Math.max(80,height*.24));
   dots[i].style.height=(diameter+dotLevels[i]*extension)+'px';
  }
 }
 function frame(now){
  if(!listening||!analyser)return;
- const dt=previousTime?Math.min((now-previousTime)/16.667,2):1;previousTime=now;
- analyser.getByteTimeDomainData(timeData);let sum=0;
- for(let i=0;i<timeData.length;i++){const s=(timeData[i]-128)/128;sum+=s*s}
- const rms=Math.sqrt(sum/timeData.length),raw=clamp((rms-.007)*18*1.6,0,1);
- const attack=reducedMotion ? 0.09 : 0.18,release=reducedMotion ? 0.07 : 0.085;
+ const dt=previousTime?Math.min((now-previousTime)/16.667,2):1;
+ previousTime=now;
+ analyser.getByteTimeDomainData(timeData);
+ let sum=0;
+ for(let i=0;i<timeData.length;i++){const sample=(timeData[i]-128)/128;sum+=sample*sample}
+ const rms=Math.sqrt(sum/timeData.length);
+ const raw=clamp((rms-.007)*18*1.6,0,1);
+ const attack=reducedMotion?.09:.18,release=reducedMotion?.07:.085;
  level+=(raw-level)*(raw>level?1-Math.pow(1-attack,dt):1-Math.pow(1-release,dt));
  if(raw>.075)lastSpeech=now;
  const speaking=now-lastSpeech<155;
  analyser.getByteFrequencyData(freqData);
  orb.style.transform='translate3d(-50%,-50%,0) scale('+(1+level*.72).toFixed(3)+')';
- updateWave(reducedMotion ? 0.08 : 0.16,speaking);
- if(speaking){
-  if(now-lastPitchAt>=45){
-   lastPitchAt=now;
-   const detected=estimatePitch(timeData,audio.sampleRate);
-   if(detected!==null){
-    const detectedLog=Math.log(detected);
-    pitchLog+=(detectedLog-pitchLog)*0.4;
-    lastValidPitchAt=now;
-    if(pitchMinLog===null||pitchLog<pitchMinLog)pitchMinLog=pitchLog;
-    else pitchMinLog+=(pitchLog-pitchMinLog)*0.001;
-    if(pitchMaxLog===null||pitchLog>pitchMaxLog)pitchMaxLog=pitchLog;
-    else pitchMaxLog+=(pitchLog-pitchMaxLog)*0.001;
+ updateWave(reducedMotion?.08:.16,speaking);
+
+ if(speaking&&now-lastPitchAt>=PITCH_INTERVAL){
+  lastPitchAt=now;
+  const detectedHz=estimatePitch(timeData,audio.sampleRate);
+  if(detectedHz!==null){
+   if(now-lastValidPitchAt>120){candidateMidi=null;candidateCount=0}
+   lastValidPitchAt=now;
+   const midi=Math.round(69+12*Math.log2(detectedHz/440));
+   if(midi===candidateMidi)candidateCount++;
+   else{candidateMidi=midi;candidateCount=1}
+
+   // Require two consistent detections before changing the displayed note.
+   if(candidateCount>=2){
+    const midiLog=Math.log(440)+(midi-69)*Math.LN2/12;
+    const x=pitchToPosition(midiLog);
+    if(midi!==currentMidi){
+     endCurrentNote(now);
+     startNote(now,midi,x);
+    }else if(currentNote){
+     currentNote.lastSeen=now;
+    }
    }
   }
-  // Learn this speaker's range, then map low notes left and high notes right.
-  const pitchPadding=0.12;
-  const pitchLow=(pitchMinLog??pitchLog)-pitchPadding;
-  const pitchHigh=(pitchMaxLog??pitchLog)+pitchPadding;
-  const pitchPosition=clamp((pitchLog-pitchLow)/(pitchHigh-pitchLow),0,1);
-  if(now>=nextNoteAt&&now-lastValidPitchAt<150)spawnNote(now,pitchPosition);
  }
- drawNotes(now);raf=requestAnimationFrame(frame)
+
+ // End a sustained capsule only after a brief gap, so tiny pitch-detection dropouts do not break it.
+ if(currentNote&&now-currentNote.lastSeen>NOTE_RELEASE_MS){
+  endCurrentNote(now);
+  candidateMidi=null;candidateCount=0;
+ }
+ drawNotes(now);
+ raf=requestAnimationFrame(frame);
 }
+
 async function start(){
  if(starting||listening||stopping)return;starting=true;mic.disabled=true;message.textContent='Requesting microphone access…';
  try{
@@ -141,7 +205,7 @@ async function start(){
   analyser=audio.createAnalyser();analyser.fftSize=2048;analyser.smoothingTimeConstant=.72;
   source=audio.createMediaStreamSource(stream);source.connect(analyser);
   timeData=new Uint8Array(analyser.fftSize);freqData=new Uint8Array(analyser.frequencyBinCount);
-  listening=true;level=0;pitchLog=Math.log(150);pitchMinLog=null;pitchMaxLog=null;lastSpeech=0;lastPitchAt=0;lastValidPitchAt=0;nextNoteAt=0;previousTime=0;notes=[];dotLevels.fill(0);
+  listening=true;level=0;pitchMinLog=null;pitchMaxLog=null;lastSpeech=0;lastPitchAt=0;lastValidPitchAt=0;candidateMidi=null;candidateCount=0;currentMidi=null;currentNote=null;previousTime=0;notes=[];dotLevels.fill(0);
   mic.textContent='Stop listening';status.textContent='Listening';status.classList.add('live');message.textContent='Audio is analysed locally to animate the visuals.';
   raf=requestAnimationFrame(frame)
  }catch(e){
@@ -161,7 +225,7 @@ async function stop(){
  if(source)try{source.disconnect()}catch(_){}source=null;
  const activeAudio=audio;audio=null;analyser=null;timeData=null;freqData=null;
  if(activeAudio)try{await activeAudio.close()}catch(_){}
- level=0;pitchLog=Math.log(150);pitchMinLog=null;pitchMaxLog=null;lastSpeech=0;lastPitchAt=0;lastValidPitchAt=0;nextNoteAt=0;previousTime=0;notes=[];dotLevels.fill(0);
+ level=0;pitchMinLog=null;pitchMaxLog=null;lastSpeech=0;lastPitchAt=0;lastValidPitchAt=0;candidateMidi=null;candidateCount=0;currentMidi=null;currentNote=null;previousTime=0;notes=[];dotLevels.fill(0);
  orb.style.transform='translate3d(-50%,-50%,0) scale(1)';
  dots.forEach(d=>{d.style.height=''});
  drawNotes(performance.now());
