@@ -134,7 +134,7 @@ input[type=range]{width:135px;accent-color:var(--teal)}
 
   <div class="section">
     <h2>Simulation</h2>
-    <div class="option-row"><label for="speed">Motion speed</label><input id="speed" type="range" min="0.1" max="2.5" step="0.1" value="1"><span id="speedValue">1.0×</span></div>
+    <div class="option-row"><label for="speed">Simulation speed</label><input id="speed" type="range" min="0.1" max="4" step="0.1" value="1" aria-label="Simulation playback speed"><span id="speedValue">1.0×</span></div>
     <div class="option-row"><label for="showRanges">Show interaction ranges</label><input id="showRanges" type="checkbox"></div>
     <div class="option-row"><label for="sizeWorld">Dot size follows zoom</label><input id="sizeWorld" type="checkbox" checked></div>
     <div class="footer-actions">
@@ -338,7 +338,7 @@ input[type=range]{width:135px;accent-color:var(--teal)}
         }
       }
     }
-    const accel=.018*state.speed,friction=Math.pow(.965,dt*state.speed),maxSpeed=.36*state.speed;
+    const accel=.018,friction=Math.pow(.965,dt),maxSpeed=.36;
     for(let i=0;i<ps.length;i++){
       const p=ps[i];p.vx=(p.vx+ax[i]*accel*dt)*friction;p.vy=(p.vy+ay[i]*accel*dt)*friction;
       const v=hypot(p.vx,p.vy);if(v>maxSpeed){p.vx=p.vx/v*maxSpeed;p.vy=p.vy/v*maxSpeed;}
@@ -367,8 +367,11 @@ input[type=range]{width:135px;accent-color:var(--teal)}
   }
   function animate(time){
     if(!state.paused){
-      const dt=state.lastTime?clamp((time-state.lastTime)/16.667,0,2.5):1;state.accumulator+=dt;
-      let loops=0;while(state.accumulator>=1&&loops<2){step(1);state.accumulator-=1;loops++;}
+      const frameTime=state.lastTime?clamp((time-state.lastTime)/16.667,0,1.5):1;
+      state.accumulator+=frameTime*state.speed;
+      let loops=0;
+      while(state.accumulator>=1&&loops<6){step(1);state.accumulator-=1;loops++;}
+      if(loops===6&&state.accumulator>6)state.accumulator=6;
     }
     state.lastTime=time;draw();state.frame=requestAnimationFrame(animate);
   }
@@ -415,26 +418,47 @@ input[type=range]{width:135px;accent-color:var(--teal)}
   document.getElementById('showRanges').checked=false;
 
   const pointers=state.pointerMap;
+  function beginPinch(){
+    const pair=Array.from(pointers.values()).slice(0,2);
+    if(pair.length<2)return;
+    const midX=(pair[0].x+pair[1].x)/2,midY=(pair[0].y+pair[1].y)/2;
+    state.gesture={
+      kind:'pinch',
+      distance:Math.max(1,hypot(pair[0].x-pair[1].x,pair[0].y-pair[1].y)),
+      zoom:state.zoom,
+      anchor:screenToWorld(midX,midY)
+    };
+  }
   function pointerDown(e){
     if(e.target!==canvas)return;
-    e.preventDefault();canvas.setPointerCapture(e.pointerId);pointers.set(e.pointerId,{x:e.clientX,y:e.clientY,prevX:e.clientX,prevY:e.clientY});
+    e.preventDefault();
+    try{canvas.setPointerCapture(e.pointerId);}catch(_){}
+    pointers.set(e.pointerId,{x:e.clientX,y:e.clientY,prevX:e.clientX,prevY:e.clientY});
     if(pointers.size===1){
       if(state.paintMode){
         const w=screenToWorld(e.clientX,e.clientY);addParticle(state.selectedColor,w.x,w.y);
         state.gesture={kind:'paint',lastX:e.clientX,lastY:e.clientY};
       }else state.gesture={kind:'pan',lastX:e.clientX,lastY:e.clientY};
-    }else if(pointers.size===2){
-      const a=Array.from(pointers.values());state.gesture={kind:'pinch',distance:hypot(a[0].x-a[1].x,a[0].y-a[1].y),zoom:state.zoom,midX:(a[0].x+a[1].x)/2,midY:(a[0].y+a[1].y)/2};
+    }else if(pointers.size>=2){
+      beginPinch();
     }
   }
   function pointerMove(e){
     if(!pointers.has(e.pointerId))return;
     e.preventDefault();const p=pointers.get(e.pointerId);p.prevX=p.x;p.prevY=p.y;p.x=e.clientX;p.y=e.clientY;
     if(pointers.size>=2){
-      const a=Array.from(pointers.values());if(a.length<2)return;
-      if(!state.gesture||state.gesture.kind!=='pinch')state.gesture={kind:'pinch',distance:hypot(a[0].x-a[1].x,a[0].y-a[1].y),zoom:state.zoom,midX:(a[0].x+a[1].x)/2,midY:(a[0].y+a[1].y)/2};
-      const g=state.gesture,dist=Math.max(1,hypot(a[0].x-a[1].x,a[0].y-a[1].y)),mx=(a[0].x+a[1].x)/2,my=(a[0].y+a[1].y)/2;
-      setZoom(g.zoom*dist/Math.max(1,g.distance),mx,my);return;
+      const pair=Array.from(pointers.values()).slice(0,2);if(pair.length<2)return;
+      if(!state.gesture||state.gesture.kind!=='pinch')beginPinch();
+      const g=state.gesture,dist=Math.max(1,hypot(pair[0].x-pair[1].x,pair[0].y-pair[1].y));
+      const mx=(pair[0].x+pair[1].x)/2,my=(pair[0].y+pair[1].y)/2;
+      state.zoom=clamp(g.zoom*dist/g.distance,.12,8);
+      const s=scale();
+      state.camX=g.anchor.x-(mx-state.width/2)/s;
+      state.camY=g.anchor.y-(my-state.height/2)/s;
+      const viewW=state.width/s,viewH=state.height/s;
+      state.camX=clamp(state.camX,Math.min(viewW/2,state.worldW/2),Math.max(state.worldW-viewW/2,state.worldW/2));
+      state.camY=clamp(state.camY,Math.min(viewH/2,state.worldH/2),Math.max(state.worldH-viewH/2,state.worldH/2));
+      updateZoomLabel();return;
     }
     if(!state.gesture)return;
     const dx=e.clientX-p.prevX,dy=e.clientY-p.prevY;
@@ -448,13 +472,12 @@ input[type=range]{width:135px;accent-color:var(--teal)}
     }
   }
   function pointerUp(e){
-    pointers.delete(e.pointerId);
+    const existed=pointers.delete(e.pointerId);
+    if(!existed)return;
     if(pointers.size===0){state.gesture=null;return;}
-    if(pointers.size===1){
-      const p=Array.from(pointers.values())[0];state.gesture={kind:state.paintMode?'paint':'pan',lastX:p.x,lastY:p.y};
-    }else{
-      const a=Array.from(pointers.values());state.gesture={kind:'pinch',distance:hypot(a[0].x-a[1].x,a[0].y-a[1].y),zoom:state.zoom,midX:(a[0].x+a[1].x)/2,midY:(a[0].y+a[1].y)/2};
-    }
+    if(pointers.size>=2){beginPinch();return;}
+    const p=Array.from(pointers.values())[0];
+    state.gesture={kind:state.paintMode?'paint':'pan',lastX:p.x,lastY:p.y};
   }
   canvas.addEventListener('pointerdown',pointerDown);
   canvas.addEventListener('pointermove',pointerMove);
