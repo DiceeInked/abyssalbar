@@ -85,7 +85,7 @@ else if(who==="masc"||who==="fem"||who==="andro"){nuance.textContent="Presentati
 result.classList.remove("hidden");
 }
 showButton.addEventListener("click",function(){if(!kindEl.value||!whoEl.value||!patternEl.value){const target=!kindEl.value?kindEl:(!whoEl.value?whoEl:patternEl);target.focus();target.reportValidity();return;}updateResult();result.scrollIntoView({behavior:window.matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"});});
-[kindEl,whoEl,patternEl].forEach(function(select){select.addEventListener("change",function(){if(!result.classList.contains("hidden"))updateResult();});});
+[kindEl,whoEl,patternEl].forEach(function(select){select.addEventListener("change",function(){if(kindEl.value&&whoEl.value&&patternEl.value){updateResult();}else if(!result.classList.contains("hidden")){result.classList.add("hidden");}});});
 resetButton.addEventListener("click",function(){kindEl.value="";whoEl.value="";patternEl.value="";result.classList.add("hidden");pills.replaceChildren();details.replaceChildren();kindEl.focus();});
 })();
 </script></body></html>
