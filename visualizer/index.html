@@ -52,12 +52,13 @@ function estimatePitch(bytes,sampleRate){
  mean/=bytes.length;let energy=0;
  for(let i=0;i<bytes.length;i++){data[i]=(bytes[i]-128)/128-mean;energy+=data[i]*data[i]}
  if(Math.sqrt(energy/data.length)<.012)return null;
- const minLag=Math.max(25,Math.floor(sampleRate/430)),maxLag=Math.min(Math.floor(sampleRate/65),Math.floor(data.length*.44)),limit=data.length-maxLag;
+ const minLag=Math.max(20,Math.floor(sampleRate/700)),maxLag=Math.min(Math.floor(sampleRate/75),Math.floor(data.length*.44)),limit=data.length-maxLag;
  let bestLag=0,bestCorrelation=0;
- for(let lag=minLag;lag<=maxLag;lag+=2){let cross=0,a2=0,b2=0;for(let i=0;i<limit;i+=3){const a=data[i],b=data[i+lag];cross+=a*b;a2+=a*a;b2+=b*b}const correlation=cross/Math.sqrt((a2*b2)||1);if(correlation>bestCorrelation){bestCorrelation=correlation;bestLag=lag}}
+ for(let lag=minLag;lag<=maxLag;lag++){let cross=0,a2=0,b2=0;for(let i=0;i<limit;i+=3){const a=data[i],b=data[i+lag];cross+=a*b;a2+=a*a;b2+=b*b}const correlation=cross/Math.sqrt((a2*b2)||1);if(correlation>bestCorrelation){bestCorrelation=correlation;bestLag=lag}}
  if(bestCorrelation<.36||!bestLag)return null;
- const hz=sampleRate/bestLag;if(hz<65||hz>430)return null;
- return clamp((Math.log(hz)-Math.log(80))/(Math.log(400)-Math.log(80)),0,1)
+ const hz=sampleRate/bestLag;if(hz<75||hz>700)return null;
+ // Map a broader singing range logarithmically across the full screen.
+ return clamp((Math.log(hz)-Math.log(75))/(Math.log(700)-Math.log(75)),0,1)
 }
 function emitTrail(now){trails.push({x:flameX*width,y:flameY*height,createdAt:now});if(trails.length>24)trails.shift();nextCloneAt=now+TRAIL_INTERVAL}
 function drawTrails(now){
@@ -105,12 +106,12 @@ function frame(now){
   if(now-lastPitchAt>=45){
    lastPitchAt=now;
    const detected=estimatePitch(timeData,audio.sampleRate);
-   if(detected!==null)pitch+=(detected-pitch)*responsiveness;
+   if(detected!==null)pitch+=(detected-pitch)*0.4;
   }
   // Pitch steers left/right; volume steers up/down, with generous safe margins.
-  const targetX=clamp(.5+(pitch-.5)*.74,.13,.87);
+  const targetX=clamp(.5+(pitch-.5)*2.0,.035,.965);
   const targetY=clamp(.5-level*.34,.16,.83);
-  const move=1-Math.pow(1-(reducedMotion ? 0.06 : 0.13),dt);
+  const move=1-Math.pow(1-(reducedMotion ? 0.12 : 0.34),dt);
   flameX+=(targetX-flameX)*move;flameY+=(targetY-flameY)*move;
   if(now>=nextCloneAt)emitTrail(now);
  }
