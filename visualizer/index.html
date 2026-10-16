@@ -785,7 +785,7 @@ async function stop(){
   await saveTakeLocally({audioBlob:rawAudioBlob,frames:recordedFrames,notes:recordedNotes,speech:recordedSpeechSegments,savedAt:Date.now()});
   status.textContent='Opening video compiler';status.classList.remove('live');
   message.textContent='Opening the local video compiler…';
-  location.href='compile.html?compile=1';
+  window.top.location.href=new URL('compile.html?compile=1',location.href).href;
  }catch(error){
   console.error('Could not prepare local take',error);
   message.textContent=(error&&error.message)||'Could not prepare this recording.';
