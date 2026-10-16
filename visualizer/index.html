@@ -113,11 +113,8 @@ function frame(now){
   const move=1-Math.pow(1-(reducedMotion ? 0.06 : 0.13),dt);
   flameX+=(targetX-flameX)*move;flameY+=(targetY-flameY)*move;
   if(now>=nextCloneAt)emitTrail(now);
- }else{
-  const returnEase=1-Math.pow(1-(reducedMotion ? 0.06 : 0.085),dt);
-  flameX+=(.5-flameX)*returnEase;flameY+=(.5-flameY)*returnEase;
-
  }
+ flame.style.background=speaking?'#fff':'#888';
  flame.style.left=(flameX*100).toFixed(3)+'%';flame.style.top=(flameY*100).toFixed(3)+'%';
  drawTrails(now);raf=requestAnimationFrame(frame)
 }
