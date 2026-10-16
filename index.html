@@ -27,7 +27,7 @@ button{font:inherit}
 #blob{display:block;width:100%;height:100%;height:100dvh;touch-action:none;overscroll-behavior:none;cursor:grab;outline:none;background:#000;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 #blob:active{cursor:grabbing}
 #blob:focus-visible{outline:2px solid #000;outline-offset:-7px}
-#voiceFrame,#testFrame,#prideFrame{display:none;position:absolute;inset:0;width:100%;height:100%;border:0;background:#000;z-index:2}
+#voiceFrame,#testFrame,#prideFrame,#templateFrame{display:none;position:absolute;inset:0;width:100%;height:100%;border:0;background:#000;z-index:2}
 #back{position:absolute;left:18px;top:18px;width:42px;height:42px;padding:0;border:0;background:transparent;color:#fff;opacity:0;pointer-events:none;cursor:pointer;transition:none;z-index:4}
 #back svg{display:block;width:100%;height:100%}
 #experience.ready #back{opacity:1;pointer-events:auto}
@@ -44,6 +44,7 @@ button{font:inherit}
     <button class="dot active" type="button" aria-label="Open combined voice visualizer"></button>
     <button class="dot active" type="button" aria-label="Open Test dictation studio"></button>
     <button class="dot active" type="button" aria-label="Open Pride attraction label finder"></button>
+    <button class="dot active" type="button" aria-label="Open website template showcase"></button>
     <button class="dot" type="button" aria-label="Unavailable experience" disabled></button>
     <button class="dot" type="button" aria-label="Unavailable experience" disabled></button>
     <button class="dot" type="button" aria-label="Unavailable experience" disabled></button>
@@ -72,6 +73,7 @@ button{font:inherit}
   <iframe id="voiceFrame" title="Voice visualizer" src="about:blank" allow="microphone" allowfullscreen></iframe>
   <iframe id="testFrame" title="Test dictation-to-video studio" src="about:blank" allow="microphone" allowfullscreen></iframe>
   <iframe id="prideFrame" title="Pride attraction label finder" src="about:blank" allowfullscreen></iframe>
+  <iframe id="templateFrame" title="Reusable website template showcase" src="about:blank" allowfullscreen></iframe>
   <button id="back" type="button" aria-label="Back to dot grid">
     <svg viewBox="0 0 48 48" fill="none" aria-hidden="true"><path d="M28 12L16 24L28 36" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
   </button>
@@ -87,6 +89,7 @@ button{font:inherit}
   const voiceFrame = document.getElementById('voiceFrame');
   const testFrame = document.getElementById('testFrame');
   const prideFrame = document.getElementById('prideFrame');
+  const templateFrame = document.getElementById('templateFrame');
   const ctx = canvas.getContext('2d', { alpha: false });
   const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   let opened = false;
@@ -251,11 +254,11 @@ button{font:inherit}
 
   dots.forEach((dot,index)=>{
     dot.addEventListener('click',()=>{
-      if(index>5||opened)return;
-      mode=index===0?'blob':index===1?'ripples':index===2?'particles':index===3?'voice':index===4?'test':'pride';
+      if(index>6||opened)return;
+      mode=index===0?'blob':index===1?'ripples':index===2?'particles':index===3?'voice':index===4?'test':index===5?'pride':'template';
       opened=true;
-      experience.setAttribute('aria-label',mode==='blob'?'Elastic blob fidget':mode==='ripples'?'Ripple ring sensory experience':mode==='particles'?'Drifting particle field':mode==='test'?'Test dictation studio':mode==='pride'?'Pride attraction label finder':'Voice visualizer');
-      canvas.setAttribute('aria-label',mode==='blob'?'Drag the white blob to stretch it and release to let it spring back. Press Enter or Space to bounce it.':mode==='ripples'?'Tap or drag anywhere to send soft rings rippling across the dark water.':mode==='test'?'Test dictation-to-video studio':mode==='pride'?'Pride attraction label finder':'Move your finger through the floating lights to gently scatter them.');
+      experience.setAttribute('aria-label',mode==='blob'?'Elastic blob fidget':mode==='ripples'?'Ripple ring sensory experience':mode==='particles'?'Drifting particle field':mode==='test'?'Test dictation studio':mode==='pride'?'Pride attraction label finder':mode==='template'?'Reusable website template showcase':'Voice visualizer');
+      canvas.setAttribute('aria-label',mode==='blob'?'Drag the white blob to stretch it and release to let it spring back. Press Enter or Space to bounce it.':mode==='ripples'?'Tap or drag anywhere to send soft rings rippling across the dark water.':mode==='test'?'Test dictation-to-video studio':mode==='pride'?'Pride attraction label finder':mode==='template'?'Reusable website template showcase':'Move your finger through the floating lights to gently scatter them.');
       const r=dot.getBoundingClientRect();
       zoom.style.left=(r.left+r.width/2)+'px';
       zoom.style.top=(r.top+r.height/2)+'px';
@@ -268,22 +271,25 @@ button{font:inherit}
       window.setTimeout(()=>{
         menu.style.display='none';
         zoom.style.display='none';
-        if(mode==='voice'||mode==='test'||mode==='pride'){
+        if(mode==='voice'||mode==='test'||mode==='pride'||mode==='template'){
           animationRunning=false;
           if(animationFrame)cancelAnimationFrame(animationFrame);
           animationFrame=0;
         }
         if(mode==='voice') {
-          canvas.style.display='none';testFrame.style.display='none';prideFrame.style.display='none';
+          canvas.style.display='none';testFrame.style.display='none';prideFrame.style.display='none';templateFrame.style.display='none';
           voiceFrame.style.display='block';voiceFrame.src=new URL('visualizer/',window.location.href).href;
         } else if(mode==='test') {
-          canvas.style.display='none';voiceFrame.style.display='none';prideFrame.style.display='none';
+          canvas.style.display='none';voiceFrame.style.display='none';prideFrame.style.display='none';templateFrame.style.display='none';
           testFrame.style.display='block';testFrame.src=new URL('test/',window.location.href).href;
         } else if(mode==='pride') {
-          canvas.style.display='none';voiceFrame.style.display='none';testFrame.style.display='none';
+          canvas.style.display='none';voiceFrame.style.display='none';testFrame.style.display='none';templateFrame.style.display='none';
           prideFrame.style.display='block';prideFrame.src=new URL('pride/',window.location.href).href;
+        } else if(mode==='template') {
+          canvas.style.display='none';voiceFrame.style.display='none';testFrame.style.display='none';prideFrame.style.display='none';
+          templateFrame.style.display='block';templateFrame.src=new URL('template/',window.location.href).href;
         } else {
-          voiceFrame.style.display='none';testFrame.style.display='none';prideFrame.style.display='none';canvas.style.display='block';
+          voiceFrame.style.display='none';testFrame.style.display='none';prideFrame.style.display='none';templateFrame.style.display='none';canvas.style.display='block';
         }
         experience.classList.add('ready');
         experience.inert=false;
@@ -291,7 +297,7 @@ button{font:inherit}
           if(mode==='blob') startBlobEntrance();
           else if(mode==='ripples') { ripples=[]; addRipple(width/2,height/2,1.7); addRipple(width/2,height/2,1.1); }
           else if(mode==='particles') { particleTouch=null; initParticles(); }
-          if(mode!=='voice'&&mode!=='test') canvas.focus({preventScroll:true});
+          if(mode!=='voice'&&mode!=='test'&&mode!=='pride'&&mode!=='template') canvas.focus({preventScroll:true});
         },reduceMotion?20:460);
       },reduceMotion?200:810);
     });
@@ -310,12 +316,13 @@ button{font:inherit}
   }
 
   back.addEventListener('click',()=>{
-    if(mode==='voice'||mode==='test'||mode==='pride'){
+    if(mode==='voice'||mode==='test'||mode==='pride'||mode==='template'){
       animationRunning=true;previousTime=0;animationFrame=requestAnimationFrame(animate);
     }
     if(mode==='voice') { voiceFrame.src='about:blank';voiceFrame.style.display='none';canvas.style.display='block'; }
     if(mode==='test') { testFrame.src='about:blank';testFrame.style.display='none';canvas.style.display='block'; }
     if(mode==='pride') { prideFrame.src='about:blank';prideFrame.style.display='none';canvas.style.display='block'; }
+    if(mode==='template') { templateFrame.src='about:blank';templateFrame.style.display='none';canvas.style.display='block'; }
     experience.classList.remove('ready');
     experience.inert=true;
     zoom.style.display='block';
