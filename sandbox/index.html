@@ -17,9 +17,13 @@ button{color:inherit;cursor:pointer;touch-action:manipulation}
 button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--teal);outline-offset:2px}
 #field{position:fixed;inset:0;width:100%;height:100%;display:block;background:#000;touch-action:none;cursor:grab}
 #settings{display:none!important}.toolbar,#bottomtip{display:none!important}
-.controls{position:fixed;z-index:10;left:50%;bottom:calc(14px + var(--safe-bottom));transform:translateX(-50%);display:flex;align-items:center;gap:10px;width:min(390px,calc(100vw - 24px));padding:10px 12px;background:rgba(12,12,12,.94);border:1px solid #333;border-radius:12px;box-shadow:0 8px 32px #0009;backdrop-filter:blur(12px)}
-.controls label{font-size:12px;color:#bbb;white-space:nowrap}.controls input{width:100%;min-width:60px;accent-color:var(--teal)}#speedReadout{min-width:34px;font-size:12px;text-align:right;font-variant-numeric:tabular-nums}
-@media(max-width:420px){.controls{gap:8px;padding:9px}.controls .btn{min-height:34px;padding:7px 10px}}
+.controls{position:fixed;z-index:10;left:50%;bottom:calc(14px + var(--safe-bottom));transform:translateX(-50%);display:flex;align-items:center;gap:9px;width:min(520px,calc(100vw - 16px));padding:9px 10px;background:rgba(12,12,12,.94);border:1px solid #333;border-radius:12px;box-shadow:0 8px 32px #0009;backdrop-filter:blur(12px)}
+.controls label{font-size:12px;color:#bbb;white-space:nowrap}
+#interactionMode{min-width:95px;max-width:126px;flex:none;border:1px solid #383838;border-radius:7px;background:#171717;color:#eee;padding:7px 5px;font-size:11px}
+.speed-control{display:flex;align-items:center;gap:7px;flex:1;min-width:0}
+.speed-control input{width:100%;min-width:35px;accent-color:var(--teal)}
+#speedReadout{min-width:32px;font-size:12px;text-align:right;font-variant-numeric:tabular-nums}
+@media(max-width:420px){.controls{gap:6px;padding:8px}.controls .btn{min-height:34px;padding:7px 8px;font-size:11px}#interactionMode{min-width:88px;max-width:105px;font-size:10px;padding:7px 3px}.speed-control{gap:5px}.speed-control label{font-size:11px}#speedReadout{min-width:29px;font-size:11px}}
 #field.is-panning{cursor:grabbing}
 .toolbar{position:fixed;z-index:5;top:calc(10px + var(--safe-top));left:10px;right:10px;display:flex;align-items:center;justify-content:space-between;gap:8px;pointer-events:none}
 .toolgroup{display:flex;align-items:center;gap:6px;min-width:0;pointer-events:auto}
@@ -85,7 +89,7 @@ input[type=range]{width:135px;accent-color:var(--teal)}
 </head>
 <body>
 <canvas id="field" aria-label="Particle life simulation. Drag to move the view and pinch or scroll to zoom."></canvas>
-<div class="controls" aria-label="Simulation playback controls"><button class="btn" id="playButton" type="button">Ⅱ Pause</button><label for="speedControl">Speed</label><input id="speedControl" type="range" min="0.1" max="3" step="0.1" value="1"><span id="speedReadout">1.0×</span></div>
+<div class="controls" aria-label="Simulation controls"><button class="btn" id="playButton" type="button">Ⅱ Pause</button><select id="interactionMode" aria-label="Particle interaction mode" title="Particle interaction mode"><option value="self">Self only</option><option value="other">Other colors</option><option value="both" selected>Both</option></select><div class="speed-control"><label for="speedControl">Speed</label><input id="speedControl" type="range" min="0.1" max="3" step="0.1" value="1"><span id="speedReadout">1.0×</span></div></div>
 <div class="toolbar" aria-label="Sandbox controls" hidden>
   <div class="toolgroup">
     <span class="brand">ABYSSAL BAR / SANDBOX</span>
@@ -176,7 +180,7 @@ input[type=range]{width:135px;accent-color:var(--teal)}
     {value:'strong-repel',label:'≪ Strong',strength:-1}
   ];
   const state = {
-    particles:[], matrix:[], selectedColor:0, paintMode:false, paused:false, showRanges:false, sizeFollowsZoom:true,
+    particles:[], matrix:[], selectedColor:0, paintMode:false, paused:false, showRanges:false, sizeFollowsZoom:true, interactionMode:'both',
     speed:1, forceMultiplier:1.5, damping:.035, boundaryMode:"bounce", baseScale:7, zoom:1, camX:0, camY:0, worldW:0, worldH:0, width:0, height:0, dpr:1, countOnStart:500,
     pointerMap:new Map(), gesture:null, lastTime:0, accumulator:0, frame:0, dirty:true
   };
@@ -185,7 +189,7 @@ input[type=range]{width:135px;accent-color:var(--teal)}
   const rand=(a,b)=>a+Math.random()*(b-a);
   const hypot=Math.hypot;
   const getRule=(i,j)=>ruleOptions.find(x=>x.value===state.matrix[i][j])||ruleOptions[0];
-  const scale=()=>Math.min((state.width-28)/state.worldW,(state.height-100)/state.worldH)*state.zoom;
+  const scale=()=>Math.max(.0001,Math.min(Math.max(1,state.width-28)/state.worldW,Math.max(1,state.height-100)/state.worldH)*state.zoom);
   const shortest=(d,extent)=>d>extent/2?d-extent:d< -extent/2?d+extent:d;
 
   function buildMatrix(){
@@ -257,18 +261,23 @@ input[type=range]{width:135px;accent-color:var(--teal)}
     }
     state.matrix=m;buildMatrix();state.dirty=true;
   }
+  function clampCamera(){
+    const s=scale(),viewW=state.width/s,viewH=state.height/s;
+    // If the viewport is larger than the world, center that axis instead of
+    // passing reversed min/max bounds to clamp (which caused the stuck corner).
+    if(viewW>=state.worldW)state.camX=state.worldW/2;
+    else state.camX=clamp(state.camX,viewW/2,state.worldW-viewW/2);
+    if(viewH>=state.worldH)state.camY=state.worldH/2;
+    else state.camY=clamp(state.camY,viewH/2,state.worldH-viewH/2);
+  }
   function resize(){
     const oldW=state.width,oldH=state.height;
     state.width=window.innerWidth;state.height=window.innerHeight;state.dpr=Math.min(window.devicePixelRatio||1,2);
     canvas.width=Math.max(1,Math.round(state.width*state.dpr));canvas.height=Math.max(1,Math.round(state.height*state.dpr));
     ctx.setTransform(state.dpr,0,0,state.dpr,0,0);
-    const viewW=state.width/state.baseScale,viewH=state.height/state.baseScale;
-    state.worldW=180;
-    state.worldH=110;
+    state.worldW=180;state.worldH=110;
     if(!oldW&&!oldH){state.camX=state.worldW/2;state.camY=state.worldH/2;}
-    state.camX=clamp(state.camX,viewW/(2*state.zoom),state.worldW-viewW/(2*state.zoom));
-    state.camY=clamp(state.camY,viewH/(2*state.zoom),state.worldH-viewH/(2*state.zoom));
-    state.dirty=true;draw();
+    clampCamera();state.dirty=true;draw();
   }
   function screenToWorld(sx,sy){
     const s=scale();return{x:state.camX+(sx-state.width/2)/s,y:state.camY+(sy-state.height/2)/s};
@@ -316,18 +325,13 @@ input[type=range]{width:135px;accent-color:var(--teal)}
     state.zoom=clamp(next,.12,8);
     state.camX=before.x-(sx-state.width/2)/scale();
     state.camY=before.y-(sy-state.height/2)/scale();
-    const viewW=state.width/scale(),viewH=state.height/scale();
-    state.camX=clamp(state.camX,Math.min(viewW/2,state.worldW/2),Math.max(state.worldW-viewW/2,state.worldW/2));
-    state.camY=clamp(state.camY,Math.min(viewH/2,state.worldH/2),Math.max(state.worldH-viewH/2,state.worldH/2));
+    clampCamera();
     updateZoomLabel();state.dirty=true;
   }
   function updateZoomLabel(){document.getElementById('zoomlabel').textContent=Math.round(state.zoom*100)+'%';}
   function cameraMove(dx,dy){
     state.camX-=dx/scale();state.camY-=dy/scale();
-    const vw=state.width/scale(),vh=state.height/scale();
-    state.camX=clamp(state.camX,vw/2,state.worldW-vw/2);
-    state.camY=clamp(state.camY,vh/2,state.worldH-vh/2);
-    state.dirty=true;
+    clampCamera();state.dirty=true;
   }
   function buildBuckets(){
     const cellSize=Math.max(1,Math.max.apply(null,species.map(s=>s.max)));
@@ -351,7 +355,10 @@ input[type=range]{width:135px;accent-color:var(--teal)}
         const bucket=buckets.get(nx+','+ny);if(!bucket)continue;
         for(let k=0;k<bucket.length;k++){
           const j=bucket[k];if(j===i)continue;
-          const b=ps[j];let dx=b.x-a.x,dy=b.y-a.y;
+          const b=ps[j];
+          if(state.interactionMode==='self' && a.type!==b.type)continue;
+          if(state.interactionMode==='other' && a.type===b.type)continue;
+          let dx=b.x-a.x,dy=b.y-a.y;
           const d2=dx*dx+dy*dy;if(d2<.0001)continue;
           const d=Math.sqrt(d2),setting=species[a.type];
           if(d<setting.min||d>setting.max)continue;
@@ -375,6 +382,9 @@ input[type=range]{width:135px;accent-color:var(--teal)}
     ctx.setTransform(state.dpr,0,0,state.dpr,0,0);
     ctx.fillStyle='#000';ctx.fillRect(0,0,w,h);
     const s=scale(),dots=state.particles;
+    const wallA=worldToScreen(0,0),wallB=worldToScreen(state.worldW,state.worldH);
+    ctx.strokeStyle='#777';ctx.lineWidth=1.5;
+    ctx.strokeRect(wallA.x+.5,wallA.y+.5,wallB.x-wallA.x-1,wallB.y-wallA.y-1);
     if(state.showRanges){
       for(let i=0;i<dots.length;i++){
         const p=dots[i],at=worldToScreen(p.x,p.y),sp=species[p.type];
@@ -432,6 +442,7 @@ input[type=range]{width:135px;accent-color:var(--teal)}
   document.getElementById('randomRules').addEventListener('click',()=>{setPreset('random');document.getElementById('preset').value='random';});
   document.getElementById('neutralRules').addEventListener('click',()=>{setPreset('neutral');document.getElementById('preset').value='neutral';});
   document.getElementById('speedControl').addEventListener('input',e=>{state.speed=Number(e.target.value);document.getElementById('speedReadout').textContent=state.speed.toFixed(1)+'×';});
+  document.getElementById('interactionMode').addEventListener('change',e=>{state.interactionMode=e.target.value;});
   document.getElementById('particleCount').addEventListener('input',e=>setParticleCount(Number(e.target.value)));
   document.getElementById('forceMultiplier').addEventListener('input',e=>{state.forceMultiplier=Number(e.target.value);document.getElementById('forceValue').textContent=state.forceMultiplier.toFixed(1)+'×';});
   document.getElementById('damping').addEventListener('input',e=>{state.damping=Number(e.target.value);document.getElementById('dampingValue').textContent=state.damping.toFixed(3);});
@@ -483,9 +494,7 @@ input[type=range]{width:135px;accent-color:var(--teal)}
       const s=scale();
       state.camX=g.anchor.x-(mx-state.width/2)/s;
       state.camY=g.anchor.y-(my-state.height/2)/s;
-      const viewW=state.width/s,viewH=state.height/s;
-      state.camX=clamp(state.camX,Math.min(viewW/2,state.worldW/2),Math.max(state.worldW-viewW/2,state.worldW/2));
-      state.camY=clamp(state.camY,Math.min(viewH/2,state.worldH/2),Math.max(state.worldH-viewH/2,state.worldH/2));
+      clampCamera();
       updateZoomLabel();return;
     }
     if(!state.gesture)return;
