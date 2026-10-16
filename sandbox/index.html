@@ -348,6 +348,60 @@ input[type=range]{width:135px;accent-color:var(--teal)}
     }
     return{buckets,cellSize,cols,rows};
   }
+  function resolveParticleCollisions(){
+    const ps=state.particles;
+    if(ps.length<2)return;
+    // The default dot radius is 1 cm, so dot-centres aim to stay 2 cm apart.
+    // A few soft correction passes allow a tiny overlap, then push pairs apart
+    // before they can pass through one another.
+    const maxRadius=Math.max.apply(null,species.map(s=>s.radius));
+    const cellSize=Math.max(2,maxRadius*2);
+    const cols=Math.max(1,Math.ceil(state.worldW/cellSize));
+    const rows=Math.max(1,Math.ceil(state.worldH/cellSize));
+    for(let pass=0;pass<3;pass++){
+      const buckets=new Map();
+      for(let i=0;i<ps.length;i++){
+        const p=ps[i],cx=Math.floor(p.x/cellSize),cy=Math.floor(p.y/cellSize),key=cx+','+cy;
+        if(!buckets.has(key))buckets.set(key,[]);
+        buckets.get(key).push(i);
+      }
+      for(let i=0;i<ps.length;i++){
+        const a=ps[i],cx=Math.floor(a.x/cellSize),cy=Math.floor(a.y/cellSize);
+        const neighbours=Math.max(1,Math.ceil((species[a.type].radius+maxRadius)/cellSize));
+        for(let oy=-neighbours;oy<=neighbours;oy++){
+          const ny=cy+oy;if(ny<0||ny>=rows)continue;
+          for(let ox=-neighbours;ox<=neighbours;ox++){
+            const nx=cx+ox;if(nx<0||nx>=cols)continue;
+            const bucket=buckets.get(nx+','+ny);if(!bucket)continue;
+            for(let k=0;k<bucket.length;k++){
+              const j=bucket[k];if(j<=i)continue;
+              const b=ps[j],minimum=species[a.type].radius+species[b.type].radius;
+              let dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy);
+              if(d>=minimum)continue;
+              let nxv,nyv;
+              if(d<1e-8){
+                const angle=((i*31+j*17)%360)*Math.PI/180;
+                nxv=Math.cos(angle);nyv=Math.sin(angle);d=0;
+              }else{nxv=dx/d;nyv=dy/d;}
+              const overlap=minimum-d;
+              const correction=overlap*.85*.5;
+              a.x-=nxv*correction;a.y-=nyv*correction;
+              b.x+=nxv*correction;b.y+=nyv*correction;
+              // A gentle, low-bounce impulse removes closing velocity so dots
+              // do not immediately tunnel through the same pair next frame.
+              const closing=(b.vx-a.vx)*nxv+(b.vy-a.vy)*nyv;
+              if(closing<0){
+                const impulse=-(1+.25)*closing*.5;
+                a.vx-=nxv*impulse;a.vy-=nyv*impulse;
+                b.vx+=nxv*impulse;b.vy+=nyv*impulse;
+              }
+              wrapParticle(a);wrapParticle(b);
+            }
+          }
+        }
+      }
+    }
+  }
   function step(dt){
     const ps=state.particles;if(ps.length<1)return;
     const grid=buildBuckets(),{buckets,cellSize,cols,rows}=grid;
@@ -381,6 +435,7 @@ input[type=range]{width:135px;accent-color:var(--teal)}
       const v=hypot(p.vx,p.vy);if(v>maxSpeed){p.vx=p.vx/v*maxSpeed;p.vy=p.vy/v*maxSpeed;}
       p.x+=p.vx*dt;p.y+=p.vy*dt;wrapParticle(p);
     }
+    resolveParticleCollisions();
   }
   function draw(){
     const w=state.width,h=state.height;
