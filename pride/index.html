@@ -47,8 +47,8 @@ const resultTitle=document.getElementById("resultTitle"),resultSummary=document.
 const siteQuote=document.getElementById("siteQuote");
 const fallbackQuotes=["Commitment is key.","It's all about the presentation","a drop a day will eventually fill up a well."];
 function chooseQuote(list){const pool=list.filter(function(value){return typeof value==="string"&&value.trim().length>0;});if(pool.length)siteQuote.textContent=pool[Math.floor(Math.random()*pool.length)];}
-chooseQuote(fallbackQuotes);
-fetch("../quotes.md",{cache:"no-store"}).then(function(response){if(!response.ok)throw new Error("Quote list unavailable");return response.text();}).then(function(markdown){const approved=markdown.split(/\r?\n/).map(function(line){const match=line.match(/^\s*-\s*["“](.*?)["”]\s*$/);return match?match[1].trim():"";}).filter(Boolean);if(approved.length)chooseQuote(approved);}).catch(function(){});
+siteQuote.textContent=fallbackQuotes[0];
+fetch("../quotes.md",{cache:"no-store"}).then(function(response){if(!response.ok)throw new Error("Quote list unavailable");return response.text();}).then(function(markdown){const approved=markdown.split(/\r?\n/).map(function(line){const match=line.match(/^\s*-\s*["“](.*?)["”]\s*$/);return match?match[1].trim():"";}).filter(Boolean);if(approved.length)chooseQuote(approved);}).catch(function(){chooseQuote(fallbackQuotes);});
 const orientations={
 same:{sexual:{label:"Gay / lesbian",explanation:"Gay and lesbian are commonly used for same-gender attraction. The word that fits can depend on your gender and the label you prefer."},romantic:{label:"Homoromantic",explanation:"Homoromantic describes romantic attraction toward people of the same gender."}},
 different:{sexual:{label:"Straight / heterosexual",explanation:"Straight or heterosexual commonly describes sexual attraction toward a gender different from your own."},romantic:{label:"Heteroromantic",explanation:"Heteroromantic describes romantic attraction toward a gender different from your own."}},
