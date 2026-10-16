@@ -146,7 +146,7 @@ input[type=range]{width:135px;accent-color:var(--teal)}
     <div class="option-row"><label for="particleCount">Particle count</label><input id="particleCount" type="range" min="100" max="2000" step="50" value="500"><span id="particleCountValue">500</span></div>
     <div class="option-row"><label for="speed">Simulation speed</label><input id="speed" type="range" min="0.1" max="4" step="0.1" value="1" aria-label="Simulation playback speed"><span id="speedValue">1.0×</span></div>
     <div class="option-row"><label for="forceMultiplier">Force multiplier</label><input id="forceMultiplier" type="range" min="0.1" max="5" step="0.1" value="1.5"><span id="forceValue">1.5×</span></div>
-    <div class="option-row"><label for="damping">Damping</label><input id="damping" type="range" min="0" max="0.15" step="0.005" value="0.035"><span id="dampingValue">0.035</span></div>
+    <div class="option-row"><label for="damping">Damping</label><input id="damping" type="range" min="0" max="0.15" step="0.005" value="0.12"><span id="dampingValue">0.035</span></div>
     <div class="option-row"><label for="boundaries">World edges</label><select id="boundaries" class="btn small"><option value="wrap">Wrap around</option><option value="bounce">Bounce</option></select></div>
     <div class="option-row"><label for="showRanges">Show interaction ranges</label><input id="showRanges" type="checkbox"></div>
     <div class="option-row"><label for="sizeWorld">Dot size follows zoom</label><input id="sizeWorld" type="checkbox" checked></div>
@@ -179,8 +179,8 @@ input[type=range]{width:135px;accent-color:var(--teal)}
     {value:'strong-repel',label:'≪ Strong',strength:-1.15}
   ];
   const state = {
-    particles:[], matrix:[], selectedColor:0, paintMode:false, paused:false, showRanges:false, sizeFollowsZoom:true, interactionMode:'both',
-    speed:1, forceMultiplier:1.5, damping:.035, boundaryMode:"bounce", baseScale:7, zoom:1, camX:0, camY:0, worldW:0, worldH:0, width:0, height:0, dpr:1, countOnStart:500,
+    particles:[], matrix:[], minRadiusMatrix:[], maxRadiusMatrix:[], selectedColor:0, paintMode:false, paused:false, showRanges:false, sizeFollowsZoom:true, interactionMode:'both',
+    speed:1, forceMultiplier:1.5, damping:.12, boundaryMode:"bounce", baseScale:7, zoom:1, camX:0, camY:0, worldW:0, worldH:0, width:0, height:0, dpr:1, countOnStart:500,
     pointerMap:new Map(), gesture:null, lastTime:0, accumulator:0, frame:0, dirty:true
   };
   let species = colors.map((c)=>({radius:1,min:2,max:10}));
@@ -189,6 +189,30 @@ input[type=range]{width:135px;accent-color:var(--teal)}
   const hypot=Math.hypot;
   const getRule=(i,j)=>ruleOptions.find(x=>x.value===state.matrix[i][j])||{strength:0};
   const scale=()=>Math.max(.0001,Math.min(Math.max(1,state.width-28)/state.worldW,Math.max(1,state.height-100)/state.worldH)*state.zoom);
+  function randomizeInteractionRanges(){
+    const minMatrix=[],maxMatrix=[];
+    for(let i=0;i<4;i++){
+      const minRow=[],maxRow=[];
+      for(let j=0;j<4;j++){
+        const min=Math.round(rand(1.5,3.8)*10)/10;
+        const max=Math.round(rand(Math.max(7,min+2),10)*10)/10;
+        minRow.push(min);maxRow.push(max);
+      }
+      minMatrix.push(minRow);maxMatrix.push(maxRow);
+    }
+    state.minRadiusMatrix=minMatrix;state.maxRadiusMatrix=maxMatrix;
+  }
+  function interactionForce(rule,minRadius,maxRadius,distance){
+    // All active pairings repel inside their inner radius. Between the inner
+    // and outer radii, the chosen rule ramps up to its signed peak at the
+    // midpoint and smoothly falls back to zero at the outer radius.
+    if(distance<minRadius)return distance/minRadius-1;
+    if(distance>=maxRadius)return 0;
+    const midpoint=(minRadius+maxRadius)*.5;
+    const halfRange=midpoint-minRadius;
+    if(halfRange<=0)return 0;
+    return rule*(1-Math.abs(distance-midpoint)/halfRange);
+  }
   const shortest=(d,extent)=>d>extent/2?d-extent:d< -extent/2?d+extent:d;
 
   function buildMatrix(){
@@ -259,9 +283,10 @@ input[type=range]{width:135px;accent-color:var(--teal)}
     } else if(name==='all'){
       for(let i=0;i<4;i++)for(let j=0;j<4;j++)m[i][j]=i===j?'strong-repel':'weak-attract';
     } else if(name==='random'){
-      // Every directed color pairing receives a real rule; "none" is not chosen.
+      // Every directed color pairing receives a real rule; no pairing is blank.
       const values=['weak-attract','strong-attract','weak-repel','strong-repel'];
       for(let i=0;i<4;i++)for(let j=0;j<4;j++)m[i][j]=values[Math.floor(Math.random()*values.length)];
+      randomizeInteractionRanges();
     }
     state.matrix=m;buildMatrix();state.dirty=true;
   }
@@ -339,7 +364,7 @@ input[type=range]{width:135px;accent-color:var(--teal)}
     clampCamera();state.dirty=true;
   }
   function buildBuckets(){
-    const cellSize=Math.max(1,Math.max.apply(null,species.map(s=>s.max)));
+    const cellSize=Math.max(1,...state.maxRadiusMatrix.map(row=>Math.max(...row)));
     const cols=Math.max(1,Math.ceil(state.worldW/cellSize)),rows=Math.max(1,Math.ceil(state.worldH/cellSize));
     const buckets=new Map();
     for(let i=0;i<state.particles.length;i++){
@@ -396,10 +421,13 @@ input[type=range]{width:135px;accent-color:var(--teal)}
     const grid=buildBuckets(),{buckets,cellSize,cols,rows}=grid;
     const ax=new Float32Array(ps.length),ay=new Float32Array(ps.length);
     for(let i=0;i<ps.length;i++){
-      const a=ps[i],range=species[a.type].max,reach=Math.ceil(range/cellSize);
+      const a=ps[i],rowMax=Math.max(...state.maxRadiusMatrix[a.type]),reach=Math.ceil(rowMax/cellSize);
       const cx=Math.floor(a.x/cellSize),cy=Math.floor(a.y/cellSize);
       for(let oy=-reach;oy<=reach;oy++)for(let ox=-reach;ox<=reach;ox++){
-        const nx=(cx+ox%cols+cols)%cols,ny=(cy+oy%rows+rows)%rows;
+        // This world has solid walls, not wraparound edges. Ignore cells
+        // outside the world rather than treating the opposite wall as adjacent.
+        const nx=cx+ox,ny=cy+oy;
+        if(nx<0||nx>=cols||ny<0||ny>=rows)continue;
         const bucket=buckets.get(nx+','+ny);if(!bucket)continue;
         for(let k=0;k<bucket.length;k++){
           const j=bucket[k];if(j===i)continue;
@@ -430,12 +458,11 @@ input[type=range]{width:135px;accent-color:var(--teal)}
           }
           if(state.interactionMode==='self' && a.type!==b.type)continue;
           if(state.interactionMode==='other' && a.type===b.type)continue;
-          const setting=species[a.type];
-          if(d<setting.min||d>setting.max)continue;
-          const rule=getRule(a.type,b.type).strength;if(rule===0)continue;
-          const t=(d-setting.min)/(setting.max-setting.min);
-          const envelope=Math.max(0,1-t);
-          const force=rule*envelope;
+          const minRadius=state.minRadiusMatrix[a.type][b.type];
+          const maxRadius=state.maxRadiusMatrix[a.type][b.type];
+          if(d>=maxRadius)continue;
+          const rule=getRule(a.type,b.type).strength;
+          const force=interactionForce(rule,minRadius,maxRadius,d);
           ax[i]+=nx*force;ay[i]+=ny*force;
         }
       }
