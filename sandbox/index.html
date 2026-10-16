@@ -1,0 +1,532 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Four-Dot Force Lab</title>
+<style>
+  :root {
+    --bg: #080b10;
+    --panel: #10151d;
+    --panel-2: #0c1118;
+    --line: #222d39;
+    --line-strong: #334252;
+    --text: #edf5f5;
+    --muted: #9aaab5;
+    --teal: #00ffc8;
+    --red: #ff4b5c;
+    --green: #43f58b;
+    --blue: #4d8dff;
+    --yellow: #ffd84d;
+    --radius: 18px;
+  }
+  * { box-sizing: border-box; }
+  html { background: var(--bg); }
+  body {
+    margin: 0; color: var(--text); background:
+      radial-gradient(ellipse at 12% 0%, rgba(0,255,200,.07), transparent 34rem),
+      var(--bg);
+    font: 14px/1.45 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    min-height: 100vh;
+  }
+  button, select, input { font: inherit; }
+  button, select, input[type="number"] { color: var(--text); }
+  .shell { width: min(1440px, 100%); margin: 0 auto; padding: 24px clamp(14px, 3vw, 36px) 32px; }
+  header { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; margin-bottom: 22px; }
+  .eyebrow { color: var(--teal); font-size: 11px; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; display:flex; gap:9px; align-items:center; }
+  .eyebrow::before { content:""; height:7px; width:7px; border-radius:50%; background:var(--teal); box-shadow:0 0 12px rgba(0,255,200,.75); }
+  h1 { font-size: clamp(28px, 4vw, 42px); line-height:1.05; letter-spacing:-.045em; margin:10px 0 9px; }
+  .subtitle { color: var(--muted); max-width: 690px; margin:0; font-size:14px; }
+  .header-pill { border:1px solid rgba(0,255,200,.25); color:#cafff2; background:rgba(0,255,200,.055); border-radius:999px; padding:9px 13px; font-size:11px; font-weight:750; letter-spacing:.08em; white-space:nowrap; }
+  .layout { display:grid; grid-template-columns:minmax(0, 1.35fr) minmax(360px, .9fr); gap:16px; align-items:start; }
+  .panel { background:linear-gradient(180deg, rgba(18,24,33,.96), rgba(12,17,24,.98)); border:1px solid var(--line); border-radius:var(--radius); overflow:hidden; box-shadow:0 12px 38px rgba(0,0,0,.14); }
+  .panel-head { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:17px 19px; border-bottom:1px solid var(--line); }
+  .panel-title { font-size:13px; font-weight:800; letter-spacing:.04em; }
+  .panel-kicker { margin-top:3px; font-size:11px; color:var(--muted); }
+  .stage-tools { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
+  .btn { border:1px solid var(--line-strong); background:#151d27; border-radius:10px; padding:9px 12px; font-size:12px; font-weight:750; cursor:pointer; transition:background .15s,border-color .15s,transform .15s; }
+  .btn:hover { background:#202b38; border-color:#526476; }
+  .btn:active { transform:translateY(1px); }
+  .btn.primary { background:var(--teal); border-color:var(--teal); color:#04120f; }
+  .btn.primary:hover { background:#64ffdf; }
+  .stage-wrap { padding:14px; }
+  .stage {
+    position:relative; overflow:hidden; border-radius:12px; border:1px solid #26313e;
+    background-color:#080d13;
+    background-image:linear-gradient(rgba(127,160,178,.075) 1px, transparent 1px),linear-gradient(90deg, rgba(127,160,178,.075) 1px, transparent 1px),radial-gradient(ellipse at 50% 45%, rgba(0,255,200,.06), transparent 70%);
+    background-size:5% 5%, 5% 5%, auto;
+  }
+  canvas { display:block; width:100%; aspect-ratio:16 / 10; touch-action:none; }
+  .stage-badge { position:absolute; top:12px; left:12px; pointer-events:none; padding:6px 9px; border:1px solid rgba(153,177,192,.18); border-radius:8px; background:rgba(5,10,15,.76); color:#a8bac7; font-size:10px; font-weight:750; letter-spacing:.09em; backdrop-filter:blur(8px); }
+  .stage-bottom { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:13px 3px 1px; color:var(--muted); font-size:11px; flex-wrap:wrap; }
+  .legend { display:flex; align-items:center; gap:13px; flex-wrap:wrap; }
+  .legend-item { display:flex; align-items:center; gap:6px; white-space:nowrap; }
+  .swatch { display:inline-block; width:8px; height:8px; border-radius:50%; box-shadow:0 0 8px currentColor; }
+  .switchrow { display:flex; align-items:center; gap:8px; cursor:pointer; user-select:none; }
+  .switchrow input { accent-color:var(--teal); }
+  .controls { display:flex; flex-direction:column; gap:16px; }
+  .matrix-panel { padding-bottom:15px; }
+  .matrix-content { padding:14px 14px 0; }
+  .matrix-note { color:var(--muted); font-size:11px; margin:0 3px 12px; }
+  .matrix-scroll { overflow-x:auto; padding-bottom:2px; }
+  table { border-collapse:separate; border-spacing:4px; width:100%; min-width:330px; table-layout:fixed; }
+  th { color:#9eb0bd; font-size:10px; font-weight:800; text-align:center; padding:4px 2px 7px; }
+  th:first-child { width:68px; text-align:left; }
+  td { padding:0; }
+  .row-head { text-align:left; padding-left:5px; white-space:nowrap; font-size:11px; font-weight:800; }
+  .color-dot { display:inline-block; width:7px; height:7px; border-radius:50%; margin-right:5px; vertical-align:1px; }
+  .cell-select { width:100%; min-width:0; display:block; border:1px solid #2a3644; background:#0c1219; border-radius:8px; padding:8px 3px; text-align:center; font-size:12px; font-weight:850; appearance:none; cursor:pointer; }
+  .cell-select:focus, input:focus-visible, button:focus-visible, select:focus-visible { outline:2px solid var(--teal); outline-offset:2px; }
+  .cell-select[data-value="none"] { color:#a0acb7; }
+  .cell-select[data-value="strong-attract"] { color:#76ffcf; border-color:#246a59; }
+  .cell-select[data-value="weak-attract"] { color:#76b9a8; }
+  .cell-select[data-value="weak-repel"] { color:#ffab83; }
+  .cell-select[data-value="strong-repel"] { color:#ff6f7e; border-color:#713340; }
+  .self-cell { text-align:center; padding:9px 0; color:#526170; }
+  .legend-rules { display:flex; flex-wrap:wrap; gap:8px; margin:12px 3px 0; }
+  .rule-key { color:var(--muted); font-size:10px; display:flex; gap:5px; align-items:center; }
+  .rule-symbol { font-weight:950; font-size:12px; }
+  .distance-panel .panel-head { border-bottom:0; }
+  .distance-list { padding:0 14px 14px; display:grid; grid-template-columns:1fr 1fr; gap:9px; }
+  .distance-card { border:1px solid var(--line); background:rgba(5,10,15,.3); border-radius:12px; padding:12px; min-width:0; }
+  .distance-name { display:flex; align-items:center; gap:7px; font-weight:800; font-size:12px; margin-bottom:11px; }
+  .big-dot { display:inline-block; width:11px; height:11px; border-radius:50%; box-shadow:0 0 10px currentColor; }
+  .dot-radius { margin-left:auto; color:#91a1ad; font-size:10px; font-weight:600; }
+  .fields { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+  .field label { display:block; color:var(--muted); font-size:10px; margin:0 0 5px 1px; }
+  .input-wrap { display:flex; align-items:center; gap:5px; background:#080d13; border:1px solid #2b3744; border-radius:8px; padding:0 8px; }
+  .input-wrap:focus-within { border-color:var(--teal); }
+  .input-wrap input { width:100%; min-width:0; padding:8px 0; border:0; outline:0; background:transparent; font-weight:750; font-size:12px; }
+  .unit { color:#788b98; font-size:10px; }
+  .note-line { color:#8295a2; font-size:11px; padding:0 17px 15px; }
+  .footer { display:flex; justify-content:space-between; gap:15px; color:#71828e; font-size:10px; padding:17px 3px 0; flex-wrap:wrap; }
+  .footer strong { color:#b9c6cd; font-weight:750; }
+  .toast { position:fixed; bottom:18px; left:50%; transform:translate(-50%,12px); background:#14241f; border:1px solid #246b56; border-radius:10px; padding:10px 14px; color:#c8fff1; box-shadow:0 8px 28px #0008; opacity:0; pointer-events:none; transition:opacity .2s, transform .2s; z-index:5; font-size:12px; }
+  .toast.show { opacity:1; transform:translate(-50%,0); }
+  @media (max-width:980px) { .layout { grid-template-columns:1fr; } .controls { display:grid; grid-template-columns:1fr; } }
+  @media (max-width:540px) {
+    .shell { padding:18px 10px 22px; }
+    header { display:block; }
+    .header-pill { display:inline-block; margin-top:14px; }
+    .panel-head { padding:14px; align-items:flex-start; }
+    .stage-tools { max-width:150px; }
+    .btn { padding:8px 10px; }
+    .stage-wrap { padding:8px; }
+    .distance-list { grid-template-columns:1fr; padding:0 8px 10px; gap:7px; }
+    .distance-card { padding:9px; }
+    .fields { gap:5px; }
+    .field label { font-size:9px; }
+    .input-wrap { padding:0 5px; }
+    .input-wrap input { font-size:11px; }
+    .row-head { font-size:10px; }
+    table { border-spacing:3px; min-width:300px; }
+  }
+  @media (prefers-reduced-motion: reduce) { *,*::before,*::after { transition:none !important; } }
+</style>
+</head>
+<body>
+<div class="shell">
+  <header>
+    <div>
+      <div class="eyebrow">Interactive physics toy</div>
+      <h1>Four-Dot Force Lab</h1>
+      <p class="subtitle">Four dots, four little minds. Each one chooses how it moves in response to every other color, independently of the others.</p>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:10px"><a href="../" style="color:#a9c1c4;text-decoration:none;font-size:12px">← Abyssal Bar</a><div class="header-pill">4 DOTS&nbsp; / &nbsp;CENTIMETERS</div></div>
+  </header>
+
+  <main class="layout">
+    <section class="panel">
+      <div class="panel-head">
+        <div><div class="panel-title">THE SIMULATION</div><div class="panel-kicker">Drag a dot to give the system a nudge.</div></div>
+        <div class="stage-tools">
+          <button class="btn primary" id="pauseBtn" type="button">Ⅱ Pause</button>
+          <button class="btn" id="resetBtn" type="button">↺ Reset</button>
+        </div>
+      </div>
+      <div class="stage-wrap">
+        <div class="stage" id="stage">
+          <canvas id="world" aria-label="A live simulation with one red, green, blue, and yellow dot. You can drag the dots with a mouse or finger."></canvas>
+          <div class="stage-badge">WORLD&nbsp; 32 × 20 CM</div>
+        </div>
+        <div class="stage-bottom">
+          <div class="legend" aria-label="Dot colors">
+            <span class="legend-item"><i class="swatch" style="color:var(--red);background:var(--red)"></i>Red</span>
+            <span class="legend-item"><i class="swatch" style="color:var(--green);background:var(--green)"></i>Green</span>
+            <span class="legend-item"><i class="swatch" style="color:var(--blue);background:var(--blue)"></i>Blue</span>
+            <span class="legend-item"><i class="swatch" style="color:var(--yellow);background:var(--yellow)"></i>Yellow</span>
+          </div>
+          <label class="switchrow"><input id="showFields" type="checkbox" checked> Show force-field rings</label>
+        </div>
+      </div>
+    </section>
+
+    <div class="controls">
+      <section class="panel matrix-panel">
+        <div class="panel-head">
+          <div><div class="panel-title">INTERACTION RULES</div><div class="panel-kicker">Choose what each dot does toward each color.</div></div>
+          <button class="btn" id="mixBtn" type="button" title="Randomize all interaction rules">⤨ Mix rules</button>
+        </div>
+        <div class="matrix-content">
+          <p class="matrix-note">Read across a row: “Red → Blue” controls Red’s own movement around Blue. The Blue → Red setting is separate. A dot never applies its interaction force to another dot.</p>
+          <div class="matrix-scroll">
+            <table aria-label="Directional color interaction matrix">
+              <thead><tr><th scope="col">DOT ↓</th><th scope="col"><span style="color:var(--red)">●</span> Red</th><th scope="col"><span style="color:var(--green)">●</span> Green</th><th scope="col"><span style="color:var(--blue)">●</span> Blue</th><th scope="col"><span style="color:var(--yellow)">●</span> Yellow</th></tr></thead>
+              <tbody id="matrixBody"></tbody>
+            </table>
+          </div>
+          <div class="legend-rules">
+            <span class="rule-key"><b class="rule-symbol" style="color:#8797a4">—</b> No response</span>
+            <span class="rule-key"><b class="rule-symbol" style="color:#76ffcf">&gt;&gt;</b> Strong attract</span>
+            <span class="rule-key"><b class="rule-symbol" style="color:#76b9a8">&gt;</b> Weak attract</span>
+            <span class="rule-key"><b class="rule-symbol" style="color:#ffab83">&lt;</b> Weak repel</span>
+            <span class="rule-key"><b class="rule-symbol" style="color:#ff6f7e">&lt;&lt;</b> Strong repel</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel distance-panel">
+        <div class="panel-head">
+          <div><div class="panel-title">FORCE-FIELD DISTANCES</div><div class="panel-kicker">Set the interaction range for each dot.</div></div>
+        </div>
+        <div id="distanceList" class="distance-list"></div>
+        <div class="note-line">Each dot starts with radius <strong>1 cm</strong> and an inner/outer range of <strong>2–5 cm</strong>. There is no dot-to-dot collision push: circles can overlap, and each dot changes only its own motion. Centimeters are virtual simulation units, not a calibrated screen ruler.</div>
+      </section>
+    </div>
+  </main>
+  <div class="footer"><span><strong>Model note:</strong> a playful, simplified force model, not a scientific measurement device.</span><span>Changes apply live. Nothing is uploaded.</span></div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(() => {
+  'use strict';
+  const COLORS = [
+    { name: 'Red', color: '#ff4b5c', key: 'red' },
+    { name: 'Green', color: '#43f58b', key: 'green' },
+    { name: 'Blue', color: '#4d8dff', key: 'blue' },
+    { name: 'Yellow', color: '#ffd84d', key: 'yellow' }
+  ];
+  const WORLD_W = 32;
+  const WORLD_H = 20;
+  const DOT_R = 1;
+  const OPTIONS = [
+    { value: 'none', symbol: '—', label: 'No response', strength: 0, sign: 0 },
+    { value: 'strong-attract', symbol: '>>', label: 'Strong attraction', strength: 19, sign: 1 },
+    { value: 'weak-attract', symbol: '>', label: 'Weak attraction', strength: 7.5, sign: 1 },
+    { value: 'weak-repel', symbol: '<', label: 'Weak repulsion', strength: 7.5, sign: -1 },
+    { value: 'strong-repel', symbol: '<<', label: 'Strong repulsion', strength: 19, sign: -1 }
+  ];
+  const defaults = [
+    ['strong-attract','weak-attract','strong-repel','weak-repel'],
+    ['weak-attract','strong-repel','weak-repel','strong-attract'],
+    ['strong-repel','weak-repel','strong-attract','weak-attract'],
+    ['weak-repel','strong-attract','weak-attract','strong-repel']
+  ];
+  let matrix = defaults.map(row => row.slice());
+  let ranges = COLORS.map(() => ({ radius: 1, min: 2, max: 5 }));
+  let running = true;
+  let showFields = true;
+  let frameHandle = 0;
+  let lastTime = 0;
+  let toastTimer = 0;
+  let canvas, ctx, cssW = 640, cssH = 400, dpr = 1, scale = 20, offsetX = 0, offsetY = 0;
+  const dots = [
+    { x: 6.2, y: 5.0, vx: 0.2, vy: 0.0, r: DOT_R, index: 0 },
+    { x: 25.2, y: 5.8, vx: -0.2, vy: 0.1, r: DOT_R, index: 1 },
+    { x: 9.2, y: 15.0, vx: 0.15, vy: -0.1, r: DOT_R, index: 2 },
+    { x: 24.0, y: 14.1, vx: -0.1, vy: -0.15, r: DOT_R, index: 3 }
+  ];
+  let dragIndex = -1;
+  let pointerId = null;
+  let lastPointer = null;
+
+  const $ = (id) => document.getElementById(id);
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  const smooth = (t) => { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); };
+
+  function makeMatrix() {
+    const body = $('matrixBody');
+    body.textContent = '';
+    COLORS.forEach((rowColor, i) => {
+      const tr = document.createElement('tr');
+      const th = document.createElement('th');
+      th.scope = 'row'; th.className = 'row-head';
+      th.innerHTML = `<span class="color-dot" style="background:${rowColor.color};color:${rowColor.color}"></span>${rowColor.name}`;
+      tr.appendChild(th);
+      COLORS.forEach((colColor, j) => {
+        const td = document.createElement('td');
+        if (i === j) {
+          td.className = 'self-cell'; td.textContent = '—'; td.title = 'There is only one dot of each color';
+        } else {
+          const select = document.createElement('select');
+          select.className = 'cell-select';
+          select.setAttribute('aria-label', `${rowColor.name} response to ${colColor.name}`);
+          select.title = `${rowColor.name} → ${colColor.name}`;
+          OPTIONS.forEach(option => {
+            const opt = document.createElement('option');
+            opt.value = option.value; opt.textContent = option.symbol; opt.title = option.label;
+            opt.setAttribute('aria-label', option.label);
+            select.appendChild(opt);
+          });
+          select.value = matrix[i][j];
+          select.dataset.value = select.value;
+          select.addEventListener('change', () => {
+            matrix[i][j] = select.value;
+            select.dataset.value = select.value;
+          });
+          td.appendChild(select);
+        }
+        tr.appendChild(td);
+      });
+      body.appendChild(tr);
+    });
+  }
+
+  function makeRanges() {
+    const list = $('distanceList');
+    list.textContent = '';
+    COLORS.forEach((color, i) => {
+      const card = document.createElement('div');
+      card.className = 'distance-card';
+      const top = document.createElement('div');
+      top.className = 'distance-name';
+      top.innerHTML = `<i class="big-dot" style="color:${color.color};background:${color.color}"></i>${color.name}<span class="dot-radius" id="${color.key}-radius-display">dot r = ${ranges[i].radius} cm</span>`;
+      card.appendChild(top);
+      const fields = document.createElement('div'); fields.className = 'fields';
+      [['radius','Dot radius'],['min','Inner edge'],['max','Outer edge']].forEach(([key,label]) => {
+        const field = document.createElement('div'); field.className = 'field';
+        const lab = document.createElement('label'); lab.textContent = label; lab.htmlFor = `${color.key}-${key}`;
+        const wrap = document.createElement('div'); wrap.className = 'input-wrap';
+        const input = document.createElement('input'); input.type = 'number'; input.id = `${color.key}-${key}`;
+        input.min = key === 'radius' ? '0.25' : key === 'min' ? String(Math.max(0.5, ranges[i].radius * 2)) : String(ranges[i].min + 0.5);
+        input.max = key === 'radius' ? '2.5' : key === 'min' ? '14.5' : '15';
+        input.step = key === 'radius' ? '0.25' : '0.5'; input.value = ranges[i][key]; input.inputMode = 'decimal';
+        input.setAttribute('aria-label', `${color.name} ${key === 'radius' ? 'dot radius' : key === 'min' ? 'inner interaction edge' : 'outer interaction edge'} in centimeters`);
+        input.addEventListener('change', () => changeRange(i, key, input));
+        input.addEventListener('keydown', (event) => { if (event.key === 'Enter') input.blur(); });
+        const unit = document.createElement('span'); unit.className = 'unit'; unit.textContent = 'cm';
+        wrap.append(input, unit); field.append(lab,wrap); fields.appendChild(field);
+      });
+      card.appendChild(fields); list.appendChild(card);
+    });
+  }
+
+  function changeRange(index, key, input) {
+    const row = ranges[index];
+    let value = Number(input.value);
+    if (!Number.isFinite(value)) value = row[key];
+    if (key === 'radius') {
+      value = clamp(Math.round(value * 4) / 4, 0.25, 2.5);
+      row.radius = value;
+      dots[index].r = value;
+      const minimumAllowed = Math.max(0.5, Math.ceil((row.radius * 2) * 2) / 2);
+      if (row.min < minimumAllowed) row.min = minimumAllowed;
+      if (row.max < row.min + 0.5) row.max = row.min + 0.5;
+    } else if (key === 'min') {
+      const minimumAllowed = Math.max(0.5, Math.ceil((row.radius * 2) * 2) / 2);
+      value = clamp(Math.round(value * 2) / 2, minimumAllowed, 14.5);
+      row.min = value;
+      if (row.max < value + 0.5) row.max = value + 0.5;
+    } else {
+      value = clamp(Math.round(value * 2) / 2, row.min + 0.5, 15);
+      row.max = value;
+    }
+    ['radius','min','max'].forEach(field => {
+      const control = $(`${COLORS[index].key}-${field}`);
+      if (!control) return;
+      control.value = row[field];
+      if (field === 'min') control.min = Math.max(0.5, Math.ceil((row.radius * 2) * 2) / 2);
+      if (field === 'max') control.min = row.min + 0.5;
+    });
+    const display = $(`${COLORS[index].key}-radius-display`);
+    if (display) display.textContent = `dot r = ${row.radius} cm`;
+    draw();
+  }
+
+  function resize() {
+    const rect = canvas.getBoundingClientRect();
+    cssW = Math.max(1, rect.width); cssH = Math.max(1, rect.height);
+    dpr = Math.min(2, window.devicePixelRatio || 1);
+    canvas.width = Math.round(cssW * dpr); canvas.height = Math.round(cssH * dpr);
+    scale = Math.min(cssW / WORLD_W, cssH / WORLD_H);
+    offsetX = (cssW - WORLD_W * scale) / 2;
+    offsetY = (cssH - WORLD_H * scale) / 2;
+    draw();
+  }
+
+  function relation(i, j) { return OPTIONS.find(o => o.value === matrix[i][j]) || OPTIONS[1]; }
+
+  function applyForces(dt) {
+    const ax = [0,0,0,0], ay = [0,0,0,0];
+    for (let i = 0; i < dots.length; i++) {
+      const a = dots[i];
+      for (let j = 0; j < dots.length; j++) {
+        if (i === j) continue;
+        const b = dots[j];
+        let dx = b.x - a.x, dy = b.y - a.y;
+        let d = Math.hypot(dx,dy);
+        if (d < 0.0001) { dx = (i + 1) * 0.11; dy = (j + 1) * 0.09; d = Math.hypot(dx,dy); }
+        const range = ranges[i];
+        const option = relation(i,j);
+        // Each row belongs to the dot that is moving. Neutral means this dot ignores that target.
+        if (option.sign === 0) continue;
+        if (option.sign > 0) {
+          // Attraction fades smoothly at the outer edge and stops before dot centers overlap.
+          if (d > range.min && d < range.max) {
+            const t = smooth((range.max - d) / (range.max - range.min));
+            const strength = option.strength * t;
+            ax[i] += dx / d * strength; ay[i] += dy / d * strength;
+          }
+        } else {
+          // Repulsion grows toward the inner edge, and remains protective at close range.
+          if (d < range.max) {
+            let magnitude;
+            if (d <= range.min) magnitude = option.strength * (1 + 0.75 * (range.min - d) / Math.max(range.min,0.5));
+            else {
+              const t = smooth((range.max - d) / (range.max - range.min));
+              magnitude = option.strength * t;
+            }
+            ax[i] -= dx / d * magnitude; ay[i] -= dy / d * magnitude;
+          }
+        }
+      }
+    }
+    for (let i = 0; i < dots.length; i++) {
+      const p = dots[i];
+      if (i === dragIndex) { p.vx = 0; p.vy = 0; continue; }
+      p.vx = (p.vx + ax[i] * dt) * Math.pow(0.965, dt * 60);
+      p.vy = (p.vy + ay[i] * dt) * Math.pow(0.965, dt * 60);
+      // Keep the four dots lively without letting an extreme setting destabilize the canvas.
+      const speed = Math.hypot(p.vx,p.vy);
+      if (speed > 11) { p.vx *= 11/speed; p.vy *= 11/speed; }
+      p.x += p.vx * dt; p.y += p.vy * dt;
+      if (p.x < p.r) { p.x=p.r; p.vx=Math.abs(p.vx)*0.65; }
+      if (p.x > WORLD_W-p.r) { p.x=WORLD_W-p.r; p.vx=-Math.abs(p.vx)*0.65; }
+      if (p.y < p.r) { p.y=p.r; p.vy=Math.abs(p.vy)*0.65; }
+      if (p.y > WORLD_H-p.r) { p.y=WORLD_H-p.r; p.vy=-Math.abs(p.vy)*0.65; }
+    }
+    // No pair-collision correction: each dot controls only its own acceleration and motion.
+  }
+
+  function draw() {
+    if (!ctx) return;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.clearRect(0,0,cssW,cssH);
+    ctx.setTransform(dpr*scale,0,0,dpr*scale,dpr*offsetX,dpr*offsetY);
+    // Faint centimeter lattice.
+    ctx.strokeStyle = 'rgba(125,153,173,.09)'; ctx.lineWidth = 0.012;
+    ctx.beginPath();
+    for (let x=0; x<=WORLD_W; x+=1) { ctx.moveTo(x,0); ctx.lineTo(x,WORLD_H); }
+    for (let y=0; y<=WORLD_H; y+=1) { ctx.moveTo(0,y); ctx.lineTo(WORLD_W,y); }
+    ctx.stroke();
+    ctx.strokeStyle='rgba(0,255,200,.16)'; ctx.lineWidth=.035;
+    ctx.strokeRect(0.025,0.025,WORLD_W-.05,WORLD_H-.05);
+
+    if (showFields) {
+      dots.forEach(p => {
+        const col=COLORS[p.index].color;
+        const range=ranges[p.index];
+        ctx.save();
+        ctx.strokeStyle=hexToRgba(col,.35); ctx.lineWidth=.025; ctx.setLineDash([.13,.12]);
+        ctx.beginPath(); ctx.arc(p.x,p.y,range.max,0,Math.PI*2); ctx.stroke();
+        ctx.setLineDash([]); ctx.strokeStyle=hexToRgba(col,.72); ctx.lineWidth=.045;
+        ctx.beginPath(); ctx.arc(p.x,p.y,range.min,0,Math.PI*2); ctx.stroke();
+        ctx.restore();
+      });
+    }
+    dots.forEach(p => {
+      const color=COLORS[p.index].color;
+      ctx.save();
+      ctx.shadowColor=color; ctx.shadowBlur=1.0;
+      const glow=ctx.createRadialGradient(p.x-p.r*.25,p.y-p.r*.3,.05,p.x,p.y,p.r*1.25);
+      glow.addColorStop(0, '#ffffff'); glow.addColorStop(.18,color); glow.addColorStop(1,hexToRgba(color,.12));
+      ctx.fillStyle=glow; ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill();
+      ctx.shadowBlur=0; ctx.strokeStyle=hexToRgba(color,.95); ctx.lineWidth=.055; ctx.stroke();
+      // Tiny highlight makes the sphere-like dot easier to read on touch screens.
+      ctx.fillStyle='rgba(255,255,255,.8)'; ctx.beginPath(); ctx.arc(p.x-p.r*.28,p.y-p.r*.3,Math.max(.06,p.r*.12),0,Math.PI*2); ctx.fill();
+      ctx.font='700 .62px ui-sans-serif, system-ui, sans-serif'; ctx.textAlign='center'; ctx.textBaseline='top';
+      ctx.fillStyle='rgba(235,245,250,.92)'; ctx.fillText(COLORS[p.index].name.toUpperCase(),p.x,p.y+p.r+.18);
+      ctx.restore();
+    });
+  }
+
+  function hexToRgba(hex, alpha) {
+    const h=hex.replace('#','');
+    const n=parseInt(h,16);
+    return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${alpha})`;
+  }
+
+  function animate(time) {
+    frameHandle = requestAnimationFrame(animate);
+    if (!lastTime) lastTime = time;
+    const dt=clamp((time-lastTime)/1000,0,0.032); lastTime=time;
+    if (running && dt>0) applyForces(dt);
+    draw();
+  }
+
+  function resetPositions() {
+    const initial = [[6.2,5],[25.2,5.8],[9.2,15],[24,14.1]];
+    dots.forEach((p,i) => { p.x=initial[i][0]; p.y=initial[i][1]; p.vx=0; p.vy=0; });
+    showToast('Positions reset. Your force rules were kept.');
+  }
+  function mixRules() {
+    COLORS.forEach((_,i) => COLORS.forEach((__,j) => {
+      if (i!==j) matrix[i][j]=OPTIONS[Math.floor(Math.random()*OPTIONS.length)].value;
+    }));
+    makeMatrix(); showToast('Fresh rules mixed.');
+  }
+  function showToast(message) {
+    const el=$('toast'); el.textContent=message; el.classList.add('show');
+    clearTimeout(toastTimer); toastTimer=setTimeout(()=>el.classList.remove('show'),1900);
+  }
+  function pointFromEvent(event) {
+    const rect=canvas.getBoundingClientRect();
+    const sx=event.clientX-rect.left, sy=event.clientY-rect.top;
+    return { x:(sx-offsetX)/scale, y:(sy-offsetY)/scale };
+  }
+  canvas = $('world'); ctx = canvas.getContext('2d');
+  canvas.addEventListener('pointerdown', event => {
+    const p=pointFromEvent(event);
+    let nearest=-1, best=Infinity;
+    dots.forEach((dot,i) => { const d=Math.hypot(dot.x-p.x,dot.y-p.y); if (d < Math.max(dot.r+0.55, 1.1) && d<best) {best=d;nearest=i;} });
+    if (nearest>=0) {
+      dragIndex=nearest; pointerId=event.pointerId; lastPointer=p;
+      dots[nearest].vx=0; dots[nearest].vy=0;
+      canvas.setPointerCapture(event.pointerId); event.preventDefault();
+    }
+  });
+  canvas.addEventListener('pointermove', event => {
+    if (dragIndex<0 || event.pointerId!==pointerId) return;
+    const p=pointFromEvent(event), dot=dots[dragIndex];
+    dot.x=clamp(p.x,dot.r,WORLD_W-dot.r); dot.y=clamp(p.y,dot.r,WORLD_H-dot.r);
+    dot.vx=0; dot.vy=0; lastPointer=p; draw();
+  });
+  function stopDrag(event) {
+    if (dragIndex>=0 && (!event || event.pointerId===pointerId)) {
+      dots[dragIndex].vx=0; dots[dragIndex].vy=0;
+      dragIndex=-1; pointerId=null; lastPointer=null;
+    }
+  }
+  canvas.addEventListener('pointerup', stopDrag);
+  canvas.addEventListener('pointercancel', stopDrag);
+  $('pauseBtn').addEventListener('click', () => {
+    running=!running;
+    $('pauseBtn').textContent=running?'Ⅱ Pause':'▶ Resume';
+    $('pauseBtn').classList.toggle('primary',running);
+    if (!running) showToast('Simulation paused.'); else showToast('Simulation running.');
+  });
+  $('resetBtn').addEventListener('click', resetPositions);
+  $('mixBtn').addEventListener('click', mixRules);
+  $('showFields').addEventListener('change', event => { showFields=event.target.checked; draw(); });
+  makeMatrix(); makeRanges();
+  if ('ResizeObserver' in window) new ResizeObserver(resize).observe(canvas);
+  else window.addEventListener('resize',resize);
+  resize();
+  frameHandle=requestAnimationFrame(animate);
+  window.addEventListener('pagehide', () => { cancelAnimationFrame(frameHandle); });
+})();
+</script>
+</body>
+</html>
