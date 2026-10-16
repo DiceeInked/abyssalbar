@@ -184,7 +184,7 @@ input[type=range]{width:135px;accent-color:var(--teal)}
     speed:1, forceMultiplier:1.5, damping:.035, boundaryMode:"bounce", baseScale:7, zoom:1, camX:0, camY:0, worldW:0, worldH:0, width:0, height:0, dpr:1, countOnStart:500,
     pointerMap:new Map(), gesture:null, lastTime:0, accumulator:0, frame:0, dirty:true
   };
-  let species = colors.map((c)=>({radius:1,min:2,max:5}));
+  let species = colors.map((c)=>({radius:1,min:2,max:10}));
   const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
   const rand=(a,b)=>a+Math.random()*(b-a);
   const hypot=Math.hypot;
@@ -244,9 +244,13 @@ input[type=range]{width:135px;accent-color:var(--teal)}
   function setPreset(name){
     const m=Array.from({length:4},()=>Array(4).fill('none'));
     if(name==='cycle'){
-      for(let i=0;i<4;i++)m[i][i]='strong-repel';
+      // Every row starts with its own color, then loops through the remaining
+      // colors: weak repulsion, strong attraction, strong repulsion, weak attraction.
       for(let i=0;i<4;i++){
-        const next=(i+1)%4;m[i][next]='strong-attract';m[next][i]='strong-repel';
+        m[i][i]='weak-repel';
+        m[i][(i+1)%4]='strong-attract';
+        m[i][(i+2)%4]='strong-repel';
+        m[i][(i+3)%4]='weak-attract';
       }
     } else if(name==='clusters'){
       for(let i=0;i<4;i++)for(let j=0;j<4;j++)m[i][j]=i===j?'weak-repel':'weak-attract';
