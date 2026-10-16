@@ -287,8 +287,9 @@ input[type=range]{width:135px;accent-color:var(--teal)}
   }
   function wrapParticle(p){
     if(state.boundaryMode==="bounce"){
-      if(p.x<0){p.x=0;p.vx=Math.abs(p.vx||0);}else if(p.x>state.worldW){p.x=state.worldW;p.vx=-Math.abs(p.vx||0);}
-      if(p.y<0){p.y=0;p.vy=Math.abs(p.vy||0);}else if(p.y>state.worldH){p.y=state.worldH;p.vy=-Math.abs(p.vy||0);}
+      const r=(species[p.type]&&species[p.type].radius)||0;
+      if(p.x<r){p.x=r;p.vx=Math.abs(p.vx||0);}else if(p.x>state.worldW-r){p.x=state.worldW-r;p.vx=-Math.abs(p.vx||0);}
+      if(p.y<r){p.y=r;p.vy=Math.abs(p.vy||0);}else if(p.y>state.worldH-r){p.y=state.worldH-r;p.vy=-Math.abs(p.vy||0);}
     }else{
       p.x=((p.x%state.worldW)+state.worldW)%state.worldW;
       p.y=((p.y%state.worldH)+state.worldH)%state.worldH;
