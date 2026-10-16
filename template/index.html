@@ -1,0 +1,622 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#050505">
+  <meta name="description" content="A reusable dark website template and component showcase.">
+  <title>Template | Abyssal</title>
+
+  <style>
+    /* =========================================================
+       1. THEME SETTINGS
+       Change these variables first when making a new website.
+       ========================================================= */
+    :root {
+      color-scheme: dark;
+      --page-bg: #050505;
+      --panel-bg: #101010;
+      --panel-bg-deep: #090909;
+      --text: #f7f7f7;
+      --muted-text: #aaa;
+      --border: #303030;
+      --accent: #00ffc8;
+      --accent-ink: #001e17;
+      --bar-start: #66877f;
+      --bar-middle: #00ffc8;
+      --bar-end: #b4c9c3;
+      --card-radius: 16px;
+      --button-radius: 999px;
+      --content-width: 880px;
+    }
+
+    /* =========================================================
+       2. PAGE FOUNDATION
+       ========================================================= */
+    * { box-sizing: border-box; }
+
+    html {
+      min-height: 100%;
+      background: var(--page-bg);
+      scroll-behavior: smooth;
+    }
+
+    body {
+      min-height: 100%;
+      margin: 0;
+      background: var(--page-bg);
+      color: var(--text);
+      font: 16px/1.55 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button, input, select { font: inherit; }
+
+    button, a, input, select { -webkit-tap-highlight-color: transparent; }
+
+    button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 3px;
+    }
+
+    .page {
+      width: min(var(--content-width), 100%);
+      margin: 0 auto;
+      padding: clamp(20px, 5vw, 48px) clamp(16px, 4vw, 32px) 44px;
+    }
+
+    /* =========================================================
+       3. SHARED BRAND HEADER
+       Keep this header consistent across Abyssal sections.
+       ========================================================= */
+    .topline {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 30px;
+      color: #d5d5d5;
+      font-size: .76rem;
+      letter-spacing: .15em;
+      text-transform: uppercase;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .brand-dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 18px color-mix(in srgb, var(--accent) 34%, transparent);
+    }
+
+    .quote {
+      max-width: 58%;
+      color: #888;
+      font-size: clamp(.65rem, 2vw, .76rem);
+      letter-spacing: .02em;
+      line-height: 1.35;
+      text-align: right;
+      text-transform: none;
+      overflow-wrap: anywhere;
+    }
+
+    /* This is the section bar. Change the three --bar-* variables above. */
+    .section-bar {
+      height: 2px;
+      margin-bottom: 28px;
+      border-radius: 2px;
+      background: linear-gradient(90deg, var(--bar-start), var(--bar-middle), var(--bar-end));
+    }
+
+    /* =========================================================
+       4. TEXT COMPONENTS
+       ========================================================= */
+    .eyebrow {
+      margin: 0 0 10px;
+      color: var(--accent);
+      font-size: .78rem;
+      font-weight: 700;
+      letter-spacing: .13em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0 0 18px;
+      font-size: clamp(2.5rem, 8vw, 4.7rem);
+      font-weight: 760;
+      letter-spacing: -.055em;
+      line-height: 1.02;
+      overflow-wrap: anywhere;
+    }
+
+    h2 {
+      margin: 0 0 8px;
+      font-size: clamp(1.2rem, 3.8vw, 1.55rem);
+      letter-spacing: -.025em;
+      line-height: 1.2;
+    }
+
+    h3 { margin: 0 0 8px; font-size: 1rem; }
+
+    .body-copy {
+      max-width: 660px;
+      margin: 0 0 26px;
+      color: #c4c4c4;
+      font-size: 1.04rem;
+    }
+
+    .muted { color: var(--muted-text); }
+
+    /* =========================================================
+       5. REUSABLE BOXES, CARDS, AND NOTICES
+       Copy these classes when you need the same look elsewhere.
+       ========================================================= */
+    .notice {
+      margin: 0 0 26px;
+      padding: 14px 16px;
+      border: 1px solid color-mix(in srgb, var(--accent) 24%, var(--border));
+      border-radius: 14px;
+      background: color-mix(in srgb, var(--accent) 5%, var(--page-bg));
+      color: #c9e9e2;
+      font-size: .92rem;
+    }
+
+    .component-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+      margin: 22px 0;
+    }
+
+    .card {
+      min-width: 0;
+      padding: 20px;
+      border: 1px solid var(--border);
+      border-radius: var(--card-radius);
+      background: linear-gradient(145deg, var(--panel-bg), var(--panel-bg-deep));
+    }
+
+    .component-label {
+      margin: 0 0 13px;
+      color: var(--muted-text);
+      font-size: .72rem;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    .result-box {
+      overflow: hidden;
+      border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--border));
+      border-radius: 18px;
+      background: color-mix(in srgb, var(--accent) 3%, var(--page-bg));
+    }
+
+    .result-heading {
+      padding: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .result-content { padding: 20px; }
+
+    .pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 15px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 5px 10px;
+      border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border));
+      border-radius: 999px;
+      background: color-mix(in srgb, var(--accent) 7%, var(--panel-bg));
+      color: #dbfff6;
+      font-size: .82rem;
+    }
+
+    /* =========================================================
+       6. FORM FIELDS
+       ========================================================= */
+    .field { display: grid; gap: 8px; margin-top: 16px; }
+
+    .field label {
+      font-size: .92rem;
+      font-weight: 650;
+    }
+
+    .field-help { margin: 0; color: var(--muted-text); font-size: .82rem; }
+
+    .control {
+      display: block;
+      width: 100%;
+      min-height: 48px;
+      padding: 11px 13px;
+      border: 1px solid #484848;
+      border-radius: 10px;
+      background: var(--page-bg);
+      color: var(--text);
+    }
+
+    /* =========================================================
+       7. BUTTON STYLES
+       Style 1 = filled, Style 2 = outlined, Style 3 = quiet.
+       Edit these three classes to change how the buttons look.
+       ========================================================= */
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      padding: 10px 17px;
+      border: 1px solid transparent;
+      border-radius: var(--button-radius);
+      cursor: pointer;
+      text-decoration: none;
+      transition: background-color .15s ease, border-color .15s ease, transform .15s ease;
+    }
+
+    .button:active { transform: translateY(1px); }
+
+    .button-primary {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: var(--accent-ink);
+      font-weight: 750;
+    }
+
+    .button-primary:hover { filter: brightness(1.08); }
+
+    .button-secondary {
+      border-color: #575757;
+      background: transparent;
+      color: var(--text);
+    }
+
+    .button-secondary:hover { border-color: var(--accent); }
+
+    .button-quiet {
+      border-color: transparent;
+      background: transparent;
+      color: var(--text);
+    }
+
+    .button-quiet:hover {
+      border-color: var(--border);
+      color: var(--accent);
+    }
+
+    a.text-link { color: var(--accent); text-underline-offset: 3px; }
+
+    /* =========================================================
+       8. THEME EDITOR CONTROLS
+       These controls change this preview instantly. They are optional
+       and can be removed when you copy this template for another site.
+       ========================================================= */
+    .theme-controls {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 14px;
+      margin-top: 16px;
+    }
+
+    .color-control {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-height: 48px;
+    }
+
+    input[type="color"] {
+      width: 48px;
+      height: 40px;
+      padding: 3px;
+      border: 1px solid #484848;
+      border-radius: 9px;
+      background: var(--page-bg);
+      cursor: pointer;
+    }
+
+    .status {
+      min-height: 1.5em;
+      margin: 16px 0 0;
+      color: var(--muted-text);
+      font-size: .9rem;
+    }
+
+    /* =========================================================
+       9. FOOTER AND RESPONSIVE LAYOUT
+       ========================================================= */
+    footer {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 34px;
+      padding-top: 20px;
+      border-top: 1px solid #292929;
+      color: #888;
+      font-size: .8rem;
+    }
+
+    footer a { color: #b5b5b5; text-underline-offset: 3px; }
+
+    @media (min-width: 700px) {
+      .component-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .theme-controls { grid-template-columns: 1fr 1fr; }
+      .span-all { grid-column: 1 / -1; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { transition: none !important; animation: none !important; }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="page">
+    <!-- SHARED HEADER: brand and quote stay in the same place on each page. -->
+    <header>
+      <div class="topline">
+        <a class="brand" href="../" aria-label="Abyssal home">
+          <span class="brand-dot" aria-hidden="true"></span>
+          <span>Abyssal</span>
+        </a>
+        <span class="quote" id="siteQuote" aria-live="polite">Commitment is key.</span>
+      </div>
+
+      <!-- SECTION COLOR BAR: neutral teal, not the Pride rainbow. -->
+      <div class="section-bar" aria-hidden="true"></div>
+
+      <!-- EDIT THESE PLACEHOLDERS when using this as a starting page. -->
+      <p class="eyebrow">SECTION LABEL</p>
+      <h1>Title goes here.</h1>
+      <p class="body-copy">Body text goes here. Replace this paragraph with a short introduction explaining what this page is for.</p>
+
+      <div class="notice">
+        <strong>Notice / callout.</strong> Use this box for a helpful note, a short warning, an instruction, or any other detail that should be easy to notice.
+      </div>
+    </header>
+
+    <!-- COMPONENT LIBRARY: examples of the common pieces on this page. -->
+    <section aria-labelledby="componentsTitle">
+      <p class="eyebrow">COMPONENTS</p>
+      <h2 id="componentsTitle">Reusable page pieces</h2>
+      <p class="body-copy">Each part has a plain name. Copy, remove, or rearrange these sections to fit your next page.</p>
+
+      <div class="component-grid">
+        <article class="card">
+          <p class="component-label">CARD / PANEL</p>
+          <h2>Card title</h2>
+          <p class="muted">Body text inside a card. Cards are useful for grouping related information without adding extra decoration.</p>
+          <a class="text-link" href="#themeEditor">Text link</a>
+        </article>
+
+        <article class="card">
+          <p class="component-label">FORM FIELD</p>
+          <h3>Field title</h3>
+          <div class="field">
+            <label for="exampleSelect">Select label</label>
+            <select class="control" id="exampleSelect">
+              <option>Option one</option>
+              <option>Option two</option>
+              <option>Option three</option>
+            </select>
+            <p class="field-help">Helper text goes here. Explain what to pick or type.</p>
+          </div>
+        </article>
+
+        <article class="card">
+          <p class="component-label">BUTTON STYLE 1 · PRIMARY</p>
+          <h3>Filled button</h3>
+          <p class="muted">Use for the main action you want people to notice.</p>
+          <div class="button-row">
+            <button class="button button-primary demo-button" type="button" data-message="Button style 1 clicked. Replace this action in the JavaScript section.">Button</button>
+          </div>
+        </article>
+
+        <article class="card">
+          <p class="component-label">BUTTON STYLE 2 · OUTLINE</p>
+          <h3>Outlined button</h3>
+          <p class="muted">Use for a secondary action that should still look clickable.</p>
+          <div class="button-row">
+            <button class="button button-secondary demo-button" type="button" data-message="Button style 2 clicked. Replace this action in the JavaScript section.">Button style 2</button>
+          </div>
+        </article>
+
+        <article class="card">
+          <p class="component-label">BUTTON STYLE 3 · QUIET</p>
+          <h3>Low-emphasis button</h3>
+          <p class="muted">Use when an action is useful but should not compete with the primary button.</p>
+          <div class="button-row">
+            <button class="button button-quiet demo-button" type="button" data-message="Button style 3 clicked. Replace this action in the JavaScript section.">Button style 3</button>
+          </div>
+        </article>
+
+        <article class="card">
+          <p class="component-label">PILLS / TAGS</p>
+          <h3>Small labels</h3>
+          <p class="muted">Use compact tags for categories, states, or short bits of metadata.</p>
+          <div class="pills">
+            <span class="pill">Tag one</span>
+            <span class="pill">Tag two</span>
+            <span class="pill">Status</span>
+          </div>
+        </article>
+
+        <article class="result-box span-all">
+          <div class="result-heading">
+            <p class="component-label">RESULT / OUTPUT PANEL</p>
+            <h2>Result title</h2>
+            <p class="muted">A larger heading and a few lines of text can live in a distinct output box.</p>
+          </div>
+          <div class="result-content">
+            <p>Result body text goes here. This panel can display generated information, a confirmation, or an important answer.</p>
+            <p class="muted">Secondary detail can use muted text.</p>
+          </div>
+        </article>
+      </div>
+
+      <p class="status" id="buttonStatus" role="status" aria-live="polite">Button messages will appear here when you test the examples.</p>
+    </section>
+
+    <!-- OPTIONAL LIVE THEME EDITOR: change the color choices without editing code. -->
+    <section class="card" id="themeEditor" aria-labelledby="themeTitle">
+      <p class="component-label">OPTIONAL LIVE PREVIEW</p>
+      <h2 id="themeTitle">Change the look</h2>
+      <p class="muted">Try a different accent color or section bar. These changes are only a preview and reset when you reload.</p>
+
+      <div class="theme-controls">
+        <div class="field">
+          <label for="accentPicker">Accent color</label>
+          <div class="color-control">
+            <input type="color" id="accentPicker" value="#00ffc8">
+            <span id="accentValue" class="muted">#00FFC8</span>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="barStyle">Section bar style</label>
+          <select class="control" id="barStyle">
+            <option value="teal">Teal (default)</option>
+            <option value="slate">Slate blue</option>
+            <option value="violet">Violet</option>
+            <option value="mono">Monochrome</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="button-row">
+        <button class="button button-secondary" id="resetTheme" type="button">Reset appearance</button>
+      </div>
+    </section>
+
+    <footer>
+      <span>PAGE FOOTER · Replace this text.</span>
+      <a href="../">Back to the main page</a>
+    </footer>
+  </main>
+
+  <script>
+    /* =========================================================
+       JAVASCRIPT: WHAT THE BUTTONS AND PREVIEW CONTROLS DO
+       ========================================================= */
+
+    // 1. The top-right header quote is selected only from quotes.md.
+    //    If that file cannot load, the short fallback list is used.
+    const quoteElement = document.getElementById("siteQuote");
+    const fallbackQuotes = [
+      "Commitment is key.",
+      "It's all about the presentation",
+      "a drop a day will eventually fill up a well."
+    ];
+
+    function displayRandomQuote(approvedQuotes) {
+      const usableQuotes = approvedQuotes.filter((quote) => quote.trim().length > 0);
+      if (usableQuotes.length === 0) return;
+
+      const randomIndex = Math.floor(Math.random() * usableQuotes.length);
+      quoteElement.textContent = usableQuotes[randomIndex];
+    }
+
+    displayRandomQuote(fallbackQuotes);
+
+    fetch("../quotes.md", { cache: "no-store" })
+      .then((response) => {
+        if (!response.ok) throw new Error("Could not load quotes.md");
+        return response.text();
+      })
+      .then((markdown) => {
+        const approvedQuotes = markdown
+          .split(/\r?\n/)
+          .map((line) => {
+            const match = line.match(/^\s*-\s*["“](.*?)["”]\s*$/);
+            return match ? match[1].trim() : "";
+          })
+          .filter(Boolean);
+
+        if (approvedQuotes.length > 0) displayRandomQuote(approvedQuotes);
+      })
+      .catch(() => {
+        // Keep the fallback quote if quotes.md is unavailable.
+      });
+
+    // 2. Demo buttons: each button displays its own example message.
+    //    Replace the data-message text or this event handler to change behavior.
+    const buttonStatus = document.getElementById("buttonStatus");
+    const demoButtons = document.querySelectorAll(".demo-button");
+
+    demoButtons.forEach((button) => {
+      button.addEventListener("click", () => {
+        buttonStatus.textContent = button.dataset.message;
+      });
+    });
+
+    // 3. Live preview: choosing an accent changes the accent CSS variable.
+    const accentPicker = document.getElementById("accentPicker");
+    const accentValue = document.getElementById("accentValue");
+    const barStyle = document.getElementById("barStyle");
+    const resetTheme = document.getElementById("resetTheme");
+
+    const defaultTheme = {
+      accent: "#00ffc8",
+      barStyle: "teal"
+    };
+
+    const barColors = {
+      teal: ["#66877f", "#00ffc8", "#b4c9c3"],
+      slate: ["#465b72", "#8ba8c8", "#c0ccd8"],
+      violet: ["#68518a", "#b69ce9", "#d5c7f2"],
+      mono: ["#414141", "#bcbcbc", "#f0f0f0"]
+    };
+
+    function setAccentColor(color) {
+      document.documentElement.style.setProperty("--accent", color);
+      accentValue.textContent = color.toUpperCase();
+    }
+
+    function setBarStyle(styleName) {
+      const colors = barColors[styleName] || barColors.teal;
+      document.documentElement.style.setProperty("--bar-start", colors[0]);
+      document.documentElement.style.setProperty("--bar-middle", colors[1]);
+      document.documentElement.style.setProperty("--bar-end", colors[2]);
+    }
+
+    accentPicker.addEventListener("input", () => {
+      setAccentColor(accentPicker.value);
+    });
+
+    barStyle.addEventListener("change", () => {
+      setBarStyle(barStyle.value);
+    });
+
+    resetTheme.addEventListener("click", () => {
+      accentPicker.value = defaultTheme.accent;
+      barStyle.value = defaultTheme.barStyle;
+      setAccentColor(defaultTheme.accent);
+      setBarStyle(defaultTheme.barStyle);
+      buttonStatus.textContent = "Appearance reset to the template defaults.";
+    });
+  </script>
+</body>
+</html>
