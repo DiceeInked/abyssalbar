@@ -628,6 +628,7 @@ function drawExportFrame(context,canvasWidth,canvasHeight,time,visual,notesForEx
  }
 }
 async function renderVideo(audioBuffer,cleanNotes,visualFrames,captionGroups,outputContext){
+ if(!outputContext||outputContext.state!=='running')throw new Error('Audio rendering paused while transcription was running. Tap Try compiling again.');
  if(!window.MediaRecorder)throw new Error('This browser does not support video recording.');
  const exportCanvas=document.createElement('canvas');
  const portrait=innerHeight>=innerWidth;
@@ -636,7 +637,6 @@ async function renderVideo(audioBuffer,cleanNotes,visualFrames,captionGroups,out
  const exportCtx=exportCanvas.getContext('2d',{alpha:false});
  if(!exportCtx||!exportCanvas.captureStream)throw new Error('This browser cannot export canvas video.');
  const canvasStream=exportCanvas.captureStream(30);
- if(!outputContext||outputContext.state==='closed')throw new Error('The audio renderer is unavailable. Tap Try compiling again.');
  const destination=outputContext.createMediaStreamDestination();
  const sourceNode=outputContext.createBufferSource();sourceNode.buffer=audioBuffer;sourceNode.connect(destination);
  const mixedStream=new MediaStream([...canvasStream.getVideoTracks(),...destination.stream.getAudioTracks()]);
@@ -651,8 +651,12 @@ async function renderVideo(audioBuffer,cleanNotes,visualFrames,captionGroups,out
  recorder.onerror=event=>doneReject(event.error||new Error('The video recorder encountered an error.'));
  recorder.onstop=()=>doneResolve(new Blob(chunks,{type:recorder.mimeType||mime||'video/webm'}));
  const duration=audioBuffer.duration,frameCursor={index:0};
+ if(outputContext.state!=='running'){
+  canvasStream.getTracks().forEach(track=>track.stop());destination.stream.getTracks().forEach(track=>track.stop());
+  try{sourceNode.disconnect()}catch(_){}
+  throw new Error('Audio rendering paused before export began. Tap Try compiling again.');
+ }
  recorder.start(1000);
- await outputContext.resume();
  const beganAt=outputContext.currentTime;
  let exportRaf=0,finished=false;
  const draw=()=>{
