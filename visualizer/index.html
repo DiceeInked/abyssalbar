@@ -11,7 +11,6 @@
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000;color:#fff;font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
 #stage{position:fixed;inset:0;overflow:hidden;background:#000;isolation:isolate}
 #particles{position:absolute;inset:0;width:100%;height:100%;z-index:2;pointer-events:none}
-#flame{position:absolute;left:50%;top:50%;width:clamp(60px,13vmin,112px);aspect-ratio:1;border-radius:50%;background:#fff;transform:translate3d(-50%,-50%,0);z-index:1;visibility:hidden;will-change:left,top}
 .orb{position:absolute;left:50%;top:50%;width:clamp(160px,34vmin,290px);aspect-ratio:1;border-radius:50%;background:var(--white);transform:translate3d(-50%,-50%,0) scale(1);z-index:3;will-change:transform}
 .wave{position:absolute;left:50%;top:50%;width:clamp(130px,27.88vmin,238px);height:clamp(100px,28vmin,230px);transform:translate3d(-50%,-50%,0);display:grid;grid-template-columns:repeat(5,minmax(0,1fr));align-items:center;justify-items:center;gap:clamp(5px,1.7vmin,15px);z-index:4;pointer-events:none}
 .dot{display:block;width:clamp(6px,1.4vmin,9px);height:clamp(6px,1.4vmin,9px);border-radius:999px;background:#000;will-change:height}
@@ -28,7 +27,6 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000;color:
 <body>
 <main id="stage" aria-label="Combined voice visualizer">
 <canvas id="particles" aria-hidden="true"></canvas>
-<div id="flame" aria-hidden="true"></div>
 <div id="orb" class="orb" aria-hidden="true"></div>
 <div id="wave" class="wave" aria-hidden="true"><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
 </main>
@@ -38,13 +36,13 @@ html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000;color:
 <script>
 (()=>{
 'use strict';
-const orb=document.getElementById('orb'),flame=document.getElementById('flame'),dots=[...document.querySelectorAll('.dot')],canvas=document.getElementById('particles'),ctx=canvas.getContext('2d'),mic=document.getElementById('mic'),status=document.getElementById('status'),message=document.getElementById('message');
+const orb=document.getElementById('orb'),dots=[...document.querySelectorAll('.dot')],canvas=document.getElementById('particles'),ctx=canvas.getContext('2d'),mic=document.getElementById('mic'),status=document.getElementById('status'),message=document.getElementById('message');
 const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
-const TRAIL_INTERVAL=68,TRAIL_DURATION=1200;
-let stream=null,audio=null,analyser=null,source=null,timeData=null,freqData=null,raf=0,listening=false,starting=false,stopping=false,level=0,pitchLog=Math.log(150),pitchMinLog=null,pitchMaxLog=null,lastSpeech=0,lastPitchAt=0,nextCloneAt=0,trails=[],width=0,height=0,dpr=1,flameX=.5,flameY=.5,previousTime=0,flameDiameter=100;
+const NOTE_INTERVAL=125,NOTE_DURATION=2400;
+let stream=null,audio=null,analyser=null,source=null,timeData=null,freqData=null,raf=0,listening=false,starting=false,stopping=false,level=0,pitchLog=Math.log(150),pitchMinLog=null,pitchMaxLog=null,lastSpeech=0,lastPitchAt=0,lastValidPitchAt=0,nextNoteAt=0,notes=[],width=0,height=0,dpr=1,previousTime=0;
 const dotLevels=[0,0,0,0,0];
 function clamp(v,min,max){return Math.min(max,Math.max(min,v))}
-function resize(){width=innerWidth;height=innerHeight;dpr=Math.min(window.devicePixelRatio||1,2);canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);canvas.style.width=width+'px';canvas.style.height=height+'px';ctx.setTransform(dpr,0,0,dpr,0,0);flameDiameter=flame.getBoundingClientRect().width||100;trails.length=0;drawTrails(performance.now())}
+function resize(){width=innerWidth;height=innerHeight;dpr=Math.min(window.devicePixelRatio||1,2);canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);canvas.style.width=width+'px';canvas.style.height=height+'px';ctx.setTransform(dpr,0,0,dpr,0,0);drawNotes(performance.now())}
 // Pitch estimator adapted from the original Pattern prototype.
 function estimatePitch(bytes,sampleRate){
  const data=new Float32Array(bytes.length);let mean=0;
@@ -60,17 +58,26 @@ function estimatePitch(bytes,sampleRate){
  // Return frequency so the visualizer can learn this speaker's range.
  return hz
 }
-function emitTrail(now){trails.push({x:flameX*width,y:flameY*height,createdAt:now});if(trails.length>24)trails.shift();nextCloneAt=now+TRAIL_INTERVAL}
-function drawTrails(now){
+function spawnNote(now,pitchPosition){
+ const radius=clamp(5+Math.sqrt(level)*8,5,14);
+ notes.push({x:pitchPosition,radius,createdAt:now});
+ if(notes.length>42)notes.shift();
+ nextNoteAt=now+NOTE_INTERVAL;
+}
+function drawNotes(now){
  ctx.clearRect(0,0,width,height);
- for(let i=trails.length-1;i>=0;i--){
-  const t=trails[i],age=(now-t.createdAt)/TRAIL_DURATION;
-  if(age>=1){trails.splice(i,1);continue}
-  const rise=Math.max(90,flameDiameter*1.05)*age;
-  const radius=flameDiameter*.5;
-  const alpha=.92*(1-age);
-  ctx.beginPath();ctx.arc(t.x,t.y-rise,radius,0,Math.PI*2);
-  ctx.fillStyle='rgba(255,255,255,'+alpha.toFixed(3)+')';ctx.fill();
+ for(let i=notes.length-1;i>=0;i--){
+  const note=notes[i],age=(now-note.createdAt)/NOTE_DURATION;
+  if(age>=1){notes.splice(i,1);continue}
+  const x=note.x*width,r=note.radius;
+  const y=height+r-age*(height+r*2);
+  const fade=age>.78?clamp((1-age)/.22,0,1):1;
+  // A restrained little wake gives each rising pitch a sense of motion without glow or 3D effects.
+  ctx.beginPath();ctx.moveTo(x,y+r*.65);ctx.lineTo(x,y+r*2.05);
+  ctx.lineCap='round';ctx.lineWidth=Math.max(1,r*.14);
+  ctx.strokeStyle='rgba(255,255,255,'+(fade*.18).toFixed(3)+')';ctx.stroke();
+  ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);
+  ctx.fillStyle='rgba(255,255,255,'+fade.toFixed(3)+')';ctx.fill();
  }
 }
 function updateWave(responsiveness,speaking){
@@ -101,7 +108,6 @@ function frame(now){
  analyser.getByteFrequencyData(freqData);
  orb.style.transform='translate3d(-50%,-50%,0) scale('+(1+level*.72).toFixed(3)+')';
  updateWave(reducedMotion ? 0.08 : 0.16,speaking);
- const responsiveness=reducedMotion ? 0.07 : 0.13;
  if(speaking){
   if(now-lastPitchAt>=45){
    lastPitchAt=now;
@@ -109,28 +115,21 @@ function frame(now){
    if(detected!==null){
     const detectedLog=Math.log(detected);
     pitchLog+=(detectedLog-pitchLog)*0.4;
+    lastValidPitchAt=now;
     if(pitchMinLog===null||pitchLog<pitchMinLog)pitchMinLog=pitchLog;
     else pitchMinLog+=(pitchLog-pitchMinLog)*0.001;
     if(pitchMaxLog===null||pitchLog>pitchMaxLog)pitchMaxLog=pitchLog;
     else pitchMaxLog+=(pitchLog-pitchMaxLog)*0.001;
    }
   }
-  // Learn this speaker's pitch range as they talk; leave a little breathing room beyond both extremes.
+  // Learn this speaker's range, then map low notes left and high notes right.
   const pitchPadding=0.12;
   const pitchLow=(pitchMinLog??pitchLog)-pitchPadding;
   const pitchHigh=(pitchMaxLog??pitchLog)+pitchPadding;
   const pitchPosition=clamp((pitchLog-pitchLow)/(pitchHigh-pitchLow),0,1);
-  const targetX=.035+pitchPosition*.93;
-  // Keep vertical motion in the upper region and let volume nudge it gently.
-  const targetY=clamp(.29-level*.19,.10,.35);
-  const move=1-Math.pow(1-(reducedMotion ? 0.12 : 0.34),dt);
-  const moveY=1-Math.pow(1-(reducedMotion ? 0.035 : 0.055),dt);
-  flameX+=(targetX-flameX)*move;flameY+=(targetY-flameY)*moveY;
-  if(now>=nextCloneAt)emitTrail(now);
+  if(now>=nextNoteAt&&now-lastValidPitchAt<150)spawnNote(now,pitchPosition);
  }
- flame.style.visibility=speaking?'visible':'hidden';
- flame.style.left=(flameX*100).toFixed(3)+'%';flame.style.top=(flameY*100).toFixed(3)+'%';
- drawTrails(now);raf=requestAnimationFrame(frame)
+ drawNotes(now);raf=requestAnimationFrame(frame)
 }
 async function start(){
  if(starting||listening||stopping)return;starting=true;mic.disabled=true;message.textContent='Requesting microphone access…';
@@ -142,7 +141,7 @@ async function start(){
   analyser=audio.createAnalyser();analyser.fftSize=2048;analyser.smoothingTimeConstant=.72;
   source=audio.createMediaStreamSource(stream);source.connect(analyser);
   timeData=new Uint8Array(analyser.fftSize);freqData=new Uint8Array(analyser.frequencyBinCount);
-  listening=true;level=0;pitchLog=Math.log(150);pitchMinLog=null;pitchMaxLog=null;lastSpeech=0;lastPitchAt=0;nextCloneAt=0;previousTime=0;trails=[];dotLevels.fill(0);
+  listening=true;level=0;pitchLog=Math.log(150);pitchMinLog=null;pitchMaxLog=null;lastSpeech=0;lastPitchAt=0;lastValidPitchAt=0;nextNoteAt=0;previousTime=0;notes=[];dotLevels.fill(0);
   mic.textContent='Stop listening';status.textContent='Listening';status.classList.add('live');message.textContent='Audio is analysed locally to animate the visuals.';
   raf=requestAnimationFrame(frame)
  }catch(e){
@@ -162,18 +161,17 @@ async function stop(){
  if(source)try{source.disconnect()}catch(_){}source=null;
  const activeAudio=audio;audio=null;analyser=null;timeData=null;freqData=null;
  if(activeAudio)try{await activeAudio.close()}catch(_){}
- level=0;pitchLog=Math.log(150);pitchMinLog=null;pitchMaxLog=null;lastSpeech=0;lastPitchAt=0;previousTime=0;trails=[];dotLevels.fill(0);
- flameX=.5;flameY=.5;flame.style.left='50%';flame.style.top='50%';flame.style.visibility='hidden';
+ level=0;pitchLog=Math.log(150);pitchMinLog=null;pitchMaxLog=null;lastSpeech=0;lastPitchAt=0;lastValidPitchAt=0;nextNoteAt=0;previousTime=0;notes=[];dotLevels.fill(0);
  orb.style.transform='translate3d(-50%,-50%,0) scale(1)';
  dots.forEach(d=>{d.style.height=''});
- drawTrails(performance.now());
+ drawNotes(performance.now());
  mic.textContent='Enable microphone';status.textContent='Microphone off';status.classList.remove('live');message.textContent='Microphone off. Press the button to start again.';
  stopping=false;mic.disabled=false;
 }
 mic.addEventListener('click',()=>listening?stop():start());
 addEventListener('resize',resize,{passive:true});
 addEventListener('pagehide',()=>{listening=false;if(raf)cancelAnimationFrame(raf);raf=0;if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;if(source)try{source.disconnect()}catch(_){}source=null;if(audio)audio.close().catch(()=>{});audio=null});
-resize();drawTrails(performance.now());
+resize();drawNotes(performance.now());
 })();
 </script>
 </body>
