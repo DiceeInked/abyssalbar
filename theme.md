@@ -42,6 +42,15 @@ This file documents the visual language for Abyssal so new sections feel like pa
 - The quote list is loaded from that Markdown file so edits to the approved list can update the website without editing the visual theme.
 - Keep a small in-code fallback list so the header still works if the Markdown file cannot be fetched.
 
+## Reusable website template
+
+- The reusable component showcase lives at `template/index.html` and is available from the site at `/template/`.
+- Use it as a starting point for new pages. It shows the shared header, section bar, placeholder title and body text, notice box, cards, form field, three button styles, tags, output panel, and footer.
+- The template keeps its HTML, CSS, and JavaScript in clearly labeled sections so page content, visual style, and behavior are easy to find.
+- Its first CSS block contains theme variables for background, text, accent color, section bar, borders, card corners, button corners, and content width.
+- The optional on-page preview controls change the accent color and section bar live. Those controls are a template aid and may be removed from a new page.
+- Button examples display their demo behavior in the JavaScript section. Replace the handler or its `data-message` text when adapting a button to a real task.
+
 ## Reusing the theme
 
 When adding or redesigning a section, preserve the brand dot, Abyssal wordmark, slim section bar, and rotating quote placement. Change the section bar’s colors to suit the section, but keep the overall black, white, gray, and teal visual language.
