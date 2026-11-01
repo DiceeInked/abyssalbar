@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>CUI</title>
+<style>
+:root{color-scheme:dark;--bar-height:clamp(104px,19vh,154px)}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#000;font-family:Arial,Helvetica,sans-serif}
+body{touch-action:none}
+#stage{position:fixed;inset:0;background:#000;overflow:hidden}
+#words{position:absolute;z-index:3;top:max(24px,env(safe-area-inset-top));left:max(24px,env(safe-area-inset-left));right:24px;max-width:min(760px,calc(100vw - 48px));color:#fff;font-size:clamp(25px,4vw,48px);font-weight:650;line-height:1.18;letter-spacing:-.045em;overflow-wrap:anywhere;opacity:0;transition:opacity .48s ease;pointer-events:none;text-shadow:0 1px 18px #000}
+#words.visible{opacity:1}
+#words.fading{opacity:0}
+#art{position:absolute;inset:0 0 var(--bar-height);width:100%;height:calc(100% - var(--bar-height));z-index:1;touch-action:none}
+#tray{position:absolute;z-index:4;left:0;right:0;bottom:0;height:var(--bar-height);padding:12px max(14px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left));background:#fff;color:#111;display:flex;align-items:center;gap:12px;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scrollbar-width:none}
+#tray::-webkit-scrollbar{display:none}
+.item{position:relative;flex:0 0 auto;width:clamp(76px,12vw,112px);height:calc(var(--bar-height) - 28px);max-height:124px;border:0;border-radius:5px;background:#f0f0f0;overflow:hidden;cursor:grab;touch-action:pan-x;user-select:none;transition:transform .18s,box-shadow .18s}
+.item:active{cursor:grabbing;transform:scale(.96)}
+.item img{width:100%;height:100%;object-fit:cover;display:block;pointer-events:none}
+.item.used{outline:3px solid #111;outline-offset:-3px}
+#start-screen{position:absolute;z-index:10;inset:0;display:grid;place-items:center;background:#000;transition:opacity .35s}
+#start-screen.hidden{opacity:0;pointer-events:none}
+#start{border:1px solid rgba(255,255,255,.72);border-radius:999px;background:transparent;color:#fff;padding:17px 42px;font-size:15px;letter-spacing:.18em;text-transform:uppercase;cursor:pointer}
+#start:focus-visible,.tool:focus-visible{outline:2px solid #fff;outline-offset:4px}
+#tools{position:absolute;z-index:5;right:20px;top:max(20px,env(safe-area-inset-top));display:flex;gap:9px}
+.tool{width:42px;height:42px;border:1px solid #ffffff55;border-radius:50%;background:#0009;color:#fff;display:grid;place-items:center;cursor:pointer;backdrop-filter:blur(8px)}
+.tool.active{background:#fff;color:#000}
+.tool svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+@media(max-width:600px){#words{font-size:clamp(26px,7vw,38px)}#tools{right:14px}.tool{width:38px;height:38px}}
+</style>
+</head>
+<body>
+<main id="stage">
+<div id="words" aria-live="polite"></div>
+<canvas id="art"></canvas>
+<div id="tools" hidden>
+<button class="tool" id="pen" aria-label="Pen tool" title="Pen tool">
+<svg viewBox="0 0 24 24"><path d="m4 20 4.5-1 11-11a2.8 2.8 0 0 0-4-4l-11 11L4 20Z"/><path d="m14 6 4 4"/></svg>
+</button>
+<button class="tool" id="clear" aria-label="Clear drawings" title="Clear drawings">
+<svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6m4-6v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>
+</button>
+</div>
+<div id="tray" aria-label="Collected image objects"></div>
+<div id="start-screen"><button id="start">Play</button></div>
+</main>
+<script>
+(()=>{
+const start=document.getElementById('start'),screen=document.getElementById('start-screen'),words=document.getElementById('words'),tray=document.getElementById('tray'),canvas=document.getElementById('art'),pen=document.getElementById('pen'),clear=document.getElementById('clear'),tools=document.getElementById('tools');
+const ctx=canvas.getContext('2d');
+let recognition=null,stream=null,running=false,penOn=false,drawing=false,lastPoint=null,sentenceTimer=0,currentSentence='',items=new Map(),itemOrder=[],stickers=[],activeSticker=null,dragItem=null;
+const ignored=new Set(('a an the and or but if then so of to in on at by for from with about as is are was were be been being am i you he she it we they them this that these those there here my your his her our their me us do does did can could will would should may might have has had not no yes oh um uh like just very really i think say said tell telling talking something anything everything every what which who when where why how its it\'s we\'re they\'re don\'t didn\'t cant can\'t wont won\'t').split(/\s+/));
+const objectWords=new Set(('dog cat bird fish horse cow sheep rabbit mouse lion tiger bear elephant giraffe monkey frog turtle snake spider butterfly flower tree grass leaf apple banana orange strawberry grape watermelon pizza burger sandwich bread cake cookie chocolate milk water coffee tea car truck bus train airplane boat bicycle bike house home building school book phone computer laptop tablet television tv camera chair table desk lamp bed door window key bottle cup glass pencil pen paper bag box ball toy shoe hat shirt jacket pants dress watch clock guitar piano drum music sun moon star cloud rain snow fire ocean river mountain beach rock stone flower rose garden blue red green yellow orange purple pink black white silver gold teal').split(/\s+/));
+const colors=new Set(['blue','red','green','yellow','orange','purple','pink','black','white','silver','gold','teal','brown','gray','grey']);
+const resize=()=>{const dpr=Math.min(devicePixelRatio||1,2),r=canvas.getBoundingClientRect();canvas.width=Math.round(r.width*dpr);canvas.height=Math.round(r.height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);drawStickers()};
+window.addEventListener('resize',resize);
+function sentenceDone(){if(!currentSentence.trim())return;words.classList.remove('visible');words.classList.add('fading');currentSentence='';clearTimeout(sentenceTimer)}
+function showWords(text,isFinal){if(!text)return;const clean=text.trim();if(!clean)return;if(isFinal){currentSentence=(currentSentence+' '+clean).trim();words.textContent=currentSentence;words.classList.remove('fading');words.classList.add('visible');clearTimeout(sentenceTimer);sentenceTimer=setTimeout(sentenceDone,1500);detectItems(clean)}else{words.textContent=(currentSentence+' '+clean).trim();words.classList.remove('fading');words.classList.add('visible')}}
+function detectItems(text){const tokens=text.toLowerCase().replace(/[^a-z0-9' -]/g,' ').split(/\s+/);const unique=[...new Set(tokens)].filter(w=>w.length>1&&!ignored.has(w)&&(objectWords.has(w)||colors.has(w)));unique.forEach(w=>addItem(w))}
+async function addItem(word){let item=items.get(word);if(item){item.count++;itemOrder=itemOrder.filter(x=>x!==word);itemOrder.unshift(word);sortTray();return}
+item={word,count:1,url:null,element:null};items.set(word,item);itemOrder.unshift(word);sortTray();
+try{const endpoint='https://commons.wikimedia.org/w/api.php?action=query&generator=search&gsrsearch='+encodeURIComponent('filetype:bitmap '+word)+'&gsrnamespace=6&gsrlimit=1&prop=imageinfo&iiprop=url&iiurlwidth=240&format=json&origin=*';const response=await fetch(endpoint);if(!response.ok)throw Error('image search');const data=await response.json();const page=Object.values(data.query?.pages||{})[0];const url=page?.imageinfo?.[0]?.thumburl||page?.imageinfo?.[0]?.url;if(!url)throw Error('no image');item.url=url;renderItem(item)}catch(e){item.url='';renderItem(item)}
+}
+function sortTray(){itemOrder.sort((a,b)=>items.get(b).count-items.get(a).count||itemOrder.indexOf(a)-itemOrder.indexOf(b));itemOrder=[...new Set(itemOrder)];itemOrder.sort((a,b)=>{const A=items.get(a),B=items.get(b);return B.count-A.count});itemOrder.forEach(w=>{const el=items.get(w).element;if(el)tray.appendChild(el)})}
+function renderItem(item){if(!item.element){const el=document.createElement('button');el.className='item';el.type='button';el.draggable=true;el.setAttribute('aria-label',item.word);el.addEventListener('click',()=>{if(item.url)placeSticker(item,canvas.clientWidth/2,canvas.clientHeight/2)});el.addEventListener('dragstart',e=>{dragItem=item;e.dataTransfer.setData('text/plain',item.word)});el.addEventListener('dragend',()=>dragItem=null);item.element=el}
+item.element.replaceChildren();if(item.url){const img=document.createElement('img');img.src=item.url;img.alt='';img.draggable=false;item.element.appendChild(img)}else{item.element.style.background='#e7e7e7'}tray.insertBefore(item.element,tray.firstChild);sortTray()}
+function placeSticker(item,x,y){if(!item.url)return;stickers.push({url:item.url,x,y,w:100,h:100,img:null});itemOrder=itemOrder.filter(w=>w!==item.word);itemOrder.unshift(item.word);sortTray();item.element.classList.add('used');const img=new Image();img.crossOrigin='anonymous';img.onload=()=>{stickers[stickers.length-1].img=img;drawStickers()};img.src=item.url;drawStickers()}
+function drawStickers(){ctx.clearRect(0,0,canvas.clientWidth,canvas.clientHeight);stickers.forEach(s=>{if(s.img)ctx.drawImage(s.img,s.x-s.w/2,s.y-s.h/2,s.w,s.h)})}
+canvas.addEventListener('dragover',e=>e.preventDefault());canvas.addEventListener('drop',e=>{e.preventDefault();if(!dragItem)return;const r=canvas.getBoundingClientRect();placeSticker(dragItem,e.clientX-r.left,e.clientY-r.top)});
+canvas.addEventListener('pointerdown',e=>{if(!penOn)return;drawing=true;canvas.setPointerCapture(e.pointerId);lastPoint={x:e.offsetX,y:e.offsetY};ctx.beginPath();ctx.moveTo(lastPoint.x,lastPoint.y);ctx.strokeStyle='#fff';ctx.lineWidth=3;ctx.lineCap='round';ctx.lineJoin='round'});
+canvas.addEventListener('pointermove',e=>{if(!drawing)return;ctx.lineTo(e.offsetX,e.offsetY);ctx.stroke()});
+function stopDraw(){drawing=false;lastPoint=null}canvas.addEventListener('pointerup',stopDraw);canvas.addEventListener('pointercancel',stopDraw);
+pen.addEventListener('click',()=>{penOn=!penOn;pen.classList.toggle('active',penOn);canvas.style.cursor=penOn?'crosshair':'default'});
+clear.addEventListener('click',()=>{stickers=[];drawStickers();ctx.clearRect(0,0,canvas.clientWidth,canvas.clientHeight)});
+function setupRecognition(){const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR)throw Error('Speech recognition is not supported in this browser.');recognition=new SR();recognition.continuous=true;recognition.interimResults=true;recognition.lang=navigator.language||'en-US';recognition.onresult=e=>{let interim='';for(let i=e.resultIndex;i<e.results.length;i++){const t=e.results[i][0].transcript;if(e.results[i].isFinal){showWords(t,true);if(/[.!?]$/.test(t.trim())){clearTimeout(sentenceTimer);sentenceTimer=setTimeout(sentenceDone,1600)}}else interim+=t}if(interim)showWords(interim,false)};recognition.onerror=e=>{if(e.error==='not-allowed'||e.error==='service-not-allowed')stop();};recognition.onend=()=>{if(running){try{recognition.start()}catch(e){}}}}
+function stop(){running=false;try{recognition?.stop()}catch(e){}stream?.getTracks().forEach(t=>t.stop());screen.classList.remove('hidden');tools.hidden=true}
+start.addEventListener('click',async()=>{start.disabled=true;try{stream=await navigator.mediaDevices.getUserMedia({audio:true});setupRecognition();running=true;recognition.start();screen.classList.add('hidden');tools.hidden=false;resize()}catch(e){start.disabled=false;start.textContent='Play';alert(e.message||'Microphone access is needed to start.')}});
+window.addEventListener('pagehide',()=>{running=false;stream?.getTracks().forEach(t=>t.stop())});
+resize();
+})();
+</script>
+</body>
+</html>
