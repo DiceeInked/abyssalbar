@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#080a0a">
+<meta name="description" content="CUI Creator UI. Speak, draw, and shape a video in one workspace.">
+<title>CUI — Creator UI</title>
+<style>
+:root{color-scheme:dark;--bg:#080a0a;--panel:#101414;--panel2:#151b1b;--line:#26302f;--text:#f2f7f5;--muted:#8d9b98;--accent:#00ffc8;--accent-dim:#0b5548;--danger:#ff646e;--radius:16px}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+body{min-height:100vh;background:radial-gradient(ellipse at 50% -30%,#12352e 0%,transparent 48%),var(--bg)}
+button,input,textarea,select{font:inherit}
+button{color:inherit}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.topbar{height:66px;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 clamp(16px,3vw,38px);position:sticky;top:0;background:#080a0aeb;backdrop-filter:blur(16px);z-index:10}
+.brand{display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+.mark{width:30px;height:30px;border:1px solid var(--accent);border-radius:9px;display:grid;place-items:center;color:var(--accent);font-size:15px;font-weight:800;letter-spacing:-2px}
+.brand-name{font-weight:750;letter-spacing:.12em;font-size:13px}.brand-sub{color:var(--muted);font-size:10px;letter-spacing:.16em;margin-top:3px}
+.top-actions{display:flex;align-items:center;gap:10px}.status{display:flex;align-items:center;gap:7px;color:var(--muted);font-size:11px}.dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 12px #00ffc866}
+.btn{border:1px solid var(--line);background:var(--panel2);padding:9px 13px;border-radius:10px;cursor:pointer;font-size:12px;font-weight:650;transition:transform .18s,border-color .18s,background .18s}
+.btn:hover{border-color:#53645f;transform:translateY(-1px)}.btn.primary{background:var(--accent);color:#04110e;border-color:var(--accent)}.btn.primary:hover{background:#70ffe0}.btn.ghost{background:transparent}.btn:disabled{opacity:.38;cursor:not-allowed;transform:none}
+main{max-width:1500px;margin:auto;padding:30px clamp(14px,3vw,38px) 48px}
+.intro{display:flex;justify-content:space-between;align-items:end;gap:20px;margin-bottom:22px}.eyebrow{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--accent);font-weight:750}.intro h1{font-size:clamp(28px,4vw,44px);letter-spacing:-.055em;margin:8px 0 7px}.intro p{color:var(--muted);font-size:13px;max-width:570px;line-height:1.55;margin:0}.draft-tag{border:1px solid var(--line);border-radius:999px;padding:7px 11px;color:#a7b5b1;font-size:10px;white-space:nowrap}
+.workspace{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(280px,.8fr);gap:16px;align-items:start}
+.panel{background:linear-gradient(145deg,#111717,#0d1111);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;min-width:0}
+.panel-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line);gap:12px}.panel-title{font-size:12px;font-weight:750;letter-spacing:.02em}.panel-kicker{color:var(--muted);font-size:10px}
+.stage-wrap{padding:14px}.stage{position:relative;aspect-ratio:16/9;max-height:560px;min-height:250px;background:#030706;border:1px solid #293a35;border-radius:12px;overflow:hidden;display:grid;place-items:center}
+#stageCanvas{width:100%;height:100%;display:block;touch-action:none;cursor:crosshair}
+.stage-hint{position:absolute;left:18px;top:16px;pointer-events:none;color:#82918c;font-size:10px;letter-spacing:.1em;text-transform:uppercase}.stage-time{position:absolute;right:16px;top:14px;color:#9ba9a4;font:11px ui-monospace,monospace;pointer-events:none}
+.stage-tools{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:12px}.tool{padding:8px 10px;border:1px solid var(--line);border-radius:9px;background:#111818;color:#b6c2be;font-size:11px;cursor:pointer}.tool.active{border-color:var(--accent-dim);color:var(--accent);background:#0b211c}.tool:disabled{opacity:.4}
+.control-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px}.record-btn{display:flex;align-items:center;gap:8px}.record-dot{width:8px;height:8px;border-radius:50%;background:var(--danger);box-shadow:0 0 10px #ff646e77}.timer{margin-left:auto;font:12px ui-monospace,monospace;color:#b5c1bd}
+.side{display:grid;gap:16px}.field{padding:14px 16px}.field label{display:block;color:#b8c5c0;font-size:11px;font-weight:650;margin-bottom:8px}.field textarea,.field input,.field select{width:100%;background:#080d0c;border:1px solid var(--line);border-radius:10px;color:var(--text);padding:10px 11px;font-size:12px;resize:vertical}.field textarea{min-height:92px;line-height:1.5}.field input::placeholder,.field textarea::placeholder{color:#66736f}.field select{cursor:pointer}.field-note{font-size:10px;color:var(--muted);line-height:1.5;margin-top:7px}
+.mode-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:14px 16px}.mode{border:1px solid var(--line);border-radius:10px;padding:11px;background:#0b1010;text-align:left;cursor:pointer;min-height:66px}.mode strong{display:block;font-size:11px;margin-bottom:5px}.mode span{display:block;color:var(--muted);font-size:10px;line-height:1.35}.mode.active{border-color:var(--accent-dim);background:#0b211c}.mode.active strong{color:var(--accent)}
+.timeline{margin-top:16px}.timeline-body{padding:14px 16px}.track-label{display:flex;justify-content:space-between;color:var(--muted);font-size:10px;margin-bottom:8px}.track{height:12px;border-radius:6px;background:#080d0c;border:1px solid var(--line);overflow:hidden}.track-fill{height:100%;width:0;background:linear-gradient(90deg,#087c68,var(--accent));border-radius:6px;transition:width .2s}.events{display:flex;gap:6px;flex-wrap:wrap;margin-top:11px;min-height:18px}.event-chip{font-size:9px;color:#9eada7;background:#18201e;border:1px solid #2b3834;padding:4px 7px;border-radius:6px}
+.process{margin-top:16px;padding:14px 16px}.process-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}.process-top strong{font-size:11px}.process-top span{font-size:10px;color:var(--muted)}.progress{height:6px;background:#080d0c;border-radius:10px;overflow:hidden}.progress>span{display:block;width:0;height:100%;background:var(--accent);transition:width .25s}.process-message{font-size:10px;color:var(--muted);margin-top:8px;min-height:15px}
+.roadmap{margin-top:26px}.roadmap h2{font-size:15px;letter-spacing:-.02em;margin:0 0 12px}.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}.step{border:1px solid var(--line);background:#0d1211;border-radius:12px;padding:13px}.step small{color:var(--accent);font-size:9px;letter-spacing:.13em;text-transform:uppercase}.step h3{font-size:12px;margin:7px 0 5px}.step p{font-size:10px;color:var(--muted);line-height:1.5;margin:0}.step.current{border-color:#176f5e;background:linear-gradient(145deg,#10251f,#0d1211)}
+.footer{display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;color:#63716c;font-size:10px;margin-top:26px;padding-top:15px;border-top:1px solid var(--line)}.footer a{color:#9caaa5;text-decoration:none}.footer a:hover{color:var(--accent)}
+.modal{position:fixed;inset:0;background:#000b;display:none;place-items:center;padding:18px;z-index:20}.modal.open{display:grid}.modal-card{width:min(520px,100%);background:#101615;border:1px solid var(--line);border-radius:16px;padding:20px}.modal-card h2{font-size:18px;margin:0 0 8px}.modal-card p{color:var(--muted);font-size:12px;line-height:1.6}.modal-actions{display:flex;justify-content:end;gap:8px;margin-top:16px}
+@media(max-width:900px){.workspace{grid-template-columns:1fr}.side{grid-template-columns:repeat(2,minmax(0,1fr))}.side .panel:first-child{grid-row:span 2}}
+@media(max-width:620px){main{padding-top:22px}.intro{align-items:start;flex-direction:column}.side{grid-template-columns:1fr}.side .panel:first-child{grid-row:auto}.steps{grid-template-columns:1fr 1fr}.stage{min-height:210px}.topbar{height:58px}.status{display:none}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="../" aria-label="Back to Still homepage"><span class="mark">C</span><span><span class="brand-name">CUI</span><span class="brand-sub">CREATOR UI</span></span></a>
+  <div class="top-actions"><span class="status"><i class="dot"></i> LOCAL STUDIO</span><button class="btn ghost" id="helpBtn">Shortcuts</button><button class="btn" id="saveBtn">Save project</button></div>
+</header>
+<main>
+  <section class="intro">
+    <div><div class="eyebrow">Voice × Draw × Video</div><h1>Make the first cut<br>while you make the idea.</h1><p>Record your voice, sketch visual cues, and shape a video from one workspace. This first build focuses on a working local recording and drawing workflow.</p></div>
+    <span class="draft-tag">CREATOR WORKSPACE · EARLY BUILD</span>
+  </section>
+  <section class="workspace">
+    <div>
+      <section class="panel">
+        <div class="panel-head"><span class="panel-title">Live composition</span><span class="panel-kicker" id="canvasState">READY TO RECORD</span></div>
+        <div class="stage-wrap">
+          <div class="stage"><canvas id="stageCanvas" aria-label="Drawing and video composition canvas"></canvas><span class="stage-hint">Your canvas</span><span class="stage-time" id="clock">00:00</span></div>
+          <div class="stage-tools" role="toolbar" aria-label="Drawing tools">
+            <button class="tool active" data-tool="pen">✎ Pen</button><button class="tool" data-tool="highlighter">▨ Highlight</button><button class="tool" data-tool="arrow">↗ Arrow</button><button class="tool" data-tool="circle">◯ Circle</button><button class="tool" data-tool="text">T Text</button><button class="tool" data-tool="eraser">⌫ Eraser</button>
+            <button class="tool" id="undoBtn">↶ Undo</button><button class="tool" id="clearBtn">Clear</button>
+          </div>
+          <div class="control-row">
+            <button class="btn primary record-btn" id="recordBtn"><i class="record-dot"></i> Start recording</button>
+            <button class="btn" id="pauseBtn" disabled>Pause</button>
+            <button class="btn" id="finishBtn" disabled>Finish</button>
+            <button class="btn" id="playBtn" disabled>▶ Preview</button>
+            <span class="timer" id="timer">00:00.0</span>
+          </div>
+        </div>
+      </section>
+      <section class="panel timeline">
+        <div class="panel-head"><span class="panel-title">Session timeline</span><span class="panel-kicker" id="durationLabel">NO RECORDING YET</span></div>
+        <div class="timeline-body">
+          <div class="track-label"><span>Recording</span><span id="trackDuration">00:00</span></div><div class="track"><div class="track-fill" id="trackFill"></div></div>
+          <div class="events" id="eventList"><span class="event-chip">Drawing events will appear here</span></div>
+        </div>
+      </section>
+      <section class="panel process">
+        <div class="process-top"><strong>Build progress</strong><span id="progressLabel">Waiting for a recording</span></div><div class="progress"><span id="progressBar"></span></div><div class="process-message" id="progressMessage">Your recording stays in this browser in this prototype. No upload or AI processing is happening yet.</div>
+      </section>
+    </div>
+    <aside class="side">
+      <section class="panel">
+        <div class="panel-head"><span class="panel-title">Your narration</span><span class="panel-kicker">VOICE NOTES</span></div>
+        <div class="field"><label for="captionInput">On-screen caption</label><textarea id="captionInput" placeholder="Type a line to place it on the composition..."></textarea><div class="field-note">Caption changes appear in the canvas and are included in the recorded video.</div></div>
+        <div class="field" style="padding-top:0"><label for="transcriptInput">Transcript / scene notes</label><textarea id="transcriptInput" placeholder="Add a transcript or notes for this take..."></textarea><div class="field-note">Automatic speech transcription is planned for a later stage. You can add or correct text here for now.</div></div>
+      </section>
+      <section class="panel">
+        <div class="panel-head"><span class="panel-title">Editing style</span><span class="panel-kicker">SELECT A MODE</span></div>
+        <div class="mode-grid">
+          <button class="mode active" data-mode="sketch"><strong>Sketch-led</strong><span>Your marks lead the composition.</span></button>
+          <button class="mode" data-mode="captions"><strong>Captions</strong><span>Large, clean spoken-word cards.</span></button>
+          <button class="mode" data-mode="image"><strong>Image-led</strong><span>Reserved for visual discovery.</span></button>
+          <button class="mode" data-mode="montage"><strong>Montage</strong><span>Fast scene changes and rhythm.</span></button>
+        </div>
+        <div class="field" style="padding-top:0"><label for="ratioSelect">Video format</label><select id="ratioSelect"><option value="16:9">Landscape · 16:9</option><option value="9:16">Vertical · 9:16</option><option value="1:1">Square · 1:1</option></select><div class="field-note">The canvas preview adapts to your chosen format.</div></div>
+      </section>
+      <section class="panel">
+        <div class="panel-head"><span class="panel-title">Quick controls</span><span class="panel-kicker">KEYBOARD</span></div>
+        <div class="field"><div class="field-note" style="margin:0;display:grid;grid-template-columns:1fr auto;gap:9px"><span>Start / stop</span><kbd>R</kbd><span>Pause / resume</span><kbd>Space</kbd><span>Pen tool</span><kbd>D</kbd><span>Eraser</span><kbd>E</kbd><span>Undo</span><kbd>Ctrl / ⌘ Z</kbd><span>Finish take</span><kbd>Enter</kbd></div></div>
+      </section>
+    </aside>
+  </section>
+  <section class="roadmap"><h2>Where CUI is going</h2><div class="steps">
+    <article class="step current"><small>Stage 01 · Current</small><h3>Creator workspace</h3><p>Browser recording, drawing tools, keyboard shortcuts, synchronized visual capture, and local video export.</p></article>
+    <article class="step"><small>Stage 02</small><h3>Speech intelligence</h3><p>Speech transcription, word timing, sentence detection, and linking sketches to spoken moments.</p></article>
+    <article class="step"><small>Stage 03</small><h3>Automatic editing</h3><p>Licensed image discovery, scene planning, editing modes, animated captions, and visual matching.</p></article>
+    <article class="step"><small>Stage 04</small><h3>Render & refine</h3><p>Backend rendering, genuine job progress, editable preview, project storage, and polished exports.</p></article>
+  </div></section>
+  <footer class="footer"><span>CUI · CREATOR UI <span style="color:#3e4b46">/</span> An evolving creator tool</span><a href="../">Back to Still</a></footer>
+</main>
+<div class="modal" id="helpModal" role="dialog" aria-modal="true" aria-labelledby="helpTitle"><div class="modal-card"><h2 id="helpTitle">Keyboard shortcuts</h2><p><b>R</b> starts or finishes a take. <b>Space</b> pauses or resumes. <b>D</b> selects the pen. <b>E</b> selects the eraser. <b>H</b> selects the highlighter. <b>Ctrl/⌘ + Z</b> undoes the last drawing. <b>Enter</b> finishes a recording. Shortcuts are disabled while typing in text fields.</p><div class="modal-actions"><button class="btn primary" id="closeHelp">Got it</button></div></div></div>
+<script>
+(()=>{
+const $=id=>document.getElementById(id);
+const canvas=$('stageCanvas'),ctx=canvas.getContext('2d');
+const state={recording:false,paused:false,startedAt:0,elapsed:0,raf:0,stream:null,mic:null,recorder:null,chunks:[],blob:null,url:null,events:[],strokes:[],current:null,tool:'pen',mode:'sketch',caption:'',ratio:'16:9',recognition:null};
+let cw=1280,ch=720,dpr=1;
+function resize(){
+ const rect=canvas.getBoundingClientRect();dpr=Math.min(devicePixelRatio||1,2);
+ const ratio=state.ratio.split(':').map(Number);let w=rect.width,h=rect.height;
+ if(w/h>ratio[0]/ratio[1])w=h*ratio[0]/ratio[1];else h=w*ratio[1]/ratio[0];
+ cw=Math.max(320,Math.round(w*2));ch=Math.max(320,Math.round(h*2));
+ canvas.width=cw;canvas.height=ch;render();
+}
+function elapsed(){return state.elapsed+(state.recording&&!state.paused?(performance.now()-state.startedAt)/1000:0)}
+function stamp(t){const m=Math.floor(t/60),s=Math.floor(t%60),d=Math.floor((t%1)*10);return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0')+'.'+d}
+function render(){
+ ctx.clearRect(0,0,cw,ch);ctx.fillStyle='#050908';ctx.fillRect(0,0,cw,ch);
+ const g=ctx.createRadialGradient(cw*.5,ch*.42,10,cw*.5,ch*.5,cw*.75);g.addColorStop(0,'#10241f');g.addColorStop(1,'#050908');ctx.fillStyle=g;ctx.fillRect(0,0,cw,ch);
+ ctx.strokeStyle='rgba(0,255,200,.075)';ctx.lineWidth=1;for(let x=0;x<cw;x+=cw/16){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,ch);ctx.stroke()}for(let y=0;y<ch;y+=ch/9){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(cw,y);ctx.stroke()}
+ for(const s of state.strokes)drawStroke(s);if(state.current)drawStroke(state.current);
+ const cap=state.caption.trim();if(cap){ctx.save();ctx.textAlign='center';ctx.textBaseline='bottom';const maxW=cw*.82;let size=Math.min(cw*.055,54);ctx.font='700 '+size+'px system-ui';while(ctx.measureText(cap).width>maxW&&size>16){size-=2;ctx.font='700 '+size+'px system-ui'}ctx.lineWidth=Math.max(4,size*.13);ctx.lineJoin='round';ctx.strokeStyle='#07100e';ctx.fillStyle='#f4fffc';const lines=wrap(cap,maxW);lines.forEach((line,i)=>{const y=ch*.88-(lines.length-1-i)*(size*1.18);ctx.strokeText(line,cw/2,y);ctx.fillText(line,cw/2,y)});ctx.restore()}
+ ctx.save();ctx.fillStyle='rgba(0,255,200,.72)';ctx.font='600 17px system-ui';ctx.fillText('CUI  /  CREATOR UI',36,42);ctx.fillStyle='rgba(220,245,237,.38)';ctx.font='13px ui-monospace';ctx.fillText(state.mode.toUpperCase()+'  ·  '+state.ratio,36,66);ctx.restore();
+}
+function wrap(text,max){const words=text.split(/\s+/),lines=[];let line='';for(const word of words){const test=line?line+' '+word:word;if(ctx.measureText(test).width>max&&line){lines.push(line);line=word}else line=test}if(line)lines.push(line);return lines.slice(-3)}
+function drawStroke(s){
+ if(!s||!s.points||!s.points.length)return;ctx.save();ctx.globalCompositeOperation=s.tool==='eraser'?'destination-out':'source-over';ctx.strokeStyle=s.tool==='highlighter'?'rgba(0,255,200,.25)':s.color||'#00ffc8';ctx.fillStyle=s.color||'#00ffc8';ctx.lineWidth=s.tool==='highlighter'?Math.max(18,s.size*3):s.tool==='eraser'?s.size*3:s.size;ctx.lineCap='round';ctx.lineJoin='round';
+ const p=s.points.map(q=>({x:q.x*cw,y:q.y*ch}));
+ if(s.tool==='circle'){const a=p[0],b=p[p.length-1]||a;ctx.beginPath();ctx.ellipse((a.x+b.x)/2,(a.y+b.y)/2,Math.max(2,Math.abs(b.x-a.x)/2),Math.max(2,Math.abs(b.y-a.y)/2),0,0,Math.PI*2);ctx.stroke()}
+ else if(s.tool==='arrow'){const a=p[0],b=p[p.length-1]||a,ang=Math.atan2(b.y-a.y,b.x-a.x),head=22;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.moveTo(b.x,b.y);ctx.lineTo(b.x-head*Math.cos(ang-.48),b.y-head*Math.sin(ang-.48));ctx.moveTo(b.x,b.y);ctx.lineTo(b.x-head*Math.cos(ang+.48),b.y-head*Math.sin(ang+.48));ctx.stroke()}
+ else {ctx.beginPath();ctx.moveTo(p[0].x,p[0].y);for(let i=1;i<p.length;i++)ctx.lineTo(p[i].x,p[i].y);if(p.length===1){ctx.lineTo(p[0].x+.1,p[0].y+.1)}ctx.stroke()}
+ ctx.restore();
+}
+function pointerPos(e){const r=canvas.getBoundingClientRect();return{x:(e.clientX-r.left)/r.width,y:(e.clientY-r.top)/r.height}}
+canvas.addEventListener('pointerdown',e=>{if(state.tool==='text'){const text=prompt('Text to add to this scene:');if(text){state.caption=text;$('captionInput').value=text;recordEvent('Text note added')}render();return}const p=pointerPos(e);state.current={tool:state.tool,points:[p],color:'#00ffc8',size:Math.max(2,cw*.0024),at:elapsed()};canvas.setPointerCapture(e.pointerId);e.preventDefault()});
+canvas.addEventListener('pointermove',e=>{if(!state.current)return;state.current.points.push(pointerPos(e));render()});
+function finishStroke(){if(!state.current)return;state.strokes.push(state.current);recordEvent('Drawing · '+state.current.tool);state.current=null;render();updateEvents()}
+canvas.addEventListener('pointerup',finishStroke);canvas.addEventListener('pointercancel',finishStroke);
+function recordEvent(label){state.events.push({at:elapsed(),label});updateEvents()}
+function updateEvents(){$('eventList').innerHTML='';const items=state.events.slice(-8);if(!items.length){$('eventList').innerHTML='<span class="event-chip">Drawing events will appear here</span>';return}for(const e of items){const el=document.createElement('span');el.className='event-chip';el.textContent=stamp(e.at)+' · '+e.label;$('eventList').append(el)}}
+function setTool(tool){state.tool=tool;document.querySelectorAll('[data-tool]').forEach(b=>b.classList.toggle('active',b.dataset.tool===tool))}
+document.querySelectorAll('[data-tool]').forEach(b=>b.addEventListener('click',()=>setTool(b.dataset.tool)));
+$('undoBtn').onclick=()=>{state.strokes.pop();recordEvent('Undo');render()};
+$('clearBtn').onclick=()=>{if(!state.strokes.length)return;state.strokes=[];recordEvent('Canvas cleared');render()};
+document.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click',()=>{state.mode=b.dataset.mode;document.querySelectorAll('[data-mode]').forEach(x=>x.classList.toggle('active',x===b));recordEvent('Mode · '+b.dataset.mode);render()}));
+$('captionInput').addEventListener('input',e=>{state.caption=e.target.value;render()});
+$('ratioSelect').addEventListener('change',e=>{state.ratio=e.target.value;resize();recordEvent('Format · '+state.ratio)});
+function setProgress(p,label,msg){$('progressBar').style.width=p+'%';$('progressLabel').textContent=label;$('progressMessage').textContent=msg}
+function tick(){if(!state.recording)return;const t=elapsed();$('timer').textContent=stamp(t);$('clock').textContent=stamp(t);$('trackDuration').textContent=stamp(t);$('trackFill').style.width=Math.min(100,t/180*100)+'%';$('canvasState').textContent=state.paused?'PAUSED':'RECORDING';state.raf=requestAnimationFrame(tick)}
+async function startRecording(){
+ if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder){alert('This browser does not support local audio/video recording. Try a recent version of Chrome, Edge, or Safari over HTTPS.');return}
+ try{
+  state.mic=await navigator.mediaDevices.getUserMedia({audio:true});
+  const video=canvas.captureStream(30),audioCtx=new AudioContext(),source=audioCtx.createMediaStreamSource(state.mic),dest=audioCtx.createMediaStreamDestination();source.connect(dest);
+  state.stream=new MediaStream([...video.getVideoTracks(),...dest.stream.getAudioTracks()]);
+  const mime=['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'].find(x=>MediaRecorder.isTypeSupported(x));
+  state.recorder=new MediaRecorder(state.stream,mime?{mimeType:mime}:undefined);state.chunks=[];
+  state.recorder.ondataavailable=e=>{if(e.data.size)state.chunks.push(e.data)};
+  state.recorder.onstop=async()=>{setProgress(55,'Finalizing recording','The browser has finished encoding the captured canvas and microphone track.');state.blob=new Blob(state.chunks,{type:state.recorder.mimeType||'video/webm'});if(state.url)URL.revokeObjectURL(state.url);state.url=URL.createObjectURL(state.blob);$('playBtn').disabled=false;$('durationLabel').textContent='TAKE READY · '+stamp(state.elapsed);$('canvasState').textContent='TAKE READY';$('recordBtn').disabled=false;$('recordBtn').innerHTML='<i class="record-dot"></i> Record another take';$('pauseBtn').disabled=true;$('finishBtn').disabled=true;setProgress(100,'Ready to preview','Your local video is ready. Use Preview or download the WebM file. No AI-generated scenes have been added in this prototype.');state.stream?.getTracks().forEach(t=>t.stop());state.mic?.getTracks().forEach(t=>t.stop());await audioCtx.close();};
+  state.recorder.start(250);state.recording=true;state.paused=false;state.elapsed=0;state.startedAt=performance.now();$('recordBtn').disabled=true;$('pauseBtn').disabled=false;$('finishBtn').disabled=false;$('durationLabel').textContent='RECORDING';$('playBtn').disabled=true;setProgress(0,'Recording in progress','Live canvas and microphone are being captured locally.');tick();
+ }catch(err){console.error(err);alert('Microphone access was not available. Check browser permissions and try again.')}
+}
+function pauseRecording(){if(!state.recording||!state.recorder)return;if(state.paused){state.recorder.resume();state.startedAt=performance.now();state.paused=false;$('pauseBtn').textContent='Pause';tick()}else{state.recorder.pause();state.elapsed=elapsed();state.paused=true;$('pauseBtn').textContent='Resume'}$('canvasState').textContent=state.paused?'PAUSED':'RECORDING'}
+function finishRecording(){if(!state.recording||!state.recorder)return;state.elapsed=elapsed();state.recording=false;state.paused=false;cancelAnimationFrame(state.raf);$('timer').textContent=stamp(state.elapsed);$('trackDuration').textContent=stamp(state.elapsed);$('trackFill').style.width='100%';$('recordBtn').disabled=true;setProgress(35,'Finishing take','Waiting for the browser recorder to close the video file.');state.recorder.stop()}
+$('recordBtn').onclick=()=>{if(state.recording)return;startRecording()};
+$('pauseBtn').onclick=pauseRecording;$('finishBtn').onclick=finishRecording;
+$('playBtn').onclick=()=>{if(!state.url)return;const a=document.createElement('a');a.href=state.url;a.download='cui-take.webm';a.click()};
+$('saveBtn').onclick=()=>{const project={format:'CUI project v1',ratio:state.ratio,mode:state.mode,caption:state.caption,transcript:$('transcriptInput').value,events:state.events,strokes:state.strokes,created:new Date().toISOString()};const blob=new Blob([JSON.stringify(project,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='cui-project.json';a.click();URL.revokeObjectURL(url);setProgress(100,'Project saved','Your editable drawing and event data has been downloaded as JSON. The recording video is downloaded separately with Preview.')};
+$('helpBtn').onclick=()=>$('helpModal').classList.add('open');$('closeHelp').onclick=()=>$('helpModal').classList.remove('open');$('helpModal').addEventListener('click',e=>{if(e.target===$('helpModal'))$('helpModal').classList.remove('open')});
+window.addEventListener('keydown',e=>{if($('helpModal').classList.contains('open')){if(e.key==='Escape')$('helpModal').classList.remove('open');return}if(['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName))return;if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();$('undoBtn').click();return}if(e.key==='r'||e.key==='R'){e.preventDefault();if(state.recording)finishRecording();else startRecording()}if(e.code==='Space'){e.preventDefault();pauseRecording()}if(e.key==='Enter'&&state.recording){e.preventDefault();finishRecording()}if(e.key.toLowerCase()==='d')setTool('pen');if(e.key.toLowerCase()==='e')setTool('eraser');if(e.key.toLowerCase()==='h')setTool('highlighter')});
+window.addEventListener('beforeunload',e=>{if(state.recording){e.preventDefault();e.returnValue=''}});
+new ResizeObserver(resize).observe(canvas);resize();render();
+})();
+</script>
+</body>
+</html>
