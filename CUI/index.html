@@ -87,7 +87,7 @@ main{max-width:1500px;margin:auto;padding:30px clamp(14px,3vw,38px) 48px}
       <section class="panel">
         <div class="panel-head"><span class="panel-title">Your narration</span><span class="panel-kicker">VOICE NOTES</span></div>
         <div class="field"><label for="captionInput">On-screen caption</label><textarea id="captionInput" placeholder="Type a line to place it on the composition..."></textarea><div class="field-note">Caption changes appear in the canvas and are included in the recorded video.</div></div>
-        <div class="field" style="padding-top:0"><label for="transcriptInput">Transcript / scene notes</label><textarea id="transcriptInput" placeholder="Add a transcript or notes for this take..."></textarea><div class="field-note">Live speech recognition is available in supported browsers. Click a sentence cue to attach your next drawing to that moment.</div><div class="transcript-tools"><button class="btn" id="transcribeBtn">Start speech recognition</button><button class="btn" id="clearTranscriptBtn">Clear transcript</button></div><div class="live-interim" id="interimText"></div><div class="sentence-list" id="sentenceList"></div></div>
+        <div class="field" style="padding-top:0"><label for="transcriptInput">Transcript / scene notes</label><textarea id="transcriptInput" placeholder="Add a transcript or notes for this take..."></textarea><div class="field-note">Live speech recognition is available in supported browsers. Sentence timestamps mark when recognition returns each phrase, not exact word boundaries. Click a sentence cue to attach your next drawing to that moment.</div><div class="transcript-tools"><button class="btn" id="transcribeBtn">Start speech recognition</button><button class="btn" id="clearTranscriptBtn">Clear transcript</button></div><div class="live-interim" id="interimText"></div><div class="sentence-list" id="sentenceList"></div></div>
       </section>
       <section class="panel">
         <div class="panel-head"><span class="panel-title">Editing style</span><span class="panel-kicker">SELECT A MODE</span></div>
@@ -106,8 +106,8 @@ main{max-width:1500px;margin:auto;padding:30px clamp(14px,3vw,38px) 48px}
     </aside>
   </section>
   <section class="roadmap"><h2>Where CUI is going</h2><div class="steps">
-    <article class="step current"><small>Stage 01 · Current</small><h3>Creator workspace</h3><p>Browser recording, drawing tools, keyboard shortcuts, synchronized visual capture, and local video export.</p></article>
-    <article class="step"><small>Stage 02</small><h3>Speech intelligence</h3><p>Speech transcription, word timing, sentence detection, and linking sketches to spoken moments.</p></article>
+    <article class="step"><small>Stage 01 · Complete</small><h3>Creator workspace</h3><p>Browser recording, drawing tools, keyboard shortcuts, synchronized visual capture, and local video export.</p></article>
+    <article class="step current"><small>Stage 02 · In progress</small><h3>Speech intelligence</h3><p>Browser speech recognition, sentence cues, transcript editing, and linking sketches to spoken moments. Precise word alignment comes later.</p></article>
     <article class="step"><small>Stage 03</small><h3>Automatic editing</h3><p>Licensed image discovery, scene planning, editing modes, animated captions, and visual matching.</p></article>
     <article class="step"><small>Stage 04</small><h3>Render & refine</h3><p>Backend rendering, genuine job progress, editable preview, project storage, and polished exports.</p></article>
   </div></section>
@@ -184,7 +184,7 @@ async function startRecording(){
   state.recorder.start(250);state.recording=true;startSpeech();state.paused=false;state.elapsed=0;state.startedAt=performance.now();$('recordBtn').disabled=true;$('pauseBtn').disabled=false;$('finishBtn').disabled=false;$('durationLabel').textContent='RECORDING';$('playBtn').disabled=true;setProgress(0,'Recording in progress','Live canvas and microphone are being captured locally.');tick();
  }catch(err){console.error(err);alert('Microphone access was not available. Check browser permissions and try again.')}
 }
-function pauseRecording(){if(!state.recording||!state.recorder)return;if(state.paused){state.recorder.resume();state.startedAt=performance.now();state.paused=false;$('pauseBtn').textContent='Pause';tick()}else{state.recorder.pause();state.elapsed=elapsed();state.paused=true;$('pauseBtn').textContent='Resume'}$('canvasState').textContent=state.paused?'PAUSED':'RECORDING'}
+function pauseRecording(){if(!state.recording||!state.recorder)return;if(state.paused){state.recorder.resume();state.startedAt=performance.now();state.paused=false;$('pauseBtn').textContent='Pause';startSpeech();tick()}else{state.recorder.pause();state.elapsed=elapsed();state.paused=true;stopSpeech();$('pauseBtn').textContent='Resume'}$('canvasState').textContent=state.paused?'PAUSED':'RECORDING'}
 function finishRecording(){if(!state.recording||!state.recorder)return;stopSpeech();state.elapsed=elapsed();state.recording=false;state.paused=false;cancelAnimationFrame(state.raf);$('timer').textContent=stamp(state.elapsed);$('trackDuration').textContent=stamp(state.elapsed);$('trackFill').style.width='100%';$('recordBtn').disabled=true;setProgress(35,'Finishing take','Waiting for the browser recorder to close the video file.');state.recorder.stop()}
 $('recordBtn').onclick=()=>{if(state.recording)return;startRecording()};
 $('pauseBtn').onclick=pauseRecording;$('finishBtn').onclick=finishRecording;
