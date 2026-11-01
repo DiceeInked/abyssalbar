@@ -67,7 +67,7 @@ main{max-width:1500px;margin:auto;padding:30px clamp(14px,3vw,38px) 48px}
             <button class="btn primary record-btn" id="recordBtn"><i class="record-dot"></i> Start recording</button>
             <button class="btn" id="pauseBtn" disabled>Pause</button>
             <button class="btn" id="finishBtn" disabled>Finish</button>
-            <button class="btn" id="playBtn" disabled>▶ Preview</button>
+            <button class="btn" id="playBtn" disabled>▶ Preview take</button>
             <span class="timer" id="timer">00:00.0</span>
           </div>
         </div>
@@ -114,6 +114,7 @@ main{max-width:1500px;margin:auto;padding:30px clamp(14px,3vw,38px) 48px}
   <footer class="footer"><span>CUI · CREATOR UI <span style="color:#3e4b46">/</span> An evolving creator tool</span><a href="../">Back to Still</a></footer>
 </main>
 <div class="modal" id="helpModal" role="dialog" aria-modal="true" aria-labelledby="helpTitle"><div class="modal-card"><h2 id="helpTitle">Keyboard shortcuts</h2><p><b>R</b> starts or finishes a take. <b>Space</b> pauses or resumes. <b>D</b> selects the pen. <b>E</b> selects the eraser. <b>H</b> selects the highlighter. <b>Ctrl/⌘ + Z</b> undoes the last drawing. <b>Enter</b> finishes a recording. Shortcuts are disabled while typing in text fields.</p><div class="modal-actions"><button class="btn primary" id="closeHelp">Got it</button></div></div></div>
+<div class="modal" id="previewModal" role="dialog" aria-modal="true" aria-labelledby="previewTitle"><div class="modal-card" style="width:min(900px,100%)"><h2 id="previewTitle">Your recorded take</h2><video id="previewVideo" controls playsinline style="display:block;width:100%;max-height:65vh;background:#000;border-radius:10px;margin-top:12px"></video><div class="modal-actions"><button class="btn" id="closePreview">Close</button><button class="btn primary" id="downloadTake">Download WebM</button></div></div></div>
 <script>
 (()=>{
 const $=id=>document.getElementById(id);
@@ -159,7 +160,7 @@ $('undoBtn').onclick=()=>{state.strokes.pop();recordEvent('Undo');render()};
 $('clearBtn').onclick=()=>{if(!state.strokes.length)return;state.strokes=[];recordEvent('Canvas cleared');render()};
 document.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click',()=>{state.mode=b.dataset.mode;document.querySelectorAll('[data-mode]').forEach(x=>x.classList.toggle('active',x===b));recordEvent('Mode · '+b.dataset.mode);render()}));
 $('captionInput').addEventListener('input',e=>{state.caption=e.target.value;render()});
-$('ratioSelect').addEventListener('change',e=>{state.ratio=e.target.value;resize();recordEvent('Format · '+state.ratio)});
+$('ratioSelect').addEventListener('change',e=>{state.ratio=e.target.value;document.querySelector('.stage').style.aspectRatio=state.ratio.replace(':',' / ');resize();recordEvent('Format · '+state.ratio)});
 function setProgress(p,label,msg){$('progressBar').style.width=p+'%';$('progressLabel').textContent=label;$('progressMessage').textContent=msg}
 function tick(){if(!state.recording)return;const t=elapsed();$('timer').textContent=stamp(t);$('clock').textContent=stamp(t);$('trackDuration').textContent=stamp(t);$('trackFill').style.width=Math.min(100,t/180*100)+'%';$('canvasState').textContent=state.paused?'PAUSED':'RECORDING';state.raf=requestAnimationFrame(tick)}
 async function startRecording(){
@@ -179,7 +180,7 @@ function pauseRecording(){if(!state.recording||!state.recorder)return;if(state.p
 function finishRecording(){if(!state.recording||!state.recorder)return;state.elapsed=elapsed();state.recording=false;state.paused=false;cancelAnimationFrame(state.raf);$('timer').textContent=stamp(state.elapsed);$('trackDuration').textContent=stamp(state.elapsed);$('trackFill').style.width='100%';$('recordBtn').disabled=true;setProgress(35,'Finishing take','Waiting for the browser recorder to close the video file.');state.recorder.stop()}
 $('recordBtn').onclick=()=>{if(state.recording)return;startRecording()};
 $('pauseBtn').onclick=pauseRecording;$('finishBtn').onclick=finishRecording;
-$('playBtn').onclick=()=>{if(!state.url)return;const a=document.createElement('a');a.href=state.url;a.download='cui-take.webm';a.click()};
+$('playBtn').onclick=()=>{if(!state.url)return;$('previewVideo').src=state.url;$('previewModal').classList.add('open');$('previewVideo').play().catch(()=>{})};$('closePreview').onclick=()=>{$('previewVideo').pause();$('previewModal').classList.remove('open')};$('downloadTake').onclick=()=>{if(!state.url)return;const a=document.createElement('a');a.href=state.url;a.download='cui-take.webm';a.click()};$('previewModal').addEventListener('click',e=>{if(e.target===$('previewModal')){$('previewVideo').pause();$('previewModal').classList.remove('open')}});
 $('saveBtn').onclick=()=>{const project={format:'CUI project v1',ratio:state.ratio,mode:state.mode,caption:state.caption,transcript:$('transcriptInput').value,events:state.events,strokes:state.strokes,created:new Date().toISOString()};const blob=new Blob([JSON.stringify(project,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='cui-project.json';a.click();URL.revokeObjectURL(url);setProgress(100,'Project saved','Your editable drawing and event data has been downloaded as JSON. The recording video is downloaded separately with Preview.')};
 $('helpBtn').onclick=()=>$('helpModal').classList.add('open');$('closeHelp').onclick=()=>$('helpModal').classList.remove('open');$('helpModal').addEventListener('click',e=>{if(e.target===$('helpModal'))$('helpModal').classList.remove('open')});
 window.addEventListener('keydown',e=>{if($('helpModal').classList.contains('open')){if(e.key==='Escape')$('helpModal').classList.remove('open');return}if(['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName))return;if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();$('undoBtn').click();return}if(e.key==='r'||e.key==='R'){e.preventDefault();if(state.recording)finishRecording();else startRecording()}if(e.code==='Space'){e.preventDefault();pauseRecording()}if(e.key==='Enter'&&state.recording){e.preventDefault();finishRecording()}if(e.key.toLowerCase()==='d')setTool('pen');if(e.key.toLowerCase()==='e')setTool('eraser');if(e.key.toLowerCase()==='h')setTool('highlighter')});
