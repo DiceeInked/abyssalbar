@@ -185,7 +185,7 @@ async function startRecording(){
  try{
   const audioCtx=captureContext=new AudioContext();await audioCtx.resume();
   state.mic=await navigator.mediaDevices.getUserMedia({audio:true});
-  const video=canvas.captureStream(30),source=audioCtx.createMediaStreamSource(state.mic),dest=audioCtx.createMediaStreamDestination();source.connect(dest);
+  const video=canvas.captureStream(30),source=audioCtx.createMediaStreamSource(state.mic),dest=audioCtx.createMediaStreamDestination();source.connect(dest);await audioCtx.resume();if(audioCtx.state!=='running')throw new Error('The browser audio context did not start.');
   state.stream=new MediaStream([...video.getVideoTracks(),...dest.stream.getAudioTracks()]);
   const mime=['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'].find(x=>MediaRecorder.isTypeSupported(x));
   state.recorder=new MediaRecorder(state.stream,mime?{mimeType:mime}:undefined);state.chunks=[];
