@@ -84,7 +84,7 @@ main{max-width:1500px;margin:auto;padding:30px clamp(14px,3vw,38px) 48px}
         <div class="scene-actions"><button class="btn primary" id="buildScenesBtn">Build scenes from narration</button><button class="btn" id="renderBtn" disabled>Render first cut</button><button class="btn" id="finalPreviewBtn" disabled>Preview first cut</button><button class="btn" id="creditsBtn" disabled>Download credits</button></div>
         <div class="scene-status" id="sceneStatus">Finish a recording with a transcript, then build a scene plan. CUI extracts topic keywords, searches Wikimedia Commons, displays license details, and picks a starting image. Search is paced to respect Commons limits.</div>
         <div class="scene-grid" id="sceneGrid"><div class="scene-empty">Your generated scenes will appear here.</div></div>
-        <div class="scene-footer"><span>Images are selected from Wikimedia Commons. Review each source and license before publishing.</span><span id="sceneCount">0 scenes</span></div>
+        <div class="scene-footer"><span>Scene timing starts as sentence-length estimates, not word-perfect sync. Adjust the start/end values, and review each image source and license before publishing.</span><span id="sceneCount">0 scenes</span></div>
       </section>
       <section class="panel process">
         <div class="process-top"><strong>Build progress</strong><span id="progressLabel">Waiting for a recording</span></div><div class="progress"><span id="progressBar"></span></div><div class="process-message" id="progressMessage">Your recording stays in this browser in this prototype. Speech recognition runs only where the browser supports it; no AI scene generation is connected yet.</div>
