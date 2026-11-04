@@ -85,17 +85,22 @@ textarea:focus-visible, .type-button:focus-visible, .download:focus-visible {
         transform .45s cubic-bezier(.2,.8,.2,1),
         border-radius .45s cubic-bezier(.2,.8,.2,1);
 }
-.type-button:hover { background: var(--white); color: var(--black); border-radius: 12px; transform: translateY(-3px) scale(1.035); }\n.type-button:active { transform: scale(.91); }
-.type-button.selected { background: var(--white); color: var(--black); border-radius: 12px; transform: scale(1.035); }
-.icon-stage { position: relative; width: 21px; height: 21px; display: grid; place-items: center; pointer-events: none; }
-.icon-stage svg, .download svg { position: absolute; width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; transition: opacity .42s cubic-bezier(.22,1,.36,1), transform .62s cubic-bezier(.22,1,.36,1), filter .42s cubic-bezier(.22,1,.36,1); }
-.icon-stage .base-icon { opacity: 1; transform: translateY(0) rotate(0) scale(1); filter: blur(0); }
-.icon-stage .arrow-icon { opacity: 0; transform: translate(-7px,5px) rotate(-35deg) scale(.35); filter: blur(3px); }
-.type-button.selected .base-icon { opacity: 0; transform: translate(7px,-5px) rotate(35deg) scale(.35); filter: blur(3px); }
-.type-button.selected .arrow-icon { opacity: 1; transform: translate(0) rotate(0) scale(1); filter: blur(0); }
-.type-button.selected .icon-stage { animation: arrow-arrive .62s cubic-bezier(.22,1,.36,1) both; }
-.type-button:hover:not(.selected) .base-icon { transform: translateY(-2px) scale(1.12); }
-.type-button.selected:hover .arrow-icon { transform: translateX(2px) scale(1.04); }
+.type-button:hover { background: var(--white); color: var(--black); border-radius: 12px; transform: translateY(-2px); }\n.type-button:active { transform: scale(.96); }
+.type-button.selected { background: var(--white); color: var(--black); border-radius: 12px; }
+.icon-stage { width: 21px; height: 21px; display: grid; place-items: center; pointer-events: none; }
+.icon-stage svg { width: 21px; height: 21px; overflow: visible; fill: none; stroke: currentColor; stroke-width: 1.65; stroke-linecap: round; stroke-linejoin: round; }
+.icon-stage svg path, .icon-stage svg rect, .icon-stage svg circle, .icon-stage svg polyline, .icon-stage svg line { stroke-dasharray: 90; stroke-dashoffset: 0; }
+.type-button .icon-stage { transform: scale(1); transition: transform .35s cubic-bezier(.2,.8,.2,1); }
+.type-button:hover .icon-stage { transform: scale(1.08); }
+.type-button.selected .icon-stage { animation: mark-in .48s cubic-bezier(.16,1.4,.3,1) both; }
+.type-button.selected .icon-stage svg path,
+.type-button.selected .icon-stage svg rect,
+.type-button.selected .icon-stage svg circle,
+.type-button.selected .icon-stage svg polyline,
+.type-button.selected .icon-stage svg line { animation: draw-in .42s cubic-bezier(.16,1,.3,1) both; }
+.type-button.selected .icon-stage svg > *:nth-child(2) { animation-delay: .055s; }
+.type-button.selected .icon-stage svg > *:nth-child(3) { animation-delay: .11s; }
+.type-button.selected .icon-stage svg > *:nth-child(4) { animation-delay: .16s; }
 .type-button .tiny-label {
     position: absolute;
     width: 1px;
@@ -119,13 +124,13 @@ textarea:focus-visible, .type-button:focus-visible, .download:focus-visible {
     background: transparent;
     color: var(--white);
     cursor: pointer;
-    transition: background .55s cubic-bezier(.22,1,.36,1), color .55s cubic-bezier(.22,1,.36,1), transform .65s cubic-bezier(.22,1,.36,1), border-radius .65s cubic-bezier(.22,1,.36,1), opacity .4s ease;\n    -webkit-tap-highlight-color: transparent;
+    transition: background .3s, color .3s, transform .3s, opacity .3s;
 }
 .download:hover:enabled { background: var(--white); color: var(--black); transform: translateY(-3px) scale(1.06); }
 .download:active:enabled { transform: scale(.9); }
-.download:disabled { opacity: .3; cursor: default; }\n.download.success { background: var(--white); color: var(--black); transform: rotate(8deg) scale(1.08); }
-.download svg { width: 22px; height: 22px; }
-.download.success svg { animation: download-confirm .55s cubic-bezier(.22,1,.36,1) both; }\n@keyframes download-confirm { 0% { opacity: 0; transform: translateY(7px) rotate(-35deg) scale(.45); } 65% { opacity: 1; transform: translateY(-1px) rotate(8deg) scale(1.12); } 100% { opacity: 1; transform: translateY(0) rotate(0) scale(1); } }
+.download:disabled { opacity: .3; cursor: default; }\n.download.success { background: var(--white); color: var(--black); transform: scale(1.04); }
+.download svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 90; stroke-dashoffset: 0; }
+.download.success svg { animation: download-draw .42s cubic-bezier(.16,1,.3,1) both; }\n@keyframes download-draw { from { stroke-dashoffset: 90; } to { stroke-dashoffset: 0; } }
 .type-name { min-height: 1.4em; margin: 10px 0 0; color: #888; font-size: 10px; letter-spacing: .16em; }
 @keyframes appear {
     from { opacity: 0; transform: translateY(12px) scale(.97); filter: blur(8px); }
@@ -162,28 +167,28 @@ textarea:focus-visible, .type-button:focus-visible, .download:focus-visible {
 
     <div class="file-types" role="group" aria-label="Choose file type">
         <button class="type-button selected" type="button" data-type="txt" aria-label="TXT file" title="TXT">
-            <span class="icon-stage" aria-hidden="true"><svg class="base-icon" viewBox="0 0 24 24"><g><path d="M6 3.5h8l4 4V20.5H6z"/><path d="M14 3.5v4h4M9 12h6M9 15.5h6"/></g></svg><svg class="arrow-icon" viewBox="0 0 24 24"><path d="M4 12h15m-6-6 6 6-6 6"/></svg></span>
+            <span class="icon-stage" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 3.5h8l4 4v13H6z"/><path d="M14 3.5v4h4"/><path d="M9 12h6M9 16h6"/></svg></span>
         </button>
         <button class="type-button" type="button" data-type="png" aria-label="PNG image" title="PNG">
-            <span class="icon-stage" aria-hidden="true"><svg class="base-icon" viewBox="0 0 24 24"><g><rect x="3.5" y="4" width="17" height="16" rx="2"/><circle cx="9" cy="9" r="1.5"/><path d="m4 17 5-5 3 3 3-4 5 6"/></g></svg><svg class="arrow-icon" viewBox="0 0 24 24"><path d="M4 12h15m-6-6 6 6-6 6"/></svg></span>
+            <span class="icon-stage" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3.5" y="4" width="17" height="16" rx="1.5"/><circle cx="9" cy="9" r="1.4"/><path d="m4.5 17 5-5 3 3 3-4 4 6"/></svg></span>
         </button>
         <button class="type-button" type="button" data-type="jpg" aria-label="JPG image" title="JPG">
-            <span class="icon-stage" aria-hidden="true"><svg class="base-icon" viewBox="0 0 24 24"><g><rect x="3.5" y="4" width="17" height="16" rx="2"/><circle cx="15.5" cy="9" r="2"/><path d="m4 17 5-5 3 3 2-2 6 5"/></g></svg><svg class="arrow-icon" viewBox="0 0 24 24"><path d="M4 12h15m-6-6 6 6-6 6"/></svg></span>
+            <span class="icon-stage" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3.5" y="4" width="17" height="16" rx="1.5"/><circle cx="15" cy="9" r="1.5"/><path d="m4.5 17 5-5 3 3 2-2 5 4"/></svg></span>
         </button>
         <button class="type-button" type="button" data-type="pdf" aria-label="PDF document" title="PDF">
-            <span class="icon-stage" aria-hidden="true"><svg class="base-icon" viewBox="0 0 24 24"><g><path d="M6 3.5h8l4 4V20.5H6z"/><path d="M14 3.5v4h4M8.5 16.5h7M8.5 13.5h7"/></g></svg><svg class="arrow-icon" viewBox="0 0 24 24"><path d="M4 12h15m-6-6 6 6-6 6"/></svg></span>
+            <span class="icon-stage" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 3.5h8l4 4v13H6z"/><path d="M14 3.5v4h4"/><path d="M9 12h6M9 16h6"/></svg></span>
         </button>
         <button class="type-button" type="button" data-type="mp3" aria-label="MP3 audio" title="MP3">
-            <span class="icon-stage" aria-hidden="true"><svg class="base-icon" viewBox="0 0 24 24"><g><path d="M10 18V5l10-2v13"/><circle cx="7" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></g></svg><svg class="arrow-icon" viewBox="0 0 24 24"><path d="M4 12h15m-6-6 6 6-6 6"/></svg></span>
+            <span class="icon-stage" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M10 17V5l10-2v12"/><circle cx="7" cy="17" r="3"/><circle cx="17" cy="15" r="3"/></svg></span>
         </button>
         <button class="type-button" type="button" data-type="mp4" aria-label="MP4 video" title="MP4">
-            <span class="icon-stage" aria-hidden="true"><svg class="base-icon" viewBox="0 0 24 24"><g><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m10 9 5 3-5 3z"/></g></svg><svg class="arrow-icon" viewBox="0 0 24 24"><path d="M4 12h15m-6-6 6 6-6 6"/></svg></span>
+            <span class="icon-stage" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="1.5"/><path d="m10 9 5 3-5 3z"/></svg></span>
         </button>
         <button class="type-button" type="button" data-type="zip" aria-label="ZIP archive" title="ZIP">
-            <span class="icon-stage" aria-hidden="true"><svg class="base-icon" viewBox="0 0 24 24"><g><path d="M6 3.5h12v17H6z"/><path d="M10 3.5v3h4v-3M12 7v2m0 2v2m0 2v2m-2 2h4"/></g></svg><svg class="arrow-icon" viewBox="0 0 24 24"><path d="M4 12h15m-6-6 6 6-6 6"/></svg></span>
+            <span class="icon-stage" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 3.5h12v17H6z"/><path d="M10 3.5v3h4v-3M12 7v2m0 2v2m0 2v2m-2 2h4"/></svg></span>
         </button>
         <button class="type-button" type="button" data-type="bin" aria-label="BIN file" title="BIN">
-            <span class="icon-stage" aria-hidden="true"><svg class="base-icon" viewBox="0 0 24 24"><g><path d="M12 3 20 7.5v9L12 21l-8-4.5v-9z"/><path d="m4 7.5 8 4.5 8-4.5M12 12v9M9 5l8 5"/></g></svg><svg class="arrow-icon" viewBox="0 0 24 24"><path d="M4 12h15m-6-6 6 6-6 6"/></svg></span>
+            <span class="icon-stage" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m12 3 8 4.5v9L12 21l-8-4.5v-9z"/><path d="m4 7.5 8 4.5 8-4.5M12 12v9"/></svg></span>
         </button>
     </div>
 
@@ -224,6 +229,8 @@ textarea:focus-visible, .type-button:focus-visible, .download:focus-visible {
 
     function chooseType(button) {
         selectedType = button.dataset.type;
+        button.classList.remove("selected");
+        void button.offsetWidth;
         typeButtons.forEach(item => {
             const selected = item === button;
             item.classList.toggle("selected", selected);
