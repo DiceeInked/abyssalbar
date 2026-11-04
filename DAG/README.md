@@ -20,7 +20,7 @@ The first scene is intentionally just a closed room:
 - Ceiling
 - Left wall
 - Right wall
-- Six-piece placeholder character
+- Six-piece block-style placeholder character
 
 There are no platforms, enemies, ores, merchants, inventory, login, or multiplayer in this movement test.
 
@@ -31,13 +31,13 @@ There are no platforms, enemies, ores, merchants, inventory, login, or multiplay
 - **Space / W / Up Arrow:** Jump.
 - **Touchscreen:** Hold the left/right controls to move; hold JUMP to auto-jump.
 
-Air control is enabled. Holding jump causes the player to jump again as soon as they land. It does not allow a second jump while airborne.
+Air control is enabled. Holding jump causes the player to jump again as soon as they land. It does not allow a second jump while airborne. Horizontal movement speed is unchanged. Jumping now uses stronger gravity and a lower launch speed for a shorter, less floaty arc.
 
 ## Character and movement
 
-The placeholder character is drawn from six separate pieces: head, torso, two arms, and two legs. Its visuals are separate from the movement and collision code. The arms move independently around their own centers instead of swinging from shoulder pivots.
+The placeholder character is built from six separate square-edged pieces: head, torso, two arms, and two legs. It uses deliberately simple block-style movement animation. More detailed character animation is postponed until a later phase.
 
-The room uses axis-aligned collision bounds, with separate handling for the floor, ceiling, and side walls. The room is deliberately low enough for a normal jump to reach the ceiling, making ceiling collision testable.
+The room uses axis-aligned collision bounds, with separate handling for the floor, ceiling, and side walls. The ceiling remains available for collision testing, although a normal jump no longer needs to reach it.
 
 ## Future mining and combat hook
 
@@ -57,4 +57,4 @@ With Node.js installed, run:
 npm test
 ```
 
-The automated tests cover floor landing, both side walls, ceiling collision, hold-to-auto-jump, jump release, air control, and repeated upward hit impulses.
+The automated tests cover floor landing, both side walls, ceiling collision, jump height, hold-to-auto-jump, jump release, air control, and repeated upward hit impulses.
