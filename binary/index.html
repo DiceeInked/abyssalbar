@@ -75,7 +75,7 @@ select:focus-visible, textarea:focus-visible, .download:focus-visible { outline:
     const fileType = document.getElementById("file-type");
     const downloadButton = document.getElementById("download-button");
     const status = document.getElementById("status");
-    function getBits() { return binaryInput.value.replace(/\\s/g, ""); }
+    function getBits() { return binaryInput.value.replace(/\s/g, ""); }
     function updateStatus() {
         const bits = getBits();
         const valid = /^[01]*$/.test(bits);
