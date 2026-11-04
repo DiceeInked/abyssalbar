@@ -1,0 +1,8 @@
+{
+  "name": "dag-phase-1-foundation",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test"
+  }
+}
