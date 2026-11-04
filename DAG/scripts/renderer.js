@@ -18,43 +18,40 @@ function drawRoom(ctx) {
   ctx.strokeRect(ROOM.left, ROOM.top, roomWidth, roomHeight);
 }
 
-function drawLimb(ctx, x, y, rotation, color, width, height) {
+function drawBlock(ctx, x, y, rotation, color, width, height) {
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(rotation);
   ctx.fillStyle = color;
-  ctx.beginPath();
-  ctx.roundRect(-width / 2, -height / 2, width, height, 4);
-  ctx.fill();
+  ctx.fillRect(-width / 2, -height / 2, width, height);
   ctx.restore();
 }
 
 function drawPlayer(ctx, player) {
   const speedRatio = Math.min(1, Math.abs(player.vx) / 285);
-  const stride = Math.sin(player.animationTime * 12) * speedRatio * 0.42;
-  const armMotion = Math.sin(player.animationTime * 12 + 1.2) * speedRatio * 0.16;
+  const stride = Math.sin(player.animationTime * 10) * speedRatio * 0.2;
+  const armMotion = Math.sin(player.animationTime * 10 + Math.PI) * speedRatio * 0.12;
 
   ctx.save();
   ctx.translate(player.x, player.y);
   ctx.scale(player.facing || 1, 1);
 
-  // Legs are separate pieces so their movement can be replaced with proper artwork later.
-  drawLimb(ctx, -7, 22, stride, "#8e9aa4", 11, 27);
-  drawLimb(ctx, 7, 22, -stride, "#8e9aa4", 11, 27);
+  // Simple block parts for the early movement prototype.
+  drawBlock(ctx, -7, 22, stride, "#87949e", 11, 25);
+  drawBlock(ctx, 7, 22, -stride, "#87949e", 11, 25);
 
-  // Arms move independently around their own centers, not from shoulder pivots.
-  drawLimb(ctx, -17, -3, -armMotion, "#b5bec5", 9, 25);
-  drawLimb(ctx, 17, -3, armMotion, "#b5bec5", 9, 25);
+  drawBlock(ctx, -17, -3, armMotion, "#b5bec5", 9, 25);
+  drawBlock(ctx, 17, -3, -armMotion, "#b5bec5", 9, 25);
 
   ctx.fillStyle = "#a7b1b9";
-  ctx.beginPath();
-  ctx.roundRect(-12, -20, 24, 31, 5);
-  ctx.fill();
+  ctx.fillRect(-12, -20, 24, 29);
 
   ctx.fillStyle = "#d2d8dc";
-  ctx.beginPath();
-  ctx.arc(0, -29, 9, 0, Math.PI * 2);
-  ctx.fill();
+  ctx.fillRect(-10, -39, 20, 18);
+
+  // Small square eyes keep the front readable without adding detailed animation.
+  ctx.fillStyle = "#263039";
+  ctx.fillRect(3, -33, 2, 2);
 
   ctx.restore();
 
