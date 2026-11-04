@@ -59,6 +59,21 @@ test("the ceiling stops upward movement", () => {
   assert.equal(player.vy, 0);
 });
 
+test("a normal jump has a shorter, heavier arc", () => {
+  const player = createPlayer();
+  const startY = player.y;
+  let highestY = player.y;
+
+  updatePlayer(player, { move: 0, jumpHeld: true }, step);
+  for (let i = 0; i < 90 && !player.grounded; i += 1) {
+    updatePlayer(player, { move: 0, jumpHeld: false }, step);
+    highestY = Math.min(highestY, player.y);
+  }
+
+  const jumpHeight = startY - highestY;
+  assert.ok(jumpHeight > 95 && jumpHeight < 125, `unexpected jump height: ${jumpHeight}`);
+});
+
 test("holding jump starts another jump immediately after landing", () => {
   const player = createPlayer();
 
