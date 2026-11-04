@@ -10,97 +10,254 @@
 * { box-sizing: border-box; }
 html { background: var(--black); }
 body {
-    margin: 0; min-height: 100vh; min-height: 100dvh; padding: 20px;
-    display: grid; place-items: center; overflow-x: hidden;
-    background: var(--black); color: var(--white);
+    margin: 0;
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding: 20px;
+    display: grid;
+    place-items: center;
+    overflow-x: hidden;
+    background: var(--black);
+    color: var(--white);
     font-family: system-ui, -apple-system, sans-serif;
 }
-main { width: min(88vw, 420px); text-align: center; animation: appear .8s cubic-bezier(.16, 1, .3, 1) both; }
-h1 { margin: 0 0 22px; font-size: 15px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; }
-textarea, select, button { font: inherit; }
+main {
+    width: min(88vw, 360px);
+    text-align: center;
+    animation: appear .8s cubic-bezier(.16, 1, .3, 1) both;
+}
+.status {
+    min-height: 2.8em;
+    margin: 0 0 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: #aaa;
+}
+textarea, button { font: inherit; }
 textarea {
-    display: block; width: 100%; min-height: 190px; resize: vertical; padding: 16px;
-    border: 1px solid var(--white); border-radius: 12px; outline: none;
-    background: var(--black); color: var(--white);
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; line-height: 1.7;
-    transition: background .3s, color .3s, border-radius .4s;
+    display: block;
+    width: 100%;
+    min-height: 190px;
+    resize: vertical;
+    padding: 15px;
+    border: 1px solid var(--white);
+    border-radius: 3px;
+    outline: none;
+    background: var(--black);
+    color: var(--white);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 13px;
+    line-height: 1.7;
+    transition: background .35s cubic-bezier(.2,.8,.2,1), border-radius .45s cubic-bezier(.2,.8,.2,1);
 }
-textarea:focus { background: #101010; border-radius: 18px; }
+textarea:focus { background: #101010; border-radius: 14px; }
 textarea::placeholder { color: #777; }
-.row { display: flex; gap: 9px; margin-top: 12px; }
-select, .download {
-    min-height: 44px; border: 1px solid var(--white); border-radius: 999px;
-    background: transparent; color: var(--white); font-size: 12px;
-    transition: background .3s, color .3s, transform .3s;
+textarea:focus-visible, .type-button:focus-visible, .download:focus-visible {
+    outline: 2px solid var(--white);
+    outline-offset: 4px;
 }
-select { flex: 1; min-width: 0; padding: 0 15px; color-scheme: dark; }
-.download { flex: 1; padding: 10px 18px; cursor: pointer; }
+.file-types {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 6px;
+    margin-top: 12px;
+}
+.type-button {
+    position: relative;
+    display: grid;
+    place-items: center;
+    aspect-ratio: 1;
+    min-width: 0;
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid var(--white);
+    border-radius: 3px;
+    background: var(--black);
+    color: var(--white);
+    cursor: pointer;
+    transition:
+        background .35s cubic-bezier(.2,.8,.2,1),
+        color .35s cubic-bezier(.2,.8,.2,1),
+        transform .45s cubic-bezier(.2,.8,.2,1),
+        border-radius .45s cubic-bezier(.2,.8,.2,1);
+}
+.type-button:hover { background: var(--white); color: var(--black); border-radius: 12px; transform: translateY(-2px); }
+.type-button.selected { background: var(--white); color: var(--black); border-radius: 12px; }
+.type-button svg, .download svg { width: 21px; height: 21px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.type-button.selected svg { animation: mark-in .48s cubic-bezier(.16,1.4,.3,1) both; }
+.type-button:hover svg { animation: icon-pop .35s cubic-bezier(.16,1.4,.3,1) both; }
+.type-button .tiny-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0,0,0,0);
+    white-space: nowrap;
+    border: 0;
+}
+.controls { display: flex; justify-content: center; margin-top: 22px; }
+.download {
+    width: 48px;
+    height: 48px;
+    display: grid;
+    place-items: center;
+    padding: 0;
+    border: 1px solid var(--white);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--white);
+    cursor: pointer;
+    transition: background .3s, color .3s, transform .3s, opacity .3s;
+}
 .download:hover:enabled { background: var(--white); color: var(--black); transform: translateY(-2px); }
 .download:active:enabled { transform: scale(.96); }
-.download:disabled { opacity: .35; cursor: default; }
-select:focus-visible, textarea:focus-visible, .download:focus-visible { outline: 2px solid var(--white); outline-offset: 4px; }
-.status { min-height: 1.5em; margin: 15px 0 0; color: #aaa; font-size: 11px; letter-spacing: .08em; }
+.download:disabled { opacity: .3; cursor: default; }
+.download svg { width: 22px; height: 22px; }
+.download.success svg { animation: mark-in .4s cubic-bezier(.16,1.4,.3,1) both; }
+.type-name { min-height: 1.4em; margin: 10px 0 0; color: #888; font-size: 10px; letter-spacing: .16em; }
 @keyframes appear {
     from { opacity: 0; transform: translateY(12px) scale(.97); filter: blur(8px); }
     to { opacity: 1; transform: none; filter: blur(0); }
 }
-@media (max-width: 380px) { main { width: min(88vw, 340px); } textarea { min-height: 165px; } }
+@keyframes mark-in {
+    from { opacity: 0; transform: scale(.3) rotate(-30deg); }
+    to { opacity: 1; transform: scale(1) rotate(0); }
+}
+@keyframes icon-pop {
+    0% { transform: scale(.75) rotate(-12deg); }
+    65% { transform: scale(1.18) rotate(5deg); }
+    100% { transform: scale(1) rotate(0); }
+}
+@media (max-width: 380px) {
+    main { width: min(86vw, 320px); }
+    .file-types { gap: 5px; }
+    textarea { min-height: 165px; }
+}
 @media (prefers-reduced-motion: reduce) {
-    *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: .01ms !important; }
+    *, *::before, *::after {
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+        transition-duration: .01ms !important;
+    }
 }
 </style>
 </head>
 <body>
 <main>
-    <h1>Binary File</h1>
+    <p class="status" id="status" role="status" aria-live="polite">0 BITS</p>
     <textarea id="binary-input" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="Binary input" placeholder="Paste binary here..."></textarea>
-    <div class="row">
-        <select id="file-type" aria-label="File type">
-            <option value="txt">TXT</option>
-            <option value="png">PNG</option>
-            <option value="jpg">JPG</option>
-            <option value="pdf">PDF</option>
-            <option value="mp3">MP3</option>
-            <option value="mp4">MP4</option>
-            <option value="zip">ZIP</option>
-            <option value="bin">BIN</option>
-        </select>
-        <button class="download" id="download-button" type="button">DOWNLOAD</button>
+
+    <div class="file-types" role="group" aria-label="Choose file type">
+        <button class="type-button selected" type="button" data-type="txt" aria-label="TXT file" title="TXT">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5h8l4 4V20.5H6z"/><path d="M14 3.5v4h4M9 12h6M9 15.5h6"/></svg>
+        </button>
+        <button class="type-button" type="button" data-type="png" aria-label="PNG image" title="PNG">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4" width="17" height="16" rx="2"/><circle cx="9" cy="9" r="1.5"/><path d="m4 17 5-5 3 3 3-4 5 6"/></svg>
+        </button>
+        <button class="type-button" type="button" data-type="jpg" aria-label="JPG image" title="JPG">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="4" width="17" height="16" rx="2"/><circle cx="15.5" cy="9" r="2"/><path d="m4 17 5-5 3 3 2-2 6 5"/></svg>
+        </button>
+        <button class="type-button" type="button" data-type="pdf" aria-label="PDF document" title="PDF">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5h8l4 4V20.5H6z"/><path d="M14 3.5v4h4M8.5 16.5h7M8.5 13.5h7"/></svg>
+        </button>
+        <button class="type-button" type="button" data-type="mp3" aria-label="MP3 audio" title="MP3">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 18V5l10-2v13"/><circle cx="7" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg>
+        </button>
+        <button class="type-button" type="button" data-type="mp4" aria-label="MP4 video" title="MP4">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m10 9 5 3-5 3z"/></svg>
+        </button>
+        <button class="type-button" type="button" data-type="zip" aria-label="ZIP archive" title="ZIP">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3.5h12v17H6z"/><path d="M10 3.5v3h4v-3M12 7v2m0 2v2m0 2v2m-2 2h4"/></svg>
+        </button>
+        <button class="type-button" type="button" data-type="bin" aria-label="BIN file" title="BIN">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 20 7.5v9L12 21l-8-4.5v-9z"/><path d="m4 7.5 8 4.5 8-4.5M12 12v9M9 5l8 5"/></svg>
+        </button>
     </div>
-    <p class="status" id="status" role="status" aria-live="polite">0 bits</p>
+
+    <p class="type-name" id="type-name">TXT</p>
+
+    <div class="controls">
+        <button class="download" id="download-button" type="button" aria-label="Download file" title="Download" disabled>
+            <svg id="download-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4"/></svg>
+        </button>
+    </div>
 </main>
 <script>
 (() => {
     const binaryInput = document.getElementById("binary-input");
-    const fileType = document.getElementById("file-type");
+    const typeButtons = [...document.querySelectorAll("[data-type]")];
     const downloadButton = document.getElementById("download-button");
+    const downloadIcon = document.getElementById("download-icon");
     const status = document.getElementById("status");
-    function getBits() { return binaryInput.value.replace(/\s/g, ""); }
+    const typeName = document.getElementById("type-name");
+    let selectedType = "txt";
+    let successTimer = 0;
+
+    function getBits() {
+        return binaryInput.value.replace(/\s/g, "");
+    }
+
     function updateStatus() {
         const bits = getBits();
         const valid = /^[01]*$/.test(bits);
         const complete = bits.length > 0 && bits.length % 8 === 0;
         downloadButton.disabled = !valid || !complete;
-        if (!bits.length) status.textContent = "0 bits";
-        else if (!valid) status.textContent = "Only 0s and 1s are allowed";
-        else if (!complete) status.textContent = `${bits.length} bits · needs ${8 - bits.length % 8} more`;
-        else status.textContent = `${bits.length} bits · ${bits.length / 8} bytes`;
+
+        if (!bits.length) status.textContent = "0 BITS";
+        else if (!valid) status.textContent = "INVALID BINARY";
+        else if (!complete) status.textContent = `${bits.length} BITS · NEED ${8 - bits.length % 8} MORE`;
+        else status.textContent = `${bits.length} BITS · ${bits.length / 8} BYTES`;
     }
+
+    function chooseType(button) {
+        selectedType = button.dataset.type;
+        typeButtons.forEach(item => {
+            const selected = item === button;
+            item.classList.toggle("selected", selected);
+            item.setAttribute("aria-pressed", String(selected));
+        });
+        typeName.textContent = selectedType.toUpperCase();
+    }
+
     function downloadFile() {
         const bits = getBits();
         if (!/^[01]+$/.test(bits) || bits.length % 8 !== 0) return;
+
         const bytes = new Uint8Array(bits.length / 8);
-        for (let i = 0; i < bytes.length; i++) bytes[i] = parseInt(bits.slice(i * 8, i * 8 + 8), 2);
+        for (let i = 0; i < bytes.length; i++) {
+            bytes[i] = parseInt(bits.slice(i * 8, i * 8 + 8), 2);
+        }
+
         const blob = new Blob([bytes], { type: "application/octet-stream" });
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
-        link.download = `download.${fileType.value}`;
+        link.download = `download.${selectedType}`;
         document.body.append(link);
         link.click();
         link.remove();
-        URL.revokeObjectURL(url);
+        window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+
+        downloadButton.classList.add("success");
+        downloadIcon.innerHTML = '<path d="m5 12 4.5 4.5L19 7"/>';
+        window.clearTimeout(successTimer);
+        successTimer = window.setTimeout(() => {
+            downloadButton.classList.remove("success");
+            downloadIcon.innerHTML = '<path d="M12 3v12m-5-5 5 5 5-5M4 17v4h16v-4"/>';
+        }, 1100);
     }
+
+    typeButtons.forEach(button => {
+        button.addEventListener("click", () => chooseType(button));
+        button.setAttribute("aria-pressed", String(button.dataset.type === selectedType));
+    });
     binaryInput.addEventListener("input", updateStatus);
     downloadButton.addEventListener("click", downloadFile);
     updateStatus();
