@@ -15,8 +15,8 @@ export const MOVEMENT = Object.freeze({
   groundAcceleration: 1900,
   airAcceleration: 1150,
   groundFriction: 2200,
-  gravity: 1350,
-  jumpVelocity: 820,
+  gravity: 2100,
+  jumpVelocity: 680,
   hitImpulse: 190
 });
 
