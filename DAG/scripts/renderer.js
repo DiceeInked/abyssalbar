@@ -38,8 +38,11 @@ function drawPlayer(ctx, player) {
   ctx.translate(player.x, player.y);
   ctx.scale(player.facing || 1, 1);
 
+  // Legs are separate pieces so their movement can be replaced with proper artwork later.
   drawLimb(ctx, -7, 22, stride, "#8e9aa4", 11, 27);
   drawLimb(ctx, 7, 22, -stride, "#8e9aa4", 11, 27);
+
+  // Arms move independently around their own centers, not from shoulder pivots.
   drawLimb(ctx, -17, -3, -armMotion, "#b5bec5", 9, 25);
   drawLimb(ctx, 17, -3, armMotion, "#b5bec5", 9, 25);
 
@@ -55,6 +58,7 @@ function drawPlayer(ctx, player) {
 
   ctx.restore();
 
+  // A subtle outline shows the actual collision rectangle during this test phase.
   ctx.save();
   ctx.strokeStyle = "rgba(122, 211, 190, 0.32)";
   ctx.lineWidth = 1;
