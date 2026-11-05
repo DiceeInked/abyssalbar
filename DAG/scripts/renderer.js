@@ -197,8 +197,8 @@ export function renderGame(canvas, player, camera) {
   ctx.save();
   ctx.translate(width / 2 - camera.x * scale, height / 2 - camera.y * scale);
   ctx.scale(scale, scale);
-  drawCaveRockwork(ctx);
   drawTerrain(ctx);
+  drawCaveRockwork(ctx);
   drawPlayer(ctx, player);
   ctx.restore();
 }
