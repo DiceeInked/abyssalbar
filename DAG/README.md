@@ -19,9 +19,11 @@ The scene is a side-view cave movement sandbox labelled A99. It is a technical t
 - A six-piece block-style placeholder character.
 - A camera that follows the player as they travel through the cave.
 - Keyboard and multitouch controls.
-- Stronger gravity and a shorter jump arc from the Phase 1 movement pass.
+- The restored original gravity and jump settings, with the previous horizontal movement speed.
+- Simple blocky idle, running, rising, and falling character poses.
+- Basic angular cave-rock shapes so the test scene reads as underground without becoming an art-polish task.
 
-The test ledges are not a final map design. The cave generation method, terrain shapes, and layout rules remain open design decisions.
+The rock silhouettes and test ledges are deliberately simple placeholders, not final cave art or a final map design. The cave generation method, terrain shapes, and layout rules remain open design decisions.
 
 ## Controls
 
