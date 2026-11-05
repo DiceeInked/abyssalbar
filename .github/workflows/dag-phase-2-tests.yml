@@ -1,0 +1,33 @@
+name: DAG automated tests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "DAG/**"
+      - ".github/workflows/dag-phase-2-tests.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "DAG/**"
+      - ".github/workflows/dag-phase-2-tests.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Run DAG tests
+        working-directory: DAG
+        run: npm test
+      - name: Check JavaScript syntax
+        working-directory: DAG
+        run: |
+          for file in scripts/*.js tests/*.js; do
+            node --check "$file"
+          done
