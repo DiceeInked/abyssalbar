@@ -72,9 +72,9 @@ test("one swing cannot damage the same creature more than once", () => {
   assert.equal(creatures[0].health, 2);
 });
 
-test("hitting a solid surface rebounds the player upward", () => {
+test("hitting the floor rebounds the player upward", () => {
   const player = createPlayer();
-  player.attackTime = ATTACK_DURATION / 2;
+  player.attackTime = ATTACK_DURATION * 0.05;
 
   assert.equal(resolveAttackHits(player, [], [], [
     { x: 0, y: 180, width: 500, height: 40, kind: "floor" }
@@ -84,9 +84,34 @@ test("hitting a solid surface rebounds the player upward", () => {
   assert.equal(player.lastHitType, "SURFACE");
 });
 
+test("hitting a wall also gives an upward boost", () => {
+  const player = createPlayer();
+  player.x = 100;
+  player.y = 142;
+  player.facing = 1;
+  player.attackTime = ATTACK_DURATION / 2;
+
+  assert.equal(resolveAttackHits(player, [], [], [
+    { x: 170, y: 90, width: 30, height: 130, kind: "wall" }
+  ]), "surface");
+  assert.equal(player.vy, -COMBAT.surfaceBounceVelocity);
+});
+
+test("the high part of the swing can hit the ceiling and trigger an upward boost", () => {
+  const player = createPlayer();
+  player.y = -502;
+  player.grounded = false;
+  player.attackTime = ATTACK_DURATION * 0.95;
+
+  assert.equal(resolveAttackHits(player, [], [], [
+    { x: 0, y: -580, width: 500, height: 40, kind: "ceiling" }
+  ]), "surface");
+  assert.equal(player.vy, -COMBAT.surfaceBounceVelocity);
+});
+
 test("a single swing triggers at most one surface rebound", () => {
   const player = createPlayer();
-  player.attackTime = ATTACK_DURATION / 2;
+  player.attackTime = ATTACK_DURATION * 0.05;
   const floor = [{ x: 0, y: 180, width: 500, height: 40, kind: "floor" }];
 
   assert.equal(resolveAttackHits(player, [], [], floor), "surface");
