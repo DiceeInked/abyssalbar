@@ -102,20 +102,22 @@ function canvasPoint(event) {
 
 function drawSegment(from, to) {
   const color = activeTool === "eraser" ? "#ffffff" : activeColor;
-  ctx.save();
-  ctx.strokeStyle = color;
+  const brushSize = activeTool === "eraser" ? 7 : 4;
+  const steps = Math.max(
+    Math.abs(to.x - from.x),
+    Math.abs(to.y - from.y),
+    1
+  );
+  const offset = Math.floor(brushSize / 2);
+
+  // Paint whole grid pixels so the connected-region fill has clean boundaries.
   ctx.fillStyle = color;
-  ctx.lineWidth = activeTool === "eraser" ? 7 : 4;
-  ctx.lineCap = "round";
-  ctx.lineJoin = "round";
-  ctx.beginPath();
-  ctx.moveTo(from.x + 0.5, from.y + 0.5);
-  ctx.lineTo(to.x + 0.5, to.y + 0.5);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.arc(to.x + 0.5, to.y + 0.5, ctx.lineWidth / 2, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
+  for (let step = 0; step <= steps; step += 1) {
+    const progress = step / steps;
+    const x = Math.round(from.x + (to.x - from.x) * progress);
+    const y = Math.round(from.y + (to.y - from.y) * progress);
+    ctx.fillRect(x - offset, y - offset, brushSize, brushSize);
+  }
 }
 
 function applyRecolor(point) {
