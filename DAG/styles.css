@@ -123,6 +123,11 @@ h1 {
   font-weight: 800;
 }
 
+#ink-state {
+  color: #8fffe8;
+  font-weight: 750;
+}
+
 .touch-controls {
   display: none;
   position: absolute;
@@ -314,7 +319,7 @@ kbd {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *, 
+  *,
   *::before,
   *::after {
     scroll-behavior: auto !important;
