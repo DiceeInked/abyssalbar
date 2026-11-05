@@ -34,9 +34,10 @@ The practice creature and ledges are test objects. They are not part of the inte
 - **D / Right Arrow:** Move right.
 - **Space / W / Up Arrow:** Jump. Holding jump causes another jump as soon as the player lands.
 - **J / touchscreen HIT button:** Swing the weapon. The same action can damage the practice creature or mine nearby ore.
+- **R / touchscreen RESET button:** Restart the cave test, respawning the practice creature and ore deposits and resetting the player and raw ink.
 - **Touchscreen:** Hold the left/right controls to move; hold JUMP to auto-jump.
 
-The shared HIT action is a temporary prototype choice because the design says weapons can mine ores. It can be separated into a dedicated mining action later if that feels better.
+The shared HIT action is a temporary prototype choice because the design says weapons can mine ores. It can be separated into a dedicated mining action later if that feels better. RESET is only a testing convenience; it is not a planned in-world game feature.
 
 ## Combat prototype
 
