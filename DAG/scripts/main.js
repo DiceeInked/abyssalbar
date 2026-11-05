@@ -2,16 +2,18 @@ import { createPlayer, updatePlayer } from "./physics.js";
 import { InputController } from "./input.js";
 import { renderGame } from "./renderer.js";
 import { createCamera, updateCamera } from "./camera.js";
-import { createPracticeCreatures, resolveAttackHits } from "./combat.js";
+import { createPracticeCreatures, createPracticeOres, resolveAttackHits } from "./combat.js";
 
 const canvas = document.querySelector("#game");
 const movementState = document.querySelector("#movement-state");
 const collisionState = document.querySelector("#collision-state");
+const inkState = document.querySelector("#ink-state");
 
 const player = createPlayer();
 const camera = createCamera(player);
 const input = new InputController();
 const creatures = createPracticeCreatures();
+const ores = createPracticeOres();
 const fixedStep = 1 / 60;
 
 let previousTime = 0;
@@ -40,6 +42,7 @@ function updateReadout() {
   collisionState.textContent = states.length
     ? states.join(" · ") + " · " + targetStatus
     : "A99 · " + targetStatus;
+  inkState.textContent = "RAW INK " + player.ink;
 }
 
 function frame(time) {
@@ -51,15 +54,18 @@ function frame(time) {
   while (accumulator >= fixedStep) {
     const snapshot = input.snapshot();
     updatePlayer(player, snapshot, fixedStep);
-    resolveAttackHits(player, creatures);
+    resolveAttackHits(player, creatures, ores);
     for (const creature of creatures) {
       creature.flashTime = Math.max(0, creature.flashTime - fixedStep);
+    }
+    for (const ore of ores) {
+      ore.flashTime = Math.max(0, ore.flashTime - fixedStep);
     }
     accumulator -= fixedStep;
   }
 
   updateCamera(camera, player, canvas.clientWidth, canvas.clientHeight, elapsed);
-  renderGame(canvas, player, camera, creatures);
+  renderGame(canvas, player, camera, creatures, ores);
   updateReadout();
   requestAnimationFrame(frame);
 }
