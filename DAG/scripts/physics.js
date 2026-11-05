@@ -15,6 +15,9 @@ export const MOVEMENT = Object.freeze({
   hitImpulse: 190
 });
 
+export const ATTACK_DURATION = 0.28;
+export const ATTACK_COOLDOWN = 0.4;
+
 const halfWidth = PLAYER_SIZE.width / 2;
 const halfHeight = PLAYER_SIZE.height / 2;
 
@@ -28,6 +31,14 @@ export function createPlayer() {
     grounded: true,
     animationTime: 0,
     jumpCount: 0,
+    attackTime: 0,
+    attackCooldown: 0,
+    attackHits: new Set(),
+    attackCreatureHit: false,
+    attackSurfaceHit: false,
+    airHoldTimer: 0,
+    lastHitType: "",
+    hitFeedbackTime: 0,
     contacts: { floor: true, ceiling: false, left: false, right: false }
   };
 }
@@ -78,9 +89,26 @@ function resolveVertical(player, previousY) {
   }
 }
 
+function updateActionTimers(player, input, dt) {
+  player.attackCooldown = Math.max(0, player.attackCooldown - dt);
+  player.attackTime = Math.max(0, player.attackTime - dt);
+  player.airHoldTimer = Math.max(0, player.airHoldTimer - dt);
+  player.hitFeedbackTime = Math.max(0, player.hitFeedbackTime - dt);
+
+  if (input.attackPressed && player.attackCooldown === 0) {
+    player.attackTime = ATTACK_DURATION;
+    player.attackCooldown = ATTACK_COOLDOWN;
+    player.attackHits = new Set();
+    player.attackCreatureHit = false;
+    player.attackSurfaceHit = false;
+  }
+}
+
 export function updatePlayer(player, input, delta) {
   const dt = Math.max(0, Math.min(delta, 0.05));
   if (dt === 0) return player;
+
+  updateActionTimers(player, input, dt);
 
   const direction = Math.max(-1, Math.min(1, input.move || 0));
   const wasGrounded = player.grounded;
@@ -107,7 +135,10 @@ export function updatePlayer(player, input, delta) {
     && overlaps(player.x - halfWidth, player.x + halfWidth, solid.x, solid.x + solid.width)
   );
 
-  if (wasGrounded && input.jumpHeld) {
+  if (player.airHoldTimer > 0) {
+    player.vy = 0;
+    player.grounded = false;
+  } else if (wasGrounded && input.jumpHeld) {
     player.grounded = false;
     player.vy = -MOVEMENT.jumpVelocity;
     player.jumpCount += 1;
@@ -134,5 +165,17 @@ export function applyHitImpulse(player, strength = MOVEMENT.hitImpulse) {
   player.vy -= impulse;
   player.grounded = false;
   player.contacts.floor = false;
+  return player.vy;
+}
+
+export function applySurfaceBounce(player, strength = MOVEMENT.jumpVelocity) {
+  const boost = Math.max(0, Number(strength) || 0);
+  if (boost === 0) return player.vy;
+  player.vy = -boost;
+  player.grounded = false;
+  player.contacts.floor = false;
+  player.contacts.ceiling = false;
+  player.lastHitType = "SURFACE";
+  player.hitFeedbackTime = 0.5;
   return player.vy;
 }
