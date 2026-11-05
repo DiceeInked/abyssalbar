@@ -1,28 +1,27 @@
-# DAG: HTML Phase 1 Foundation
+# DAG: Phase 2 Cave Foundation
 
-This is the browser-based foundation for Drawing Adventure Game. It uses plain HTML, CSS, and JavaScript modules. No game engine, server, account system, or external dependency is required.
+This is the browser-based foundation for Drawing Adventure Game. It uses plain HTML, CSS, and JavaScript modules.
 
 ## Run it
 
-Open `index.html` in a modern browser. Because the code uses JavaScript modules, some browsers require a local static server instead of opening the file directly. From this folder, one option is:
+Open index.html in a modern browser. Because the code uses JavaScript modules, some browsers require a local static server instead of opening the file directly. From this folder, run:
 
-```sh
-python -m http.server 8000
-```
+    python -m http.server 8000
 
-Then open `http://localhost:8000`.
+Then open http://localhost:8000.
 
-## Phase 1 test room
+## Current test scene
 
-The first scene is intentionally just a closed room:
+The scene is a side-view cave movement sandbox labelled A99. It is a technical test space, not the final cave layout.
 
-- Floor
-- Ceiling
-- Left wall
-- Right wall
-- Six-piece block-style placeholder character
+- A long cave floor, ceiling, and side boundaries.
+- A handful of temporary ledges for testing platform collisions.
+- A six-piece block-style placeholder character.
+- A camera that follows the player as they travel through the cave.
+- Keyboard and multitouch controls.
+- Stronger gravity and a shorter jump arc from the Phase 1 movement pass.
 
-There are no platforms, enemies, ores, merchants, inventory, login, or multiplayer in this movement test.
+The test ledges are not a final map design. The cave generation method, terrain shapes, and layout rules remain open design decisions.
 
 ## Controls
 
@@ -31,30 +30,32 @@ There are no platforms, enemies, ores, merchants, inventory, login, or multiplay
 - **Space / W / Up Arrow:** Jump.
 - **Touchscreen:** Hold the left/right controls to move; hold JUMP to auto-jump.
 
-Air control is enabled. Holding jump causes the player to jump again as soon as they land. It does not allow a second jump while airborne. Horizontal movement speed is unchanged. Jumping now uses stronger gravity and a lower launch speed for a shorter, less floaty arc.
+Holding jump causes the player to jump again as soon as they land. It does not allow a second jump while airborne. Horizontal movement speed is unchanged.
 
 ## Character and movement
 
-The placeholder character is built from six separate square-edged pieces: head, torso, two arms, and two legs. It uses deliberately simple block-style movement animation. More detailed character animation is postponed until a later phase.
+The placeholder character is built from six separate square-edged pieces: head, torso, two arms, and two legs. It uses deliberately simple block-style movement animation. More detailed animation work is postponed.
 
-The room uses axis-aligned collision bounds, with separate handling for the floor, ceiling, and side walls. The ceiling remains available for collision testing, although a normal jump no longer needs to reach it.
+The physics module handles collisions against reusable solid rectangles. The camera has separate world coordinates, smooth follow, and world-edge limits.
+
+## Intentionally not implemented yet
+
+The first cave is designed to be quiet, with a few ores and no enemies or shopkeepers. This sandbox does not include ore objects or mining yet. Exact ore spawn rules and the mining interaction still need to be specified before they are implemented.
+
+Procedural cave generation, final cave geometry, Stronghold behavior, cave reset rules, merchants, creatures, inventory, login, and multiplayer are not part of this phase.
 
 ## Future mining and combat hook
 
-`scripts/physics.js` exports `applyHitImpulse(player, strength)`. A future ore or creature hit handler can call this when an airborne hit connects. Repeated hits add upward velocity and can counter gravity. The room does not include fake ores or enemies just to trigger that mechanic.
+scripts/physics.js exports applyHitImpulse(player, strength). A future ore or creature hit handler can call this when an airborne hit connects. Repeated hits add upward velocity and can counter gravity.
 
 ## Future multiplayer boundary
 
-The foundation separates input, simulation, and rendering so a later network session can supply player/world state without rewriting the movement rules. For now, the game is single-player and local-only. Authentication, account storage, servers, parties, matchmaking, and actual online multiplayer are intentionally not implemented or simulated.
-
-The intended playable direction after the foundation is cave exploration and mining, followed by creatures and the blade/handle/amulet weapon system. This test room is only the first movement and collision check.
+The foundation separates input, simulation, world data, camera, and rendering so a later network session can supply player/world state without rewriting the movement rules. For now, the game is single-player and local-only.
 
 ## Tests
 
 With Node.js installed, run:
 
-```sh
-npm test
-```
+    npm test
 
-The automated tests cover floor landing, both side walls, ceiling collision, jump height, hold-to-auto-jump, jump release, air control, and repeated upward hit impulses.
+The automated tests cover world boundaries, floor and ceiling collisions, ledge landing and falling, jump height, hold-to-auto-jump, jump release, air control, repeated upward hit impulses, and camera behavior.
