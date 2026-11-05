@@ -10,7 +10,7 @@ This file tracks what is actually in the browser prototype. It is separate from 
 - [x] Keyboard and touchscreen movement controls.
 - [x] Simple block-piece idle, running, rising, falling, and sword-swing poses.
 - [x] Dedicated attack input for the prototype: J on keyboard and HIT on touchscreen.
-- [x] Temporary practice creature for combat testing.
+- [x] Optional practice creature for combat testing, hidden by default so A99 starts enemy-free.
 - [x] Creature hit while airborne pauses vertical movement for about two seconds; horizontal air control remains available.
 - [x] A later swing can hit the same practice creature again while the hold is still active.
 - [x] Successful attacks against solid surfaces apply an upward velocity boost for floor, wall, and ceiling cases.
@@ -29,7 +29,7 @@ The drawing page uses a 96 × 96 raster canvas and stores saves only in the curr
 
 The RESET button and R key are development conveniences for replaying this sandbox. They are not intended as a diegetic mechanic or part of the final player interface.
 
-The creature is present only to test combat. The first real cave remains intended to be quiet, with a few ores and no enemies or shopkeepers. The temporary ledges are collision-test geometry, not the finished cave layout. Ore shapes, color, hit count, and raw ink yield are placeholder values.
+The practice creature is opt-in and appears only when the PRACTICE TARGET toggle is on. The default A99 scene remains quiet, with a few ores and no enemies or shopkeepers. The temporary ledges are collision-test geometry, not the finished cave layout. Ore shapes, color, hit count, and raw ink yield are placeholder values.
 
 ## Next implementation order
 
