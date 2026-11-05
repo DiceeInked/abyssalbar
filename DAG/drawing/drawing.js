@@ -160,17 +160,69 @@ for (const button of document.querySelectorAll("[data-tool]")) {
   button.addEventListener("click", () => chooseTool(button.dataset.tool));
 }
 
+function selectColor(color) {
+  activeColor = color;
+  for (const swatch of document.querySelectorAll("[data-color]")) {
+    const selected = swatch.dataset.color === color;
+    swatch.classList.toggle("is-selected", selected);
+    swatch.setAttribute("aria-pressed", String(selected));
+  }
+  setStatus("Selected color " + activeColor.toUpperCase() + ".");
+}
+
 for (const button of document.querySelectorAll("[data-color]")) {
-  button.addEventListener("click", () => {
-    activeColor = button.dataset.color;
-    for (const swatch of document.querySelectorAll("[data-color]")) {
-      const selected = swatch === button;
-      swatch.classList.toggle("is-selected", selected);
-      swatch.setAttribute("aria-pressed", String(selected));
+  button.addEventListener("click", () => selectColor(button.dataset.color));
+}
+
+function dropInkOnCanvas(event, color) {
+  if (!/^#[0-9a-fA-F]{6}$/.test(color)) return;
+  event.preventDefault();
+  selectColor(color);
+  chooseTool("recolor");
+  applyRecolor(canvasPoint(event));
+}
+
+canvas.addEventListener("dragover", event => {
+  event.preventDefault();
+  if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
+});
+
+canvas.addEventListener("drop", event => {
+  const color = event.dataTransfer?.getData("text/plain") || "";
+  dropInkOnCanvas(event, color);
+});
+
+let draggedInk = null;
+
+for (const swatch of document.querySelectorAll(".ink-swatches [data-color]")) {
+  swatch.addEventListener("dragstart", event => {
+    draggedInk = { pointerId: event.pointerId, color: swatch.dataset.color, button: swatch };
+    if (event.dataTransfer) {
+      event.dataTransfer.setData("text/plain", swatch.dataset.color);
+      event.dataTransfer.effectAllowed = "copy";
     }
-    setStatus("Selected color " + activeColor.toUpperCase() + ".");
+  });
+
+  swatch.addEventListener("pointerdown", event => {
+    if (event.pointerType === "mouse") return;
+    draggedInk = { pointerId: event.pointerId, color: swatch.dataset.color, button: swatch };
+    swatch.classList.add("is-dragging");
   });
 }
+
+document.addEventListener("pointerup", event => {
+  if (!draggedInk || draggedInk.pointerId !== event.pointerId) return;
+  const target = document.elementFromPoint(event.clientX, event.clientY);
+  if (target === canvas) dropInkOnCanvas(event, draggedInk.color);
+  draggedInk.button.classList.remove("is-dragging");
+  draggedInk = null;
+});
+
+document.addEventListener("pointercancel", event => {
+  if (!draggedInk || draggedInk.pointerId !== event.pointerId) return;
+  draggedInk.button.classList.remove("is-dragging");
+  draggedInk = null;
+});
 
 canvas.addEventListener("pointerdown", event => {
   event.preventDefault();
