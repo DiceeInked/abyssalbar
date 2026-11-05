@@ -5,6 +5,7 @@ export class InputController {
     this.pointers = new Map();
     this.buttons = [...root.querySelectorAll("[data-action]")];
     this.attackQueued = false;
+    this.resetQueued = false;
 
     this.handleKeyDown = this.handleKeyDown.bind(this);
     this.handleKeyUp = this.handleKeyUp.bind(this);
@@ -22,6 +23,7 @@ export class InputController {
         button.setPointerCapture?.(event.pointerId);
         this.pointers.set(event.pointerId, button.dataset.action);
         if (button.dataset.action === "attack") this.attackQueued = true;
+        if (button.dataset.action === "reset") this.resetQueued = true;
         button.classList.add("is-pressed");
       });
 
@@ -40,11 +42,12 @@ export class InputController {
 
   handleKeyDown(event) {
     const key = event.key.toLowerCase();
-    if (["a", "arrowleft", "d", "arrowright", " ", "w", "arrowup", "j"].includes(key)) {
+    if (["a", "arrowleft", "d", "arrowright", " ", "w", "arrowup", "j", "r"].includes(key)) {
       event.preventDefault();
     }
 
     if (key === "j" && !event.repeat) this.attackQueued = true;
+    if (key === "r" && !event.repeat) this.resetQueued = true;
     this.keys.add(key);
   }
 
@@ -65,12 +68,15 @@ export class InputController {
     const jump = this.keys.has(" ") || this.keys.has("w") || this.keys.has("arrowup")
       || activeActions.includes("jump");
     const attackPressed = this.attackQueued;
+    const resetPressed = this.resetQueued;
     this.attackQueued = false;
+    this.resetQueued = false;
 
     return {
       move: Number(right) - Number(left),
       jumpHeld: jump,
-      attackPressed
+      attackPressed,
+      resetPressed
     };
   }
 
@@ -78,6 +84,7 @@ export class InputController {
     this.keys.clear();
     this.pointers.clear();
     this.attackQueued = false;
+    this.resetQueued = false;
     for (const button of this.buttons) button.classList.remove("is-pressed");
   }
 
