@@ -31,10 +31,12 @@ export function createPlayer() {
     grounded: true,
     animationTime: 0,
     jumpCount: 0,
+    ink: 0,
     attackTime: 0,
     attackCooldown: 0,
     attackHits: new Set(),
     attackCreatureHit: false,
+    attackOreHit: false,
     attackSurfaceHit: false,
     airHoldTimer: 0,
     lastHitType: "",
@@ -100,6 +102,7 @@ function updateActionTimers(player, input, dt) {
     player.attackCooldown = ATTACK_COOLDOWN;
     player.attackHits = new Set();
     player.attackCreatureHit = false;
+    player.attackOreHit = false;
     player.attackSurfaceHit = false;
   }
 }
