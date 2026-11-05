@@ -1,4 +1,4 @@
-# DAG: Phase 2 Cave Foundation
+# DAG: Phase 3 Combat Prototype
 
 This is the browser-based foundation for Drawing Adventure Game. It uses plain HTML, CSS, and JavaScript modules.
 
@@ -12,43 +12,50 @@ Then open http://localhost:8000.
 
 ## Current test scene
 
-The scene is a side-view cave movement sandbox labelled A99. It is a technical test space, not the final cave layout.
+The scene is a side-view cave movement and combat sandbox labelled A99. It is a technical test space, not the final cave layout.
 
 - A long cave floor, ceiling, and side boundaries.
-- A handful of temporary ledges for testing platform collisions.
+- Temporary ledges for testing platform collisions.
 - A six-piece block-style placeholder character.
-- A camera that follows the player as they travel through the cave.
-- Keyboard and multitouch controls.
-- The restored original gravity and jump settings, with the previous horizontal movement speed.
-- Simple blocky idle, running, rising, and falling character poses.
-- Basic angular cave-rock shapes so the test scene reads as underground without becoming an art-polish task.
+- A camera that follows the player through the cave.
+- Keyboard and touchscreen controls.
+- The restored gravity and jump settings, with the previous horizontal movement speed.
+- Simple idle, running, rising, falling, and sword-swing poses.
+- A temporary practice creature for testing damage and the airborne creature-hit pause.
+- Surface-hit rebound behavior for the floor, ceiling, walls, and temporary ledges.
+- Simple cave-rock shapes without a large art-polish pass.
 
-The rock silhouettes and test ledges are deliberately simple placeholders, not final cave art or a final map design. The cave generation method, terrain shapes, and layout rules remain open design decisions.
+The practice creature and ledges are test objects. They are not part of the intended first cave, which is meant to be quiet and have no enemies or shopkeepers. The rock silhouettes are placeholders, not final cave art.
 
 ## Controls
 
 - **A / Left Arrow:** Move left.
 - **D / Right Arrow:** Move right.
-- **Space / W / Up Arrow:** Jump.
+- **Space / W / Up Arrow:** Jump. Holding jump causes another jump as soon as the player lands.
+- **J / touchscreen HIT button:** Swing the sword.
 - **Touchscreen:** Hold the left/right controls to move; hold JUMP to auto-jump.
 
-Holding jump causes the player to jump again as soon as they land. It does not allow a second jump while airborne. Horizontal movement speed is unchanged.
+Attack input is a dedicated action for this prototype. The attack button is deliberately separate from movement and jump. The exact final control mapping can be changed later.
+
+## Combat prototype
+
+The sword has a short attack animation and a cooldown. A swing can damage the temporary practice creature. When a creature is hit while the player is airborne, the player stops moving vertically for about two seconds and can continue attacking. Horizontal air movement remains available during the hold.
+
+Attacking a solid surface during a swing triggers an upward rebound. The current prototype applies the same upward boost to floor, ceiling, wall, and temporary ledge contacts. These values and the attack hitbox are first-pass tuning choices, not final balance.
+
+Creature damage and surface rebounds are separate outcomes. One swing that hits a creature does not also trigger a surface rebound.
 
 ## Character and movement
 
-The placeholder character is built from six separate square-edged pieces: head, torso, two arms, and two legs. It uses deliberately simple block-style movement animation. More detailed animation work is postponed.
+The placeholder character uses six simple square-edged pieces: head, torso, two arms, and two legs. Movement animation stays deliberately blocky. More detailed art and animation work is postponed.
 
 The physics module handles collisions against reusable solid rectangles. The camera has separate world coordinates, smooth follow, and world-edge limits.
 
-## Intentionally not implemented yet
+## Not implemented yet
 
-The first cave is designed to be quiet, with a few ores and no enemies or shopkeepers. This sandbox does not include ore objects or mining yet. Exact ore spawn rules and the mining interaction still need to be specified before they are implemented.
+The first cave is designed to be quiet, with a few ores and no enemies or shopkeepers. Actual ore objects, mining, ink collection, weapons customization, inventory, merchants, and creatures outside the practice target are not implemented.
 
-Procedural cave generation, final cave geometry, Stronghold behavior, cave reset rules, merchants, creatures, inventory, login, and multiplayer are not part of this phase.
-
-## Future mining and combat hook
-
-scripts/physics.js exports applyHitImpulse(player, strength). A future ore or creature hit handler can call this when an airborne hit connects. Repeated hits add upward velocity and can counter gravity.
+The mining input and interaction still need a final decision before mining is built. Procedural cave generation, final cave geometry, Stronghold behavior, cave reset rules, login, and multiplayer are also outside this prototype.
 
 ## Future multiplayer boundary
 
@@ -60,4 +67,4 @@ With Node.js installed, run:
 
     npm test
 
-The automated tests cover world boundaries, floor and ceiling collisions, ledge landing and falling, jump height, hold-to-auto-jump, jump release, air control, repeated upward hit impulses, and camera behavior.
+The automated tests cover world boundaries, floor and ceiling collisions, ledge landing and falling, jump height, hold-to-auto-jump, jump release, air control, hit impulses, attack timing, creature-hit suspension, surface rebounds, and camera behavior.
