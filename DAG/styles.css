@@ -101,6 +101,24 @@ h1 {
   color: #ffffff;
 }
 
+.practice-toggle {
+  min-height: 25px;
+  padding: 0 8px;
+  border: 1px solid #38434a;
+  border-radius: 6px;
+  background: rgba(18, 24, 28, 0.75);
+  color: #a2adb4;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.practice-toggle[aria-pressed="true"] {
+  border-color: rgba(0, 255, 200, 0.48);
+  color: #aaffea;
+  background: rgba(0, 255, 200, 0.07);
+}
+
 .game-frame {
   position: relative;
   width: 100%;
