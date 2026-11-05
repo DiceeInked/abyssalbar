@@ -3,7 +3,9 @@ import { SOLIDS } from "./world.js";
 
 export const COMBAT = Object.freeze({
   creatureAirHold: 2,
-  surfaceBounceVelocity: MOVEMENT.jumpVelocity
+  surfaceBounceVelocity: MOVEMENT.jumpVelocity,
+  oreHitsToMine: 3,
+  inkPerOre: 5
 });
 
 function intersects(a, b) {
@@ -27,6 +29,20 @@ export function createPracticeCreatures() {
   }];
 }
 
+export function createPracticeOres() {
+  return [620, 1510, 2470].map((x, index) => ({
+    id: "ore-" + (index + 1),
+    x,
+    y: 162,
+    radius: 17,
+    health: COMBAT.oreHitsToMine,
+    maxHealth: COMBAT.oreHitsToMine,
+    inkValue: COMBAT.inkPerOre,
+    alive: true,
+    flashTime: 0
+  }));
+}
+
 export function getAttackHitbox(player) {
   if (player.attackTime <= 0) return null;
 
@@ -42,7 +58,7 @@ export function getAttackHitbox(player) {
   };
 }
 
-export function resolveAttackHits(player, creatures, solids = SOLIDS) {
+export function resolveAttackHits(player, creatures, ores = [], solids = SOLIDS) {
   const hitbox = getAttackHitbox(player);
   if (!hitbox) return null;
 
@@ -74,7 +90,34 @@ export function resolveAttackHits(player, creatures, solids = SOLIDS) {
     return "creature";
   }
 
-  if (!player.attackCreatureHit && !player.attackSurfaceHit) {
+  for (const ore of ores) {
+    if (!ore.alive || player.attackHits.has(ore.id)) continue;
+
+    const oreBox = {
+      x: ore.x - ore.radius,
+      y: ore.y - ore.radius,
+      width: ore.radius * 2,
+      height: ore.radius * 2
+    };
+
+    if (!intersects(hitbox, oreBox)) continue;
+
+    player.attackHits.add(ore.id);
+    player.attackOreHit = true;
+    ore.health = Math.max(0, ore.health - 1);
+    ore.flashTime = 0.16;
+    player.lastHitType = "ORE";
+    player.hitFeedbackTime = 0.5;
+
+    if (ore.health === 0) {
+      ore.alive = false;
+      player.ink += ore.inkValue;
+    }
+
+    return "ore";
+  }
+
+  if (!player.attackCreatureHit && !player.attackOreHit && !player.attackSurfaceHit) {
     const surface = solids.find(solid => intersects(hitbox, solid));
     if (surface) {
       player.attackSurfaceHit = true;
