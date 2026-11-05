@@ -83,7 +83,7 @@ test("a second swing can hit the same creature before the midair hold expires", 
   const player = createPlayer();
   const creatures = createPracticeCreatures();
   player.x = 286;
-  player.y = 142;
+  player.y = 120;
   player.grounded = false;
   player.vy = 160;
 
