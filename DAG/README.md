@@ -10,6 +10,10 @@ Open index.html in a modern browser. Because the code uses JavaScript modules, s
 
 Then open http://localhost:8000.
 
+## Drawing board prototype
+
+Open [the drawing board](./drawing/) from the cave test page. It is a separate experimental page with a 96 × 96 raster canvas, grayscale brush, eraser, connected-region ink fill, undo/redo, local-browser save, and 8× PNG export. The fill tool recolors only the connected region with the exact same source shade and deliberately ignores white canvas pixels. This page tests the notes' basic color-replacement idea; the canvas format, resolution, tool list, region rules, and ink-cost formula are not final.
+
 ## Current test scene
 
 The scene is a side-view cave movement, combat, and mining sandbox labelled A99. It is a technical test space, not the final cave layout.
