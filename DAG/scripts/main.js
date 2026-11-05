@@ -9,15 +9,22 @@ const movementState = document.querySelector("#movement-state");
 const collisionState = document.querySelector("#collision-state");
 const inkState = document.querySelector("#ink-state");
 
-const player = createPlayer();
-const camera = createCamera(player);
+let player = createPlayer();
+let camera = createCamera(player);
 const input = new InputController();
-const creatures = createPracticeCreatures();
-const ores = createPracticeOres();
+let creatures = createPracticeCreatures();
+let ores = createPracticeOres();
 const fixedStep = 1 / 60;
 
 let previousTime = 0;
 let accumulator = 0;
+
+function resetTest() {
+  player = createPlayer();
+  camera = createCamera(player);
+  creatures = createPracticeCreatures();
+  ores = createPracticeOres();
+}
 
 function updateReadout() {
   const contacts = player.contacts;
@@ -53,6 +60,11 @@ function frame(time) {
 
   while (accumulator >= fixedStep) {
     const snapshot = input.snapshot();
+    if (snapshot.resetPressed) {
+      resetTest();
+      accumulator = 0;
+      break;
+    }
     updatePlayer(player, snapshot, fixedStep);
     resolveAttackHits(player, creatures, ores);
     for (const creature of creatures) {
