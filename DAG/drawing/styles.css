@@ -1,0 +1,418 @@
+:root {
+  color-scheme: dark;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #101215;
+  color: #edf1f3;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-text-size-adjust: 100%;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html,
+body {
+  width: 100%;
+  min-width: 320px;
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  min-height: 100svh;
+  padding: clamp(12px, 3vw, 28px);
+  background:
+    radial-gradient(ellipse at 48% 38%, rgba(53, 67, 75, 0.2), transparent 62%),
+    #101215;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+button:focus-visible,
+a:focus-visible {
+  outline: 2px solid #00ffc8;
+  outline-offset: 3px;
+}
+
+.drawing-app {
+  width: min(100%, 1080px);
+  min-height: calc(100svh - 56px);
+  margin: 0 auto;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 22px;
+}
+
+.drawing-header,
+.header-actions,
+.drawing-footer,
+.canvas-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.drawing-header {
+  padding-bottom: 14px;
+  border-bottom: 1px solid #2a333a;
+}
+
+.back-link {
+  display: inline-block;
+  margin-bottom: 16px;
+  color: #8d9aa2;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.1em;
+  text-decoration: none;
+}
+
+.back-link:hover {
+  color: #c9d4d9;
+}
+
+.eyebrow {
+  margin: 0 0 4px;
+  color: #74818a;
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: 0.18em;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(23px, 4vw, 34px);
+  font-weight: 650;
+  letter-spacing: -0.045em;
+}
+
+.header-actions {
+  align-self: end;
+}
+
+.quiet-button,
+.save-button,
+.wide-button,
+.tool-button {
+  border: 1px solid #37434b;
+  border-radius: 8px;
+  background: #171d22;
+  transition: border-color 100ms ease, background 100ms ease, color 100ms ease;
+}
+
+.quiet-button,
+.save-button {
+  min-width: 62px;
+  height: 36px;
+  padding: 0 11px;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.quiet-button {
+  color: #a9b4bb;
+}
+
+.quiet-button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.save-button {
+  border-color: rgba(0, 255, 200, 0.48);
+  background: rgba(0, 255, 200, 0.08);
+  color: #aaffea;
+}
+
+.quiet-button:not(:disabled):hover,
+.wide-button:hover,
+.tool-button:hover {
+  border-color: #71818b;
+}
+
+.save-button:hover {
+  background: rgba(0, 255, 200, 0.14);
+}
+
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 260px;
+  align-items: start;
+  gap: 24px;
+}
+
+.canvas-column {
+  min-width: 0;
+}
+
+.canvas-frame {
+  width: 100%;
+  padding: clamp(10px, 2vw, 18px);
+  border: 1px solid #303b43;
+  border-radius: 12px;
+  background: #171d22;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.24);
+}
+
+#drawing-board {
+  display: block;
+  width: 100%;
+  max-height: calc(100svh - 240px);
+  aspect-ratio: 1;
+  object-fit: contain;
+  background: white;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.canvas-meta {
+  align-items: start;
+  margin-top: 10px;
+  color: #87949c;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+#board-status {
+  max-width: 70%;
+}
+
+.resolution-label {
+  color: #65737c;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+.tool-panel {
+  display: grid;
+  gap: 20px;
+  padding: 17px;
+  border: 1px solid #303b43;
+  border-radius: 11px;
+  background: rgba(21, 27, 32, 0.86);
+}
+
+.tool-section {
+  display: grid;
+  gap: 11px;
+}
+
+.tool-section + .tool-section {
+  padding-top: 17px;
+  border-top: 1px solid #2a333a;
+}
+
+h2 {
+  margin: 0;
+  color: #9aa7af;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+}
+
+.tool-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.tool-button {
+  min-height: 64px;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 5px;
+  padding: 7px 3px;
+  color: #aab5bc;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+
+.tool-symbol {
+  font-size: 17px;
+  line-height: 1;
+}
+
+.tool-button.is-selected {
+  border-color: rgba(0, 255, 200, 0.62);
+  background: rgba(0, 255, 200, 0.09);
+  color: #bafff0;
+}
+
+.swatch-row {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  flex-wrap: wrap;
+}
+
+.swatch {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 2px solid #4a555c;
+  border-radius: 50%;
+  background: var(--swatch);
+  box-shadow: inset 0 0 0 2px #171d22;
+}
+
+.swatch.is-selected {
+  outline: 2px solid #00ffc8;
+  outline-offset: 3px;
+  border-color: #101719;
+}
+
+.ink-swatches .swatch {
+  width: 33px;
+  height: 33px;
+}
+
+.helper-text {
+  margin: 0;
+  color: #77858e;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.wide-button {
+  width: 100%;
+  min-height: 36px;
+  color: #bdc7cc;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.drawing-footer {
+  padding-top: 12px;
+  border-top: 1px solid #2a333a;
+  color: #68757d;
+  font-size: 8px;
+  font-weight: 750;
+  letter-spacing: 0.1em;
+}
+
+@media (max-width: 760px) {
+  body {
+    padding: 12px;
+  }
+
+  .drawing-app {
+    min-height: calc(100svh - 24px);
+    gap: 14px;
+  }
+
+  .drawing-header {
+    align-items: end;
+  }
+
+  .back-link {
+    margin-bottom: 11px;
+  }
+
+  .header-actions {
+    gap: 5px;
+  }
+
+  .quiet-button,
+  .save-button {
+    min-width: 48px;
+    height: 33px;
+    padding: 0 7px;
+    font-size: 8px;
+  }
+
+  .workspace {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 13px;
+  }
+
+  .canvas-frame {
+    padding: 8px;
+    border-radius: 9px;
+  }
+
+  #drawing-board {
+    max-height: none;
+    max-height: min(56svh, 520px);
+  }
+
+  .tool-panel {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: 12px;
+    padding: 12px;
+  }
+
+  .tool-section + .tool-section {
+    padding-top: 0;
+    border-top: 0;
+  }
+
+  .tool-section:nth-child(3),
+  .tool-section:nth-child(4) {
+    padding-top: 12px;
+    border-top: 1px solid #2a333a;
+  }
+
+  .tool-grid {
+    gap: 4px;
+  }
+
+  .tool-button {
+    min-height: 54px;
+  }
+
+  .swatch-row {
+    gap: 9px;
+  }
+
+  .swatch {
+    width: 27px;
+    height: 27px;
+  }
+
+  .ink-swatches .swatch {
+    width: 29px;
+    height: 29px;
+  }
+
+  .drawing-footer {
+    gap: 6px;
+    font-size: 7px;
+  }
+}
+
+@media (max-width: 380px) {
+  .header-actions {
+    gap: 3px;
+  }
+
+  .quiet-button,
+  .save-button {
+    min-width: 42px;
+    padding: 0 5px;
+  }
+
+  .tool-panel {
+    padding: 9px;
+  }
+
+  .swatch-row {
+    gap: 7px;
+  }
+}
