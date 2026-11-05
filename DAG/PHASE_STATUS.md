@@ -17,7 +17,13 @@ This file tracks what is actually in the browser prototype. It is separate from 
 - [x] Three generic ore deposits can be mined with the same HIT action.
 - [x] Each test deposit takes three hits and gives five units of raw test ink.
 - [x] One-button test reset for the player, target, ores, and raw ink.
+- [x] Separate drawing-board prototype with grayscale brush, eraser, connected-region ink recoloring, undo/redo, local save, and PNG export.
+- [x] Automated flood-fill tests for isolated regions and white-space boundaries.
 - [x] Automated tests and JavaScript syntax checks run in GitHub Actions.
+
+## Drawing-board prototype limits
+
+The drawing page uses a 96 × 96 raster canvas and stores saves only in the current browser. These are test defaults, not decisions about the final editor format, canvas dimensions, cloud persistence, tool set, region rules, or ink cost.
 
 ## Test-only content
 
@@ -28,12 +34,13 @@ The creature is present only to test combat. The first real cave remains intende
 ## Next implementation order
 
 1. **Confirm interaction controls.** The current prototype uses one HIT action for both attacking and mining. Decide whether mining should keep that shared action or use a separate Mine action.
-2. **Define the resource loop.** Decide what ore types exist, which ink colors they produce, whether the player has one raw-ink total or separate color amounts, and how deposits respawn.
-3. **Build the first actual cave layout.** Replace the temporary ledges with a small hand-built test route that fits the intended quiet A99 introduction. Keep the cave visually simple.
-4. **Add the first real creature outside A99.** This needs its own behavior, attacks, health, and spawn rules. Keep the practice target separate from the real creature roster.
-5. **Connect weapons to their parts.** The current sword is only a simple test weapon. Blade, handle, and amulet behavior, ink costs, upgrades, and weapon eligibility for movement effects still need their own specified rules.
-6. **Add the next exploration interaction.** Stronghold behavior and the exact descent destination still have open design questions, so implement those only after the unresolved rule is decided.
-7. **Defer larger infrastructure.** Procedural caves, shared cave servers, multiplayer, accounts, stash persistence, and Inkoff are much later than the local movement/combat/mining prototype.
+2. **Develop the drawing rules.** Decide whether the final editor should be raster, vector, or mixed, define how regions connect, and specify the ink-cost formula. The current drawing page is a test of one simple connected-region approach.
+3. **Define the resource loop.** Decide what ore types exist, which ink colors they produce, whether the player has one raw-ink total or separate color amounts, and how deposits respawn.
+4. **Build the first actual cave layout.** Replace the temporary ledges with a small hand-built test route that fits the intended quiet A99 introduction. Keep the cave visually simple.
+5. **Add the first real creature outside A99.** This needs its own behavior, attacks, health, and spawn rules. Keep the practice target separate from the real creature roster.
+6. **Connect weapons to their parts.** The current sword is only a simple test weapon. Blade, handle, and amulet behavior, ink costs, upgrades, and weapon eligibility for movement effects still need their own specified rules.
+7. **Add the next exploration interaction.** Stronghold behavior and the exact descent destination still have open design questions, so implement those only after the unresolved rule is decided.
+8. **Defer larger infrastructure.** Procedural caves, shared cave servers, multiplayer, accounts, stash persistence, and Inkoff are much later than the local movement/combat/mining prototype.
 
 ## Temporary prototype values
 
