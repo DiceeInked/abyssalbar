@@ -4,23 +4,24 @@ export class InputController {
     this.keys = new Set();
     this.pointers = new Map();
     this.buttons = [...root.querySelectorAll("[data-action]")];
+    this.attackQueued = false;
 
     this.handleKeyDown = this.handleKeyDown.bind(this);
     this.handleKeyUp = this.handleKeyUp.bind(this);
+    this.handleVisibilityChange = this.handleVisibilityChange.bind(this);
     this.clear = this.clear.bind(this);
 
     window.addEventListener("keydown", this.handleKeyDown);
     window.addEventListener("keyup", this.handleKeyUp);
     window.addEventListener("blur", this.clear);
-    document.addEventListener("visibilitychange", () => {
-      if (document.hidden) this.clear();
-    });
+    document.addEventListener("visibilitychange", this.handleVisibilityChange);
 
     for (const button of this.buttons) {
       button.addEventListener("pointerdown", event => {
         event.preventDefault();
         button.setPointerCapture?.(event.pointerId);
         this.pointers.set(event.pointerId, button.dataset.action);
+        if (button.dataset.action === "attack") this.attackQueued = true;
         button.classList.add("is-pressed");
       });
 
@@ -39,33 +40,44 @@ export class InputController {
 
   handleKeyDown(event) {
     const key = event.key.toLowerCase();
-    if (["a", "arrowleft", "d", "arrowright", " ", "w", "arrowup"].includes(key)) {
+    if (["a", "arrowleft", "d", "arrowright", " ", "w", "arrowup", "j"].includes(key)) {
       event.preventDefault();
-      this.keys.add(key);
     }
+
+    if (key === "j" && !event.repeat) this.attackQueued = true;
+    this.keys.add(key);
   }
 
   handleKeyUp(event) {
     this.keys.delete(event.key.toLowerCase());
   }
 
+  handleVisibilityChange() {
+    if (document.hidden) this.clear();
+  }
+
   snapshot() {
+    const activeActions = [...this.pointers.values()];
     const left = this.keys.has("a") || this.keys.has("arrowleft")
-      || [...this.pointers.values()].includes("left");
+      || activeActions.includes("left");
     const right = this.keys.has("d") || this.keys.has("arrowright")
-      || [...this.pointers.values()].includes("right");
+      || activeActions.includes("right");
     const jump = this.keys.has(" ") || this.keys.has("w") || this.keys.has("arrowup")
-      || [...this.pointers.values()].includes("jump");
+      || activeActions.includes("jump");
+    const attackPressed = this.attackQueued;
+    this.attackQueued = false;
 
     return {
       move: Number(right) - Number(left),
-      jumpHeld: jump
+      jumpHeld: jump,
+      attackPressed
     };
   }
 
   clear() {
     this.keys.clear();
     this.pointers.clear();
+    this.attackQueued = false;
     for (const button of this.buttons) button.classList.remove("is-pressed");
   }
 
@@ -73,6 +85,7 @@ export class InputController {
     window.removeEventListener("keydown", this.handleKeyDown);
     window.removeEventListener("keyup", this.handleKeyUp);
     window.removeEventListener("blur", this.clear);
+    document.removeEventListener("visibilitychange", this.handleVisibilityChange);
     this.clear();
   }
 }
