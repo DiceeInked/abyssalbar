@@ -10,7 +10,7 @@ export const PLAYER_START = Object.freeze({
   y: 180 - 38
 });
 
-// These simple ledges are movement-test geometry, not the final cave layout.
+// Temporary collision platforms for testing cave traversal.
 export const SOLIDS = Object.freeze([
   { x: 0, y: 180, width: 3600, height: 40, kind: "floor" },
   { x: 0, y: -580, width: 3600, height: 40, kind: "ceiling" },
