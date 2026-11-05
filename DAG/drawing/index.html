@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#101215">
+  <title>DAG | Drawing board prototype</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="drawing-app">
+    <header class="drawing-header">
+      <div class="brand">
+        <a class="back-link" href="../index.html">← CAVE TEST</a>
+        <p class="eyebrow">DRAWING ADVENTURE GAME</p>
+        <h1>Drawing board</h1>
+      </div>
+      <div class="header-actions">
+        <button type="button" id="undo-button" class="quiet-button" aria-label="Undo last change">UNDO</button>
+        <button type="button" id="redo-button" class="quiet-button" aria-label="Redo last undone change">REDO</button>
+        <button type="button" id="save-button" class="save-button">SAVE</button>
+      </div>
+    </header>
+
+    <div class="workspace">
+      <section class="canvas-column" aria-label="Drawing canvas">
+        <div class="canvas-frame">
+          <canvas id="drawing-board" width="96" height="96" aria-label="96 by 96 drawing canvas"></canvas>
+        </div>
+        <div class="canvas-meta">
+          <span id="board-status" role="status" aria-live="polite">Ready. Draw a gray shape, then recolor it with ink.</span>
+          <span class="resolution-label">96 × 96 TEST CANVAS</span>
+        </div>
+      </section>
+
+      <aside class="tool-panel">
+        <section class="tool-section">
+          <h2>TOOLS</h2>
+          <div class="tool-grid">
+            <button type="button" class="tool-button is-selected" data-tool="brush" aria-pressed="true">
+              <span class="tool-symbol">✎</span><span>BRUSH</span>
+            </button>
+            <button type="button" class="tool-button" data-tool="recolor" aria-pressed="false">
+              <span class="tool-symbol">◉</span><span>INK FILL</span>
+            </button>
+            <button type="button" class="tool-button" data-tool="eraser" aria-pressed="false">
+              <span class="tool-symbol">⌫</span><span>ERASER</span>
+            </button>
+          </div>
+        </section>
+
+        <section class="tool-section">
+          <h2>PENCIL SHADES</h2>
+          <div class="swatch-row" aria-label="Grayscale drawing shades">
+            <button type="button" class="swatch" data-color="#171a1d" aria-label="Black pencil" title="Black" style="--swatch:#171a1d" aria-pressed="false"></button>
+            <button type="button" class="swatch" data-color="#555d63" aria-label="Dark gray pencil" title="Dark gray" style="--swatch:#555d63" aria-pressed="false"></button>
+            <button type="button" class="swatch is-selected" data-color="#929ba1" aria-label="Gray pencil" title="Gray" style="--swatch:#929ba1" aria-pressed="true"></button>
+            <button type="button" class="swatch" data-color="#c9cfd2" aria-label="Light gray pencil" title="Light gray" style="--swatch:#c9cfd2" aria-pressed="false"></button>
+          </div>
+        </section>
+
+        <section class="tool-section">
+          <h2>INK COLORS</h2>
+          <div class="swatch-row ink-swatches" aria-label="Ink recolor choices">
+            <button type="button" class="swatch" data-color="#ff555d" aria-label="Red ink" title="Red ink" style="--swatch:#ff555d" aria-pressed="false"></button>
+            <button type="button" class="swatch" data-color="#4d8dff" aria-label="Blue ink" title="Blue ink" style="--swatch:#4d8dff" aria-pressed="false"></button>
+            <button type="button" class="swatch" data-color="#47d58b" aria-label="Green ink" title="Green ink" style="--swatch:#47d58b" aria-pressed="false"></button>
+            <button type="button" class="swatch" data-color="#ffd44d" aria-label="Yellow ink" title="Yellow ink" style="--swatch:#ffd44d" aria-pressed="false"></button>
+          </div>
+          <p class="helper-text">Choose an ink color, select INK FILL, then tap a connected gray region.</p>
+        </section>
+
+        <section class="tool-section tool-options">
+          <h2>BOARD</h2>
+          <button type="button" id="clear-button" class="wide-button">CLEAR CANVAS</button>
+          <button type="button" id="export-button" class="wide-button">EXPORT PNG</button>
+          <p class="helper-text">SAVE stores a local copy in this browser. It is not connected to a game account.</p>
+        </section>
+      </aside>
+    </div>
+
+    <footer class="drawing-footer">
+      <span>WHITE IS THE CANVAS, NOT AN INK COLOR.</span>
+      <span>PROTOTYPE · TOOLS AND RESOLUTION MAY CHANGE</span>
+    </footer>
+  </main>
+  <script type="module" src="./drawing.js"></script>
+</body>
+</html>
