@@ -91,7 +91,6 @@ h1 {
   border-radius: 12px;
   background: #14181c;
   box-shadow: 0 22px 70px rgba(0, 0, 0, 0.28);
-  touch-action: none;
 }
 
 #game {
@@ -135,7 +134,8 @@ h1 {
   pointer-events: none;
 }
 
-.movement-buttons {
+.movement-buttons,
+.action-buttons {
   display: flex;
   gap: 10px;
 }
@@ -160,10 +160,20 @@ h1 {
   border-color: #dce4e9;
 }
 
+.touch-controls .attack-button,
+.touch-controls .jump-button {
+  width: 76px;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+}
+
+.touch-controls .attack-button {
+  border-color: rgba(0, 255, 200, 0.5);
+  color: #b9fff0;
+}
+
 .touch-controls .jump-button {
   width: 82px;
-  font-size: 13px;
-  letter-spacing: 0.08em;
 }
 
 .game-footer {
@@ -262,13 +272,17 @@ kbd {
   }
 
   .touch-controls button {
-    width: clamp(52px, 15vw, 62px);
-    height: clamp(52px, 15vw, 62px);
+    width: clamp(48px, 13vw, 62px);
+    height: clamp(48px, 13vw, 62px);
     border-radius: 14px;
   }
 
+  .touch-controls .attack-button {
+    width: clamp(58px, 15vw, 76px);
+  }
+
   .touch-controls .jump-button {
-    width: clamp(70px, 19vw, 82px);
+    width: clamp(62px, 17vw, 82px);
   }
 
   .game-footer {
@@ -292,10 +306,15 @@ kbd {
     padding: 2px 4px;
     font-size: 9px;
   }
+
+  .movement-buttons,
+  .action-buttons {
+    gap: 6px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  *,
+  *, 
   *::before,
   *::after {
     scroll-behavior: auto !important;
