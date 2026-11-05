@@ -101,6 +101,38 @@ function drawTerrain(ctx) {
   }
 }
 
+function drawOres(ctx, ores) {
+  for (const ore of ores) {
+    const x = ore.x;
+    const y = ore.y;
+    if (!ore.alive) {
+      ctx.fillStyle = "#202a30";
+      ctx.fillRect(x - 14, y + 8, 28, 8);
+      continue;
+    }
+
+    const crystal = ore.flashTime > 0 ? "#eafffa" : "#00ffc8";
+    drawPolygon(ctx, [
+      [x - 17, y + 10], [x - 14, y - 9], [x - 4, y - 19],
+      [x + 8, y - 14], [x + 17, y + 7], [x + 7, y + 15],
+      [x - 8, y + 16]
+    ], "#263c3b");
+    drawPolygon(ctx, [
+      [x - 10, y + 7], [x - 7, y - 8], [x - 1, y - 16],
+      [x + 7, y - 10], [x + 12, y + 5], [x + 3, y + 12]
+    ], crystal);
+    drawPolygon(ctx, [
+      [x - 5, y - 7], [x - 1, y - 16], [x + 7, y - 10],
+      [x + 4, y + 2]
+    ], "rgba(235, 255, 251, 0.65)");
+
+    ctx.fillStyle = "rgba(4, 10, 12, 0.85)";
+    ctx.fillRect(x - 17, y - 30, 34, 4);
+    ctx.fillStyle = "#00ffc8";
+    ctx.fillRect(x - 17, y - 30, 34 * ore.health / ore.maxHealth, 4);
+  }
+}
+
 function drawBlock(ctx, x, y, rotation, color, width, height) {
   ctx.save();
   ctx.translate(x, y);
@@ -228,7 +260,7 @@ function drawPlayer(ctx, player) {
   ctx.restore();
 }
 
-export function renderGame(canvas, player, camera, creatures = []) {
+export function renderGame(canvas, player, camera, creatures = [], ores = []) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
 
@@ -253,6 +285,7 @@ export function renderGame(canvas, player, camera, creatures = []) {
   ctx.scale(scale, scale);
   drawTerrain(ctx);
   drawCaveRockwork(ctx);
+  drawOres(ctx, ores);
   drawPracticeCreatures(ctx, creatures);
   drawPlayer(ctx, player);
   ctx.restore();
