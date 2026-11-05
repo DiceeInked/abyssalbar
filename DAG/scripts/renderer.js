@@ -184,7 +184,7 @@ function drawPracticeCreatures(ctx, creatures) {
 function drawSword(ctx, player) {
   if (player.attackTime <= 0) return;
   const progress = Math.max(0, Math.min(1, 1 - player.attackTime / ATTACK_DURATION));
-  const swing = -1.25 + progress * 2.35;
+  const swing = -0.65 + progress * 2.75;
 
   ctx.save();
   ctx.translate(18, -4);
@@ -226,6 +226,12 @@ function drawPlayer(ctx, player) {
     rightLeg = -0.18;
     leftArm = -0.72;
     rightArm = 0.72;
+  }
+
+  if (player.attackTime > 0) {
+    const attackProgress = 1 - player.attackTime / ATTACK_DURATION;
+    rightArm = -0.35 + attackProgress * 0.95;
+    leftArm = -0.12;
   }
 
   ctx.save();
