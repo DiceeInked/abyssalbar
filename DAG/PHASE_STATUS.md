@@ -16,9 +16,12 @@ This file tracks what is actually in the browser prototype. It is separate from 
 - [x] Successful attacks against solid surfaces apply an upward velocity boost for floor, wall, and ceiling cases.
 - [x] Three generic ore deposits can be mined with the same HIT action.
 - [x] Each test deposit takes three hits and gives five units of raw test ink.
+- [x] One-button test reset for the player, target, ores, and raw ink.
 - [x] Automated tests and JavaScript syntax checks run in GitHub Actions.
 
 ## Test-only content
+
+The RESET button and R key are development conveniences for replaying this sandbox. They are not intended as a diegetic mechanic or part of the final player interface.
 
 The creature is present only to test combat. The first real cave remains intended to be quiet, with a few ores and no enemies or shopkeepers. The temporary ledges are collision-test geometry, not the finished cave layout. Ore shapes, color, hit count, and raw ink yield are placeholder values.
 
