@@ -1,12 +1,14 @@
 import { createPlayer, updatePlayer } from "./physics.js";
 import { InputController } from "./input.js";
 import { renderGame } from "./renderer.js";
+import { createCamera, updateCamera } from "./camera.js";
 
 const canvas = document.querySelector("#game");
 const movementState = document.querySelector("#movement-state");
 const collisionState = document.querySelector("#collision-state");
 
 const player = createPlayer();
+const camera = createCamera(player);
 const input = new InputController();
 const fixedStep = 1 / 60;
 
@@ -16,14 +18,13 @@ let accumulator = 0;
 function updateReadout() {
   const contacts = player.contacts;
   const states = [];
-
   if (contacts.floor) states.push("FLOOR");
   if (contacts.ceiling) states.push("CEILING");
   if (contacts.left) states.push("LEFT WALL");
   if (contacts.right) states.push("RIGHT WALL");
 
   movementState.textContent = player.grounded ? "ON GROUND" : "AIRBORNE";
-  collisionState.textContent = states.length ? states.join(" · ") : "Inside the room";
+  collisionState.textContent = states.length ? states.join(" · ") : "A99 · CAVE TEST";
 }
 
 function frame(time) {
@@ -37,7 +38,8 @@ function frame(time) {
     accumulator -= fixedStep;
   }
 
-  renderGame(canvas, player);
+  updateCamera(camera, player, canvas.clientWidth, canvas.clientHeight, elapsed);
+  renderGame(canvas, player, camera);
   updateReadout();
   requestAnimationFrame(frame);
 }
