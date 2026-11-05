@@ -14,17 +14,18 @@
         <p class="eyebrow">DRAWING ADVENTURE GAME</p>
         <h1>Cave test</h1>
       </div>
-      <p class="header-note">Phase 3 · Combat prototype</p>
+      <p class="header-note">Phase 4 · Mining prototype</p>
     </header>
 
     <section class="game-frame" aria-label="DAG cave movement and combat test">
-      <canvas id="game" aria-label="A block-style character in a side-view cave combat sandbox">
+      <canvas id="game" aria-label="A block-style character exploring a side-view cave">
         Your browser does not support the HTML canvas element.
       </canvas>
 
       <div class="readout" aria-live="polite">
         <span id="movement-state">READY</span>
-        <span id="collision-state">A99 · COMBAT TEST</span>
+        <span id="collision-state">A99 · CAVE TEST</span>
+        <span id="ink-state">RAW INK 0</span>
       </div>
 
       <div class="touch-controls" aria-label="Touchscreen controls">
@@ -33,14 +34,14 @@
           <button type="button" data-action="right" aria-label="Move right">→</button>
         </div>
         <div class="action-buttons">
-          <button class="attack-button" type="button" data-action="attack" aria-label="Attack">HIT</button>
+          <button class="attack-button" type="button" data-action="attack" aria-label="Attack or mine">HIT</button>
           <button class="jump-button" type="button" data-action="jump" aria-label="Hold to jump">JUMP</button>
         </div>
       </div>
     </section>
 
     <footer class="game-footer">
-      <p><kbd>A</kbd> <kbd>D</kbd> move <span>·</span> <kbd>Space</kbd> jump <span>·</span> <kbd>J</kbd> attack</p>
+      <p><kbd>A</kbd> <kbd>D</kbd> move <span>·</span> <kbd>Space</kbd> jump <span>·</span> <kbd>J</kbd> hit / mine</p>
       <p class="footer-secondary">The creature and ledges are temporary test objects.</p>
     </footer>
   </main>
