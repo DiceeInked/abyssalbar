@@ -1,4 +1,4 @@
-# DAG: Phase 3 Combat Prototype
+# DAG: Phase 4 Mining Prototype
 
 This is the browser-based foundation for Drawing Adventure Game. It uses plain HTML, CSS, and JavaScript modules.
 
@@ -12,7 +12,7 @@ Then open http://localhost:8000.
 
 ## Current test scene
 
-The scene is a side-view cave movement and combat sandbox labelled A99. It is a technical test space, not the final cave layout.
+The scene is a side-view cave movement, combat, and mining sandbox labelled A99. It is a technical test space, not the final cave layout.
 
 - A long cave floor, ceiling, and side boundaries.
 - Temporary ledges for testing platform collisions.
@@ -22,20 +22,21 @@ The scene is a side-view cave movement and combat sandbox labelled A99. It is a 
 - The restored gravity and jump settings, with the previous horizontal movement speed.
 - Simple idle, running, rising, falling, and sword-swing poses.
 - A temporary practice creature for testing damage and the airborne creature-hit pause.
+- Three simple ore deposits for testing weapon-based mining and ink collection.
 - Surface-hit rebound behavior for the floor, ceiling, walls, and temporary ledges.
 - Simple cave-rock shapes without a large art-polish pass.
 
-The practice creature and ledges are test objects. They are not part of the intended first cave, which is meant to be quiet and have no enemies or shopkeepers. The rock silhouettes are placeholders, not final cave art.
+The practice creature and ledges are test objects. They are not part of the intended first cave, which is meant to be quiet and have no enemies or shopkeepers. The three ore deposits represent the first cave's small-ore introduction. The rock silhouettes are placeholders, not final cave art.
 
 ## Controls
 
 - **A / Left Arrow:** Move left.
 - **D / Right Arrow:** Move right.
 - **Space / W / Up Arrow:** Jump. Holding jump causes another jump as soon as the player lands.
-- **J / touchscreen HIT button:** Swing the sword.
+- **J / touchscreen HIT button:** Swing the weapon. The same action can damage the practice creature or mine nearby ore.
 - **Touchscreen:** Hold the left/right controls to move; hold JUMP to auto-jump.
 
-Attack input is a dedicated action for this prototype. The attack button is deliberately separate from movement and jump. The exact final control mapping can be changed later.
+The shared HIT action is a temporary prototype choice because the design says weapons can mine ores. It can be separated into a dedicated mining action later if that feels better.
 
 ## Combat prototype
 
@@ -43,7 +44,11 @@ The sword has a short attack animation and a cooldown. A swing can damage the te
 
 Attacking a solid surface during a swing triggers an upward rebound. The current prototype applies the same upward boost to floor, ceiling, wall, and temporary ledge contacts. These values and the attack hitbox are first-pass tuning choices, not final balance.
 
-Creature damage and surface rebounds are separate outcomes. One swing that hits a creature does not also trigger a surface rebound.
+Creature damage, ore mining, and surface rebounds are separate outcomes. One swing that hits a creature or ore does not also trigger a surface rebound.
+
+## Mining prototype
+
+Three simple ore deposits sit along the cave floor. Each requires three successful weapon hits. Mining a deposit adds **5 raw test ink** to the HUD counter. The nodes are deliberately generic: ore color, ore types, yield values, respawn behavior, and the final ink economy have not been decided. The number shown is a prototype counter, not a final per-color inventory.
 
 ## Character and movement
 
@@ -53,9 +58,9 @@ The physics module handles collisions against reusable solid rectangles. The cam
 
 ## Not implemented yet
 
-The first cave is designed to be quiet, with a few ores and no enemies or shopkeepers. Actual ore objects, mining, ink collection, weapons customization, inventory, merchants, and creatures outside the practice target are not implemented.
+The first cave is designed to be quiet, with a few ores and no enemies or shopkeepers. The practice target is only for the combat sandbox. Weapon parts, secondary abilities, ink-color effects, the final ink inventory, mining upgrades, merchants, and creatures outside the practice target are not implemented.
 
-The mining input and interaction still need a final decision before mining is built. Procedural cave generation, final cave geometry, Stronghold behavior, cave reset rules, login, and multiplayer are also outside this prototype.
+Procedural cave generation, final cave geometry, Stronghold behavior, cave reset rules, login, and multiplayer are also outside this prototype.
 
 ## Future multiplayer boundary
 
@@ -67,4 +72,4 @@ With Node.js installed, run:
 
     npm test
 
-The automated tests cover world boundaries, floor and ceiling collisions, ledge landing and falling, jump height, hold-to-auto-jump, jump release, air control, hit impulses, attack timing, creature-hit suspension, surface rebounds, and camera behavior.
+The automated tests cover world boundaries, floor and ceiling collisions, ledge landing and falling, jump height, hold-to-auto-jump, jump release, air control, hit impulses, attack timing, creature-hit suspension, surface rebounds, ore damage, raw ink collection, and camera behavior.
