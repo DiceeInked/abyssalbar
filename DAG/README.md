@@ -30,7 +30,7 @@ The scene is a side-view cave movement, combat, and mining sandbox labelled A99.
 - Surface-hit rebound behavior for the floor, ceiling, walls, and temporary ledges.
 - Simple cave-rock shapes without a large art-polish pass.
 
-The practice creature and ledges are test objects. They are not part of the intended first cave, which is meant to be quiet and have no enemies or shopkeepers. The three ore deposits represent the first cave's small-ore introduction. The rock silhouettes are placeholders, not final cave art.
+The practice creature is hidden by default. Use the PRACTICE TARGET toggle to show it for combat tests. It is not part of the intended first cave, which is meant to be quiet and have no enemies or shopkeepers. The three ore deposits represent the first cave's small-ore introduction. The ledges and rock silhouettes are test geometry, not final cave art.
 
 ## Controls
 
