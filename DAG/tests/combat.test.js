@@ -58,6 +58,52 @@ test("hitting a creature in midair pauses falling for two seconds", () => {
   assert.ok(player.airHoldTimer > 0.9 && player.airHoldTimer < 1.1);
 });
 
+test("horizontal steering still works during the creature-hit midair hold", () => {
+  const player = createPlayer();
+  const creatures = createPracticeCreatures();
+  player.x = 286;
+  player.y = 142;
+  player.grounded = false;
+  player.vy = 160;
+  player.attackTime = ATTACK_DURATION / 2;
+
+  assert.equal(resolveAttackHits(player, creatures, [], []), "creature");
+  const heldY = player.y;
+  const startX = player.x;
+
+  updatePlayer(player, { move: 1, jumpHeld: false, attackPressed: false }, step);
+
+  assert.equal(player.y, heldY);
+  assert.equal(player.vy, 0);
+  assert.ok(player.x > startX);
+  assert.ok(player.airHoldTimer < COMBAT.creatureAirHold);
+});
+
+test("a second swing can hit the same creature before the midair hold expires", () => {
+  const player = createPlayer();
+  const creatures = createPracticeCreatures();
+  player.x = 286;
+  player.y = 142;
+  player.grounded = false;
+  player.vy = 160;
+
+  updatePlayer(player, { move: 0, jumpHeld: false, attackPressed: true }, step);
+  assert.equal(resolveAttackHits(player, creatures, [], []), "creature");
+  assert.equal(creatures[0].health, 2);
+
+  for (let i = 0; i < 25; i += 1) {
+    updatePlayer(player, { move: 0, jumpHeld: false, attackPressed: false }, step);
+  }
+
+  assert.ok(player.airHoldTimer > 1.5);
+  assert.equal(player.attackCooldown, 0);
+  updatePlayer(player, { move: 0, jumpHeld: false, attackPressed: true }, step);
+  assert.ok(player.attackTime > 0);
+  assert.equal(resolveAttackHits(player, creatures, [], []), "creature");
+  assert.equal(creatures[0].health, 1);
+  assert.ok(player.airHoldTimer > 1.9);
+});
+
 test("one swing cannot damage the same creature more than once", () => {
   const player = createPlayer();
   const creatures = createPracticeCreatures();
