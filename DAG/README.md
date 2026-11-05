@@ -1,4 +1,4 @@
-# DAG: Phase 4 Mining Prototype
+# DAG Browser Prototype
 
 This is the browser-based foundation for Drawing Adventure Game. It uses plain HTML, CSS, and JavaScript modules.
 
@@ -12,7 +12,7 @@ Then open http://localhost:8000.
 
 ## Drawing board prototype
 
-Open [the drawing board](./drawing/) from the cave test page. It is a separate experimental page with a 96 × 96 raster canvas, grayscale brush, eraser, connected-region ink fill, undo/redo, a sample block-character sketch, local-browser save, and 8× PNG export. The fill tool recolors only the connected region with the exact same source shade and deliberately ignores white canvas pixels. This page tests the notes' basic color-replacement idea; the canvas format, resolution, tool list, region rules, and ink-cost formula are not final.
+Open [the drawing board](./drawing/) from the cave test page. It is a separate experimental page with a 96 × 96 raster canvas, grayscale brush, eraser, connected-region ink fill (including direct ink-swatch dragging), undo/redo, a sample block-character sketch, local-browser save, and 8× PNG export. The fill tool recolors only the connected region with the exact same source shade and deliberately ignores white canvas pixels. This page tests the notes' basic color-replacement idea; the canvas format, resolution, tool list, region rules, and ink-cost formula are not final.
 
 ## Current test scene
 
