@@ -20,6 +20,7 @@ let previousTime = 0;
 let accumulator = 0;
 
 function resetTest() {
+  input.clear();
   player = createPlayer();
   camera = createCamera(player);
   creatures = createPracticeCreatures();
