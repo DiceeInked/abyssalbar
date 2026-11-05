@@ -1,4 +1,4 @@
-import { PLAYER_SIZE } from "./physics.js";
+import { PLAYER_SIZE, ATTACK_DURATION } from "./physics.js";
 import { SOLIDS, WORLD } from "./world.js";
 import { getCameraScale } from "./camera.js";
 
@@ -27,7 +27,6 @@ function drawPolygon(ctx, points, color) {
 }
 
 function drawCaveRockwork(ctx) {
-  // Simple angular rock shapes make the test room read as a cave.
   drawPolygon(ctx, [
     [WORLD.left, WORLD.top + 75], [WORLD.left + 120, WORLD.top + 30],
     [WORLD.left + 245, WORLD.top + 66], [WORLD.left + 390, WORLD.top + 24],
@@ -53,7 +52,6 @@ function drawCaveRockwork(ctx) {
     ], i % 2 ? "#1a252d" : "#202b33");
   }
 
-  // A few matching rock teeth rise from the floor without changing collision geometry.
   for (let i = 0; i < 18; i += 1) {
     const x = 80 + i * 197;
     const width = 18 + (i * 5 % 27);
@@ -65,7 +63,6 @@ function drawCaveRockwork(ctx) {
     ], "#242f36");
   }
 
-  // Rock flecks are sparse and fixed, not animated decoration.
   for (let i = 0; i < 92; i += 1) {
     const x = 55 + (i * 137 % 3480);
     const y = -430 + (i * 71 % 560);
@@ -110,6 +107,62 @@ function drawBlock(ctx, x, y, rotation, color, width, height) {
   ctx.rotate(rotation);
   ctx.fillStyle = color;
   ctx.fillRect(-width / 2, -height / 2, width, height);
+  ctx.restore();
+}
+
+function drawPracticeCreatures(ctx, creatures) {
+  for (const creature of creatures) {
+    if (!creature.alive) continue;
+    const x = creature.x;
+    const y = creature.y;
+    const damaged = creature.flashTime > 0;
+    const bodyColor = damaged ? "#e3f3ef" : "#718d88";
+
+    ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
+    ctx.fillRect(x - creature.width / 2 - 5, y + creature.height / 2 - 2, creature.width + 10, 5);
+
+    drawPolygon(ctx, [
+      [x - 19, y + 12], [x - 17, y - 2], [x - 8, y - 13],
+      [x + 7, y - 14], [x + 18, y - 4], [x + 20, y + 12],
+      [x + 10, y + 21], [x - 9, y + 20]
+    ], bodyColor);
+
+    drawPolygon(ctx, [
+      [x - 12, y - 11], [x - 17, y - 22], [x - 5, y - 17]
+    ], "#8da49c");
+    drawPolygon(ctx, [
+      [x + 8, y - 12], [x + 16, y - 22], [x + 17, y - 6]
+    ], "#8da49c");
+
+    ctx.fillStyle = "#182229";
+    ctx.fillRect(x - 8, y - 2, 4, 4);
+    ctx.fillRect(x + 6, y - 2, 4, 4);
+    ctx.fillStyle = "#d8e4df";
+    ctx.fillRect(x - 7, y - 3, 2, 2);
+    ctx.fillRect(x + 7, y - 3, 2, 2);
+
+    const barWidth = 34;
+    ctx.fillStyle = "rgba(5, 9, 12, 0.8)";
+    ctx.fillRect(x - barWidth / 2, y - 34, barWidth, 5);
+    ctx.fillStyle = "#00ffc8";
+    ctx.fillRect(x - barWidth / 2, y - 34, barWidth * creature.health / creature.maxHealth, 5);
+  }
+}
+
+function drawSword(ctx, player) {
+  if (player.attackTime <= 0) return;
+  const progress = Math.max(0, Math.min(1, 1 - player.attackTime / ATTACK_DURATION));
+  const swing = -1.25 + progress * 2.35;
+
+  ctx.save();
+  ctx.translate(18, -4);
+  ctx.rotate(swing);
+  ctx.fillStyle = "#52616b";
+  ctx.fillRect(-3, -4, 6, 15);
+  ctx.fillStyle = "#d8e0e5";
+  ctx.fillRect(-2, -38, 4, 34);
+  ctx.fillStyle = "#94a3ad";
+  ctx.fillRect(-5, -8, 10, 4);
   ctx.restore();
 }
 
@@ -159,6 +212,7 @@ function drawPlayer(ctx, player) {
   ctx.fillRect(-10, -39, 20, 18);
   ctx.fillStyle = "#263039";
   ctx.fillRect(3, -33, 2, 2);
+  drawSword(ctx, player);
   ctx.restore();
 
   ctx.save();
@@ -174,7 +228,7 @@ function drawPlayer(ctx, player) {
   ctx.restore();
 }
 
-export function renderGame(canvas, player, camera) {
+export function renderGame(canvas, player, camera, creatures = []) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
 
@@ -199,6 +253,7 @@ export function renderGame(canvas, player, camera) {
   ctx.scale(scale, scale);
   drawTerrain(ctx);
   drawCaveRockwork(ctx);
+  drawPracticeCreatures(ctx, creatures);
   drawPlayer(ctx, player);
   ctx.restore();
 }
