@@ -8,11 +8,13 @@ const canvas = document.querySelector("#game");
 const movementState = document.querySelector("#movement-state");
 const collisionState = document.querySelector("#collision-state");
 const inkState = document.querySelector("#ink-state");
+const practiceToggle = document.querySelector("#practice-toggle");
 
 let player = createPlayer();
 let camera = createCamera(player);
 const input = new InputController();
-let creatures = createPracticeCreatures();
+let practiceMode = false;
+let creatures = [];
 let ores = createPracticeOres();
 const fixedStep = 1 / 60;
 
@@ -23,9 +25,18 @@ function resetTest() {
   input.clear();
   player = createPlayer();
   camera = createCamera(player);
-  creatures = createPracticeCreatures();
+  creatures = practiceMode ? createPracticeCreatures() : [];
   ores = createPracticeOres();
 }
+
+function setPracticeMode(enabled) {
+  practiceMode = enabled;
+  creatures = practiceMode ? createPracticeCreatures() : [];
+  practiceToggle.setAttribute("aria-pressed", String(practiceMode));
+  practiceToggle.textContent = practiceMode ? "PRACTICE TARGET: ON" : "PRACTICE TARGET: OFF";
+}
+
+practiceToggle.addEventListener("click", () => setPracticeMode(!practiceMode));
 
 function updateReadout() {
   const contacts = player.contacts;
@@ -38,9 +49,11 @@ function updateReadout() {
   if (player.hitFeedbackTime > 0 && player.lastHitType) states.push(player.lastHitType + " HIT");
 
   const active = creatures.find(creature => creature.alive);
-  const targetStatus = active
-    ? "TARGET " + active.health + "/" + active.maxHealth
-    : "TARGET DOWN";
+  const targetStatus = !practiceMode
+    ? "QUIET A99"
+    : active
+      ? "TARGET " + active.health + "/" + active.maxHealth
+      : "TARGET DOWN";
 
   movementState.textContent = player.attackTime > 0
     ? "ATTACKING"
