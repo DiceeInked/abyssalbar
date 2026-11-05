@@ -128,6 +128,33 @@ h1 {
   font-weight: 750;
 }
 
+
+.reset-button {
+  position: absolute;
+  top: 13px;
+  right: 14px;
+  z-index: 2;
+  min-width: 56px;
+  height: 28px;
+  padding: 0 9px;
+  border: 1px solid rgba(220, 230, 236, 0.22);
+  border-radius: 7px;
+  background: rgba(12, 17, 21, 0.72);
+  color: #aab6be;
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: 0.1em;
+  pointer-events: auto;
+  touch-action: manipulation;
+}
+
+.reset-button:active,
+.reset-button.is-pressed {
+  border-color: rgba(0, 255, 200, 0.55);
+  color: #b9fff0;
+  background: rgba(20, 37, 37, 0.94);
+}
+
 .touch-controls {
   display: none;
   position: absolute;
