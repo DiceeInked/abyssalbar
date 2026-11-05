@@ -10,8 +10,8 @@ export const MOVEMENT = Object.freeze({
   groundAcceleration: 1900,
   airAcceleration: 1150,
   groundFriction: 2200,
-  gravity: 2100,
-  jumpVelocity: 680,
+  gravity: 1350,
+  jumpVelocity: 820,
   hitImpulse: 190
 });
 
@@ -28,12 +28,7 @@ export function createPlayer() {
     grounded: true,
     animationTime: 0,
     jumpCount: 0,
-    contacts: {
-      floor: true,
-      ceiling: false,
-      left: false,
-      right: false
-    }
+    contacts: { floor: true, ceiling: false, left: false, right: false }
   };
 }
 
@@ -49,19 +44,8 @@ function overlaps(minA, maxA, minB, maxB) {
 
 function resolveHorizontal(player, previousX) {
   for (const solid of SOLIDS) {
-    const overlapsY = overlaps(
-      player.y - halfHeight,
-      player.y + halfHeight,
-      solid.y,
-      solid.y + solid.height
-    );
-    const overlapsX = overlaps(
-      player.x - halfWidth,
-      player.x + halfWidth,
-      solid.x,
-      solid.x + solid.width
-    );
-
+    const overlapsY = overlaps(player.y - halfHeight, player.y + halfHeight, solid.y, solid.y + solid.height);
+    const overlapsX = overlaps(player.x - halfWidth, player.x + halfWidth, solid.x, solid.x + solid.width);
     if (!overlapsX || !overlapsY) continue;
 
     if (player.vx > 0 || (player.vx === 0 && player.x > previousX)) {
@@ -77,19 +61,8 @@ function resolveHorizontal(player, previousX) {
 
 function resolveVertical(player, previousY) {
   for (const solid of SOLIDS) {
-    const overlapsX = overlaps(
-      player.x - halfWidth,
-      player.x + halfWidth,
-      solid.x,
-      solid.x + solid.width
-    );
-    const overlapsY = overlaps(
-      player.y - halfHeight,
-      player.y + halfHeight,
-      solid.y,
-      solid.y + solid.height
-    );
-
+    const overlapsX = overlaps(player.x - halfWidth, player.x + halfWidth, solid.x, solid.x + solid.width);
+    const overlapsY = overlaps(player.y - halfHeight, player.y + halfHeight, solid.y, solid.y + solid.height);
     if (!overlapsX || !overlapsY) continue;
 
     if (player.vy >= 0 && previousY + halfHeight <= solid.y + 1) {
@@ -111,9 +84,7 @@ export function updatePlayer(player, input, delta) {
 
   const direction = Math.max(-1, Math.min(1, input.move || 0));
   const wasGrounded = player.grounded;
-  const acceleration = wasGrounded
-    ? MOVEMENT.groundAcceleration
-    : MOVEMENT.airAcceleration;
+  const acceleration = wasGrounded ? MOVEMENT.groundAcceleration : MOVEMENT.airAcceleration;
 
   if (direction !== 0) {
     player.vx = approach(player.vx, direction * MOVEMENT.speed, acceleration * dt);
@@ -133,12 +104,7 @@ export function updatePlayer(player, input, delta) {
 
   const support = SOLIDS.find(solid =>
     Math.abs(player.y + halfHeight - solid.y) < 1
-    && overlaps(
-      player.x - halfWidth,
-      player.x + halfWidth,
-      solid.x,
-      solid.x + solid.width
-    )
+    && overlaps(player.x - halfWidth, player.x + halfWidth, solid.x, solid.x + solid.width)
   );
 
   if (wasGrounded && input.jumpHeld) {
@@ -162,11 +128,9 @@ export function updatePlayer(player, input, delta) {
   return player;
 }
 
-// Mining and combat can call this when a valid airborne hit lands.
 export function applyHitImpulse(player, strength = MOVEMENT.hitImpulse) {
   const impulse = Math.max(0, Number(strength) || 0);
   if (impulse === 0 || player.grounded) return player.vy;
-
   player.vy -= impulse;
   player.grounded = false;
   player.contacts.floor = false;
