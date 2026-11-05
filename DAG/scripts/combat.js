@@ -48,13 +48,13 @@ export function getAttackHitbox(player) {
 
   const progress = Math.max(0, Math.min(1, 1 - player.attackTime / ATTACK_DURATION));
   const reach = 20 + progress * 50;
-  const drop = -6 + Math.sin(progress * Math.PI) * 12 + progress * 6;
+  const top = player.y - 54 + progress * 40;
 
   return {
     x: player.x + player.facing * reach - 42,
-    y: player.y + drop - 32,
+    y: top,
     width: 84,
-    height: 64
+    height: 68
   };
 }
 
