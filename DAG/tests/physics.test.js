@@ -19,10 +19,15 @@ function solid(kind) {
   return SOLIDS.find(item => item.kind === kind);
 }
 
+test("the previous jump and gravity values are restored", () => {
+  assert.equal(MOVEMENT.gravity, 1350);
+  assert.equal(MOVEMENT.jumpVelocity, 820);
+  assert.equal(MOVEMENT.speed, 285);
+});
+
 test("the player starts on the cave floor", () => {
   const player = createPlayer();
-  const floor = solid("floor");
-  assert.equal(player.y + PLAYER_SIZE.height / 2, floor.y);
+  assert.equal(player.y + PLAYER_SIZE.height / 2, solid("floor").y);
   assert.equal(player.grounded, true);
 });
 
@@ -45,7 +50,6 @@ test("left and right world walls stop horizontal movement", () => {
   updatePlayer(player, { move: -1, jumpHeld: false }, step);
   assert.equal(player.contacts.left, true);
   assert.equal(player.x, 21);
-
   player.x = WORLD.right - 22;
   player.vx = MOVEMENT.speed;
   updatePlayer(player, { move: 1, jumpHeld: false }, step);
@@ -65,17 +69,17 @@ test("the ceiling stops upward movement", () => {
   assert.equal(player.vy, 0);
 });
 
-test("a normal jump has a shorter, heavier arc", () => {
+test("the restored jump has its previous taller arc", () => {
   const player = createPlayer();
   const startY = player.y;
   let highestY = player.y;
   updatePlayer(player, { move: 0, jumpHeld: true }, step);
-  for (let i = 0; i < 90 && !player.grounded; i += 1) {
+  for (let i = 0; i < 120 && !player.grounded; i += 1) {
     updatePlayer(player, { move: 0, jumpHeld: false }, step);
     highestY = Math.min(highestY, player.y);
   }
   const jumpHeight = startY - highestY;
-  assert.ok(jumpHeight > 95 && jumpHeight < 125, "unexpected jump height: " + jumpHeight);
+  assert.ok(jumpHeight > 230 && jumpHeight < 260, "unexpected jump height: " + jumpHeight);
 });
 
 test("the player can land on a raised ledge", () => {
@@ -106,7 +110,7 @@ test("walking off a ledge starts a fall", () => {
 test("holding jump starts another jump immediately after landing", () => {
   const player = createPlayer();
   simulate(player, { move: 0, jumpHeld: true }, 240);
-  assert.ok(player.jumpCount >= 2, "expected multiple jumps while the button stayed held");
+  assert.ok(player.jumpCount >= 2);
 });
 
 test("releasing jump prevents another automatic jump after landing", () => {
