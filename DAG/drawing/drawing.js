@@ -193,6 +193,8 @@ canvas.addEventListener("dragover", event => {
 canvas.addEventListener("drop", event => {
   const color = event.dataTransfer?.getData("text/plain") || "";
   dropInkOnCanvas(event, color);
+  draggedInk?.button?.classList.remove("is-dragging");
+  draggedInk = null;
 });
 
 let draggedInk = null;
@@ -200,10 +202,16 @@ let draggedInk = null;
 for (const swatch of document.querySelectorAll(".ink-swatches [data-color]")) {
   swatch.addEventListener("dragstart", event => {
     draggedInk = { pointerId: event.pointerId, color: swatch.dataset.color, button: swatch };
+    swatch.classList.add("is-dragging");
     if (event.dataTransfer) {
       event.dataTransfer.setData("text/plain", swatch.dataset.color);
       event.dataTransfer.effectAllowed = "copy";
     }
+  });
+
+  swatch.addEventListener("dragend", () => {
+    swatch.classList.remove("is-dragging");
+    draggedInk = null;
   });
 
   swatch.addEventListener("pointerdown", event => {
