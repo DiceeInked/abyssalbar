@@ -7,6 +7,7 @@ const undoButton = document.querySelector("#undo-button");
 const redoButton = document.querySelector("#redo-button");
 const saveButton = document.querySelector("#save-button");
 const clearButton = document.querySelector("#clear-button");
+const sampleButton = document.querySelector("#sample-button");
 const exportButton = document.querySelector("#export-button");
 
 const saveKey = "dag-drawing-board-v1";
@@ -265,6 +266,24 @@ canvas.addEventListener("contextmenu", event => event.preventDefault());
 
 undoButton.addEventListener("click", () => restoreHistory(historyIndex - 1));
 redoButton.addEventListener("click", () => restoreHistory(historyIndex + 1));
+
+sampleButton.addEventListener("click", () => {
+  const before = readBoard();
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = "#929ba1";
+  ctx.fillRect(38, 10, 20, 20);
+  ctx.fillStyle = "#555d63";
+  ctx.fillRect(31, 31, 34, 32);
+  ctx.fillStyle = "#c9cfd2";
+  ctx.fillRect(17, 34, 13, 25);
+  ctx.fillRect(66, 34, 13, 25);
+  ctx.fillStyle = "#171a1d";
+  ctx.fillRect(34, 64, 12, 23);
+  ctx.fillRect(50, 64, 12, 23);
+  recordHistory(before);
+  setStatus("Sample sketch loaded. Drag an ink color onto a gray piece or use INK FILL.");
+});
 
 clearButton.addEventListener("click", () => {
   const before = readBoard();
