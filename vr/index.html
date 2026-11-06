@@ -654,6 +654,87 @@ function updatePreview(hand) {
   hand.preview.visible = true;
 }
 
+function closestSegmentPoints(a0, a1, b0, b1) {
+  const directionA = new THREE.Vector3().subVectors(a1, a0);
+  const directionB = new THREE.Vector3().subVectors(b1, b0);
+  const offset = new THREE.Vector3().subVectors(a0, b0);
+  const a = directionA.dot(directionA);
+  const e = directionB.dot(directionB);
+  const f = directionB.dot(offset);
+  let t = 0;
+  let u = 0;
+
+  if (a <= 0.0000001 && e <= 0.0000001) {
+    return { t: 0, u: 0, pointA: a0.clone(), pointB: b0.clone() };
+  }
+  if (a <= 0.0000001) {
+    u = THREE.MathUtils.clamp(f / e, 0, 1);
+  } else {
+    const c = directionA.dot(offset);
+    if (e <= 0.0000001) {
+      t = THREE.MathUtils.clamp(-c / a, 0, 1);
+    } else {
+      const b = directionA.dot(directionB);
+      const denominator = a * e - b * b;
+      if (Math.abs(denominator) > 0.0000001) {
+        t = THREE.MathUtils.clamp((b * f - c * e) / denominator, 0, 1);
+      }
+      u = (b * t + f) / e;
+      if (u < 0) {
+        u = 0;
+        t = THREE.MathUtils.clamp(-c / a, 0, 1);
+      } else if (u > 1) {
+        u = 1;
+        t = THREE.MathUtils.clamp((b - c) / a, 0, 1);
+      }
+    }
+  }
+
+  return {
+    t,
+    u,
+    pointA: a0.clone().addScaledVector(directionA, t),
+    pointB: b0.clone().addScaledVector(directionB, u)
+  };
+}
+
+function findEdgeIntersections(startIndex, endIndex) {
+  const start = points[startIndex];
+  const end = points[endIndex];
+  const intersections = [];
+  const tolerance = GRID_SPACING * 0.18;
+
+  edges.slice().forEach(([a, b]) => {
+    if (a === startIndex || a === endIndex || b === startIndex || b === endIndex) return;
+    const closest = closestSegmentPoints(start, end, points[a], points[b]);
+    if (closest.t <= 0.0001 || closest.t >= 0.9999 ||
+        closest.u <= 0.0001 || closest.u >= 0.9999) return;
+    if (closest.pointA.distanceToSquared(closest.pointB) > tolerance * tolerance) return;
+
+    const snapped = snapPosition(
+      closest.pointA.clone().add(closest.pointB).multiplyScalar(0.5)
+    );
+    const segmentA = new THREE.Line3(start, end);
+    const segmentB = new THREE.Line3(points[a], points[b]);
+    if (segmentA.closestPointToPoint(snapped, true, new THREE.Vector3()).distanceTo(snapped) > tolerance ||
+        segmentB.closestPointToPoint(snapped, true, new THREE.Vector3()).distanceTo(snapped) > tolerance) return;
+
+    let index = findPoint(snapped);
+    if (index === -1) {
+      index = points.length;
+      points.push(snapped);
+      splitEdgesAtPoint(index);
+    }
+    if (index !== startIndex && index !== endIndex &&
+        !intersections.some(item => item.index === index)) {
+      intersections.push({ index, t: closest.t });
+    }
+  });
+
+  intersections.sort((a, b) => a.t - b.t);
+  return intersections.map(item => item.index);
+}
+
 function finishDrawing(hand) {
   if (!hand.drawing) return;
 
@@ -676,13 +757,18 @@ function finishDrawing(hand) {
   const startIndex = drawing.startIndex;
 
   if (endIndex !== startIndex && !edgeExists(startIndex, endIndex)) {
-    // If this new edge joins the ends of an existing path of at least
-    // three points, it explicitly closes a polygon.
+    // Split crossed edges and route the new line through shared intersection points.
     const existingPath = findExistingPath(startIndex, endIndex);
-    addEdge(startIndex, endIndex);
+    const intersections = findEdgeIntersections(startIndex, endIndex);
+    const chain = [startIndex, ...intersections, endIndex];
 
+    for (let i = 0; i < chain.length - 1; i++) {
+      addEdge(chain[i], chain[i + 1]);
+    }
+
+    // Closing a loop still requires the user to draw the closing line.
     if (existingPath && existingPath.length >= 3) {
-      faces.push(existingPath);
+      faces.push(existingPath.concat(intersections.slice().reverse()));
     }
   }
 
