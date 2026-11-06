@@ -3,51 +3,56 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="theme-color" content="#080b0d">
+<meta name="theme-color" content="#050708">
 <title>DOTFORM</title>
 <style>
 :root{color-scheme:dark;--mint:#00ffc8}
 *{box-sizing:border-box}
-html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#080b0d;color:#eafff9;font-family:system-ui,sans-serif}
-canvas{display:block}
-#hud{position:fixed;inset:0;pointer-events:none}
-#logo{position:absolute;top:20px;left:22px;color:var(--mint);font-size:13px;font-weight:800;letter-spacing:.28em}
-#message{position:absolute;top:22px;left:50%;transform:translateX(-50%);color:#a9c3bc;font-size:12px;text-align:center;white-space:nowrap}
-#stats{position:absolute;top:20px;right:22px;color:#8fa9a2;font-size:11px;text-align:right;letter-spacing:.1em}
-#stats b{color:white;font-size:14px}
-#help{position:absolute;bottom:18px;left:20px;max-width:290px;padding:12px 14px;border:1px solid #29413d;border-radius:10px;background:#0a1211e8;color:#a8bdb8;font-size:12px;line-height:1.5}
-#help strong{color:white}
-#buttons{position:absolute;right:20px;bottom:20px;display:flex;gap:8px;pointer-events:auto}
-button{border:1px solid #31504b;border-radius:8px;padding:10px 13px;background:#101b1a;color:#eafff9;font:600 12px system-ui;cursor:pointer}
-button:hover{border-color:var(--mint);color:var(--mint)}
-#back{position:absolute;top:16px;left:16px;pointer-events:auto;color:#9bb5ae;text-decoration:none;font-size:11px;letter-spacing:.12em}
-#notice{display:none;position:absolute;bottom:82px;left:20px;padding:10px 12px;border:1px solid #594a2b;border-radius:8px;background:#201a10;color:#f3d9a8;font-size:11px}
-#VRButton{left:50%!important;transform:translateX(-50%)!important;bottom:18px!important}
-@media(max-width:600px){#logo{top:14px;left:14px}#stats{top:14px;right:14px}#message{top:48px;font-size:10px}#help{left:10px;bottom:10px;max-width:210px;font-size:10px}#buttons{right:10px;bottom:10px;flex-direction:column}#back{top:44px;left:14px}}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#050708}
+body{font-family:system-ui,sans-serif}
+canvas{display:block;width:100%;height:100%}
+#VRButton{
+  position:absolute!important;
+  left:50%!important;
+  bottom:24px!important;
+  transform:translateX(-50%)!important;
+  min-width:150px!important;
+  padding:13px 22px!important;
+  border:1px solid #00ffc8!important;
+  border-radius:9px!important;
+  background:#071310!important;
+  color:#eafff9!important;
+  font:700 12px system-ui,sans-serif!important;
+  letter-spacing:.16em!important;
+  opacity:1!important;
+  cursor:pointer!important;
+}
+#VRButton:hover{background:#10231e!important;color:#00ffc8!important}
 </style>
 <script type="importmap">
-{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
 </script>
 </head>
 <body>
-<div id="hud">
-  <a id="back" href="../menu/">← BAR</a>
-  <div id="logo">DOTFORM</div>
-  <div id="message">AIM AT A DOT AND PRESS THE TRIGGER</div>
-  <div id="stats"><b id="point-count">0</b> POINTS<br><b id="face-count">0</b> FACES</div>
-  <div id="help"><strong>BUILD</strong> · Trigger places points. A live line shows the next connection. Trigger the last point again to stop drawing.<br><strong>EDIT</strong> · Hold grip to move a point.<br><strong>DELETE / UNDO</strong> · A/X deletes the pointed-at point. B/Y undoes. Desktop: Delete removes a point.</div>
-  <div id="buttons"><button id="close">CLOSE FACE</button><button id="undo">UNDO</button><button id="clear">CLEAR</button></div>
-  <div id="notice">VR needs a compatible headset/browser and an HTTPS page. Desktop mode still works.</div>
-</div>
 <script type="module">
 import * as THREE from 'three';
 import { VRButton } from 'three/addons/webxr/VRButton.js';
 
-const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x080b0d);
+// DOTFORM uses an invisible, infinite grid. Only each hand's selected
+// grid position is shown; the grid itself is never rendered.
+const GRID_SPACING = 0.1;
+const MAX_HISTORY = 100;
 
-const camera = new THREE.PerspectiveCamera(65, innerWidth / innerHeight, 0.01, 50);
-camera.position.set(0, 1.6, 4.5);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x050708);
+
+const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.01, 1000);
+camera.position.set(0, 1.6, 0);
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -56,392 +61,637 @@ renderer.xr.enabled = true;
 document.body.appendChild(renderer.domElement);
 document.body.appendChild(VRButton.createButton(renderer));
 
-scene.add(new THREE.HemisphereLight(0xcffff5, 0x17201e, 1.5));
-const light = new THREE.DirectionalLight(0xffffff, 1);
-light.position.set(2, 4, 3);
-scene.add(light);
-
-// Make one 3D grid using a single instanced object.
-const gridPoints = [];
-const dotSize = 0.022;
-const dotGeometry = new THREE.SphereGeometry(dotSize, 8, 8);
-const grid = new THREE.InstancedMesh(dotGeometry, new THREE.MeshBasicMaterial({ color: 0x45635c }), 13 * 11 * 9);
-const dotMatrix = new THREE.Object3D();
-let dotNumber = 0;
-
-for (let x = 0; x < 13; x++) {
-  for (let y = 0; y < 11; y++) {
-    for (let z = 0; z < 9; z++) {
-      const point = new THREE.Vector3((x - 6) * 0.3, 1.6 + (y - 5) * 0.3, -3 - (z - 4) * 0.3);
-      gridPoints.push(point);
-      dotMatrix.position.copy(point);
-      dotMatrix.updateMatrix();
-      grid.setMatrixAt(dotNumber++, dotMatrix.matrix);
-    }
-  }
-}
-grid.instanceMatrix.needsUpdate = true;
-scene.add(grid);
-
-const pointGroup = new THREE.Group();
-const lineGroup = new THREE.Group();
 const faceGroup = new THREE.Group();
+const lineGroup = new THREE.Group();
+const pointGroup = new THREE.Group();
 scene.add(faceGroup, lineGroup, pointGroup);
 
-const pointGeometry = new THREE.SphereGeometry(0.055, 12, 10);
-const pointMaterial = new THREE.MeshStandardMaterial({ color: 0x00ffc8, emissive: 0x004c3b });
-const lineMaterial = new THREE.LineBasicMaterial({ color: 0x00dcb0 });
+const pointGeometry = new THREE.SphereGeometry(0.018, 12, 10);
+const pointMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+const lineMaterial = new THREE.LineBasicMaterial({ color: 0xffffff });
 const faceMaterial = new THREE.MeshBasicMaterial({
-  color: 0x00a987, transparent: true, opacity: 0.2, side: THREE.DoubleSide
+  color: 0x00ffc8,
+  transparent: true,
+  opacity: 0.18,
+  side: THREE.DoubleSide,
+  depthWrite: false
 });
-const target = new THREE.Mesh(
-  new THREE.SphereGeometry(0.045, 10, 8),
-  new THREE.MeshBasicMaterial({ color: 0xffffff })
-);
-target.visible = false;
-scene.add(target);
 
-const previewLine = new THREE.Line(
-  new THREE.BufferGeometry(),
-  new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.65 })
-);
-previewLine.visible = false;
-scene.add(previewLine);
-
-let points = [];
+const points = [];
 let edges = [];
 let faces = [];
-let chain = [];
-let history = [];
-let vertexMeshes = [];
-let dragging = null;
-let draggingController = null;
-let hoveredIndex = null;
+const undoStack = [];
+const redoStack = [];
 
-const raycaster = new THREE.Raycaster();
-raycaster.near = 0.01;
-raycaster.far = 10;
-const direction = new THREE.Vector3();
-const origin = new THREE.Vector3();
-const rotation = new THREE.Matrix4();
+let mainHand = null;
+let viewMode = false;
 
-function message(text) {
-  document.getElementById('message').textContent = text;
+function makeInstruction() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 1200;
+  canvas.height = 180;
+  const context = canvas.getContext('2d');
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.fillStyle = '#eafff9';
+  context.font = '700 46px system-ui, sans-serif';
+  context.textAlign = 'center';
+  context.textBaseline = 'middle';
+  context.fillText('CLICK A TRIGGER TO CHOOSE YOUR MAIN HAND', 600, 90);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  const sprite = new THREE.Sprite(new THREE.SpriteMaterial({
+    map: texture,
+    transparent: true,
+    depthTest: false
+  }));
+  sprite.scale.set(1.65, 0.25, 1);
+  sprite.renderOrder = 100;
+  sprite.visible = false;
+  scene.add(sprite);
+  return sprite;
 }
 
-function stats() {
-  document.getElementById('point-count').textContent = points.length;
-  document.getElementById('face-count').textContent = faces.length;
+const instruction = makeInstruction();
+
+function makePreviewLine() {
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute(
+    'position',
+    new THREE.Float32BufferAttribute(new Float32Array(6), 3)
+  );
+  const line = new THREE.Line(geometry, new THREE.LineBasicMaterial({
+    color: 0xffffff,
+    transparent: true,
+    opacity: 0.55
+  }));
+  line.visible = false;
+  line.frustumCulled = false;
+  scene.add(line);
+  return line;
 }
 
-function saveHistory() {
-  history.push({
+function makeSelector(color) {
+  const marker = new THREE.Mesh(
+    new THREE.SphereGeometry(0.025, 12, 10),
+    new THREE.MeshBasicMaterial({ color })
+  );
+  marker.visible = false;
+  scene.add(marker);
+  return marker;
+}
+
+const hands = [];
+
+for (let i = 0; i < 2; i++) {
+  const controller = renderer.xr.getController(i);
+  const grip = renderer.xr.getControllerGrip(i);
+  scene.add(controller, grip);
+
+  const hand = {
+    controller,
+    grip,
+    inputSource: null,
+    selectedPosition: new THREE.Vector3(),
+    selectedKey: '',
+    marker: makeSelector(i === 0 ? 0x00ffc8 : 0xffffff),
+    preview: makePreviewLine(),
+    drawing: null,
+    dragging: null,
+    buttonWasDown: [false, false]
+  };
+
+  controller.userData.hand = hand;
+  controller.addEventListener('connected', event => {
+    hand.inputSource = event.data;
+  });
+  controller.addEventListener('disconnected', () => {
+    hand.inputSource = null;
+  });
+  controller.addEventListener('selectstart', () => startDrawing(hand));
+  controller.addEventListener('selectend', () => finishDrawing(hand));
+  controller.addEventListener('squeezestart', () => startMoving(hand));
+  controller.addEventListener('squeezeend', () => finishMoving(hand));
+
+  hands.push(hand);
+}
+
+function snapPosition(position) {
+  return new THREE.Vector3(
+    Math.round(position.x / GRID_SPACING) * GRID_SPACING,
+    Math.round(position.y / GRID_SPACING) * GRID_SPACING,
+    Math.round(position.z / GRID_SPACING) * GRID_SPACING
+  );
+}
+
+function positionKey(position) {
+  return [
+    Math.round(position.x / GRID_SPACING),
+    Math.round(position.y / GRID_SPACING),
+    Math.round(position.z / GRID_SPACING)
+  ].join(',');
+}
+
+function findPoint(position) {
+  const key = positionKey(position);
+  for (let i = 0; i < points.length; i++) {
+    if (positionKey(points[i]) === key) return i;
+  }
+  return -1;
+}
+
+function updateHandPosition(hand) {
+  hand.grip.updateMatrixWorld(true);
+  const worldPosition = new THREE.Vector3();
+  hand.grip.getWorldPosition(worldPosition);
+  hand.selectedPosition.copy(snapPosition(worldPosition));
+  hand.selectedKey = positionKey(hand.selectedPosition);
+  hand.marker.position.copy(hand.selectedPosition);
+}
+
+function snapshot() {
+  return {
     points: points.map(point => point.toArray()),
     edges: edges.map(edge => edge.slice()),
-    faces: faces.map(face => face.slice()),
-    chain: chain.slice()
-  });
-  if (history.length > 30) history.shift();
+    faces: faces.map(face => face.slice())
+  };
+}
+
+function snapshotsMatch(a, b) {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
+function commitHistory(before) {
+  const after = snapshot();
+  if (snapshotsMatch(before, after)) return;
+
+  undoStack.push(before);
+  if (undoStack.length > MAX_HISTORY) undoStack.shift();
+  redoStack.length = 0;
+}
+
+function restore(state) {
+  points.length = 0;
+  state.points.forEach(point => points.push(new THREE.Vector3(...point)));
+  edges = state.edges.map(edge => edge.slice());
+  faces = state.faces.map(face => face.slice());
+  drawModel();
 }
 
 function clearGroup(group) {
   while (group.children.length) {
     const object = group.children[0];
     group.remove(object);
-    if (object.geometry && object.geometry !== pointGeometry) object.geometry.dispose();
+    if (object.geometry && object.geometry !== pointGeometry) {
+      object.geometry.dispose();
+    }
   }
+}
+
+function makeFaceGeometry(face) {
+  if (face.length < 3) return null;
+
+  const vertices = face.map(index => points[index]);
+  const normal = new THREE.Vector3();
+
+  // Newell's method finds the normal for a polygon in any orientation.
+  for (let i = 0; i < vertices.length; i++) {
+    const current = vertices[i];
+    const next = vertices[(i + 1) % vertices.length];
+    normal.x += (current.y - next.y) * (current.z + next.z);
+    normal.y += (current.z - next.z) * (current.x + next.x);
+    normal.z += (current.x - next.x) * (current.y + next.y);
+  }
+
+  if (normal.lengthSq() < 0.0000001) return null;
+  normal.normalize();
+
+  const helper = Math.abs(normal.x) < 0.8
+    ? new THREE.Vector3(1, 0, 0)
+    : new THREE.Vector3(0, 1, 0);
+  const axisX = new THREE.Vector3().crossVectors(helper, normal).normalize();
+  const axisY = new THREE.Vector3().crossVectors(normal, axisX).normalize();
+  const origin = vertices[0];
+
+  // Triangulate the polygon in its own plane, then put the triangles
+  // back into their original 3D positions.
+  const contour = vertices.map(point => {
+    const offset = new THREE.Vector3().subVectors(point, origin);
+    return new THREE.Vector2(offset.dot(axisX), offset.dot(axisY));
+  });
+  const triangles = THREE.ShapeUtils.triangulateShape(contour, []);
+  const positions = [];
+
+  triangles.forEach(triangle => {
+    triangle.forEach(vertexIndex => {
+      const point = vertices[vertexIndex];
+      positions.push(point.x, point.y, point.z);
+    });
+  });
+
+  if (!positions.length) return null;
+
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.computeVertexNormals();
+  return geometry;
 }
 
 function drawModel() {
-  clearGroup(pointGroup);
-  clearGroup(lineGroup);
   clearGroup(faceGroup);
-  vertexMeshes = [];
+  clearGroup(lineGroup);
+  clearGroup(pointGroup);
 
-  points.forEach((position, index) => {
-    const vertex = new THREE.Mesh(pointGeometry, pointMaterial);
-    vertex.position.copy(position);
-    vertex.userData.index = index;
-    pointGroup.add(vertex);
-    vertexMeshes.push(vertex);
+  faces.forEach(face => {
+    const geometry = makeFaceGeometry(face);
+    if (geometry) faceGroup.add(new THREE.Mesh(geometry, faceMaterial));
   });
 
-  edges.forEach(([a, b]) => {
-    const geometry = new THREE.BufferGeometry().setFromPoints([points[a], points[b]]);
+  edges.forEach(edge => {
+    const geometry = new THREE.BufferGeometry().setFromPoints([
+      points[edge[0]],
+      points[edge[1]]
+    ]);
     lineGroup.add(new THREE.Line(geometry, lineMaterial));
   });
 
-  faces.forEach(face => {
-    const vertices = [];
-    for (let i = 1; i < face.length - 1; i++) {
-      for (const index of [face[0], face[i], face[i + 1]]) {
-        vertices.push(points[index].x, points[index].y, points[index].z);
-      }
-    }
-    const geometry = new THREE.BufferGeometry();
-    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-    geometry.computeVertexNormals();
-    faceGroup.add(new THREE.Mesh(geometry, faceMaterial));
+  points.forEach(position => {
+    const point = new THREE.Mesh(pointGeometry, pointMaterial);
+    point.position.copy(position);
+    pointGroup.add(point);
   });
+}
 
-  stats();
+function edgeExists(a, b) {
+  return edges.some(edge =>
+    (edge[0] === a && edge[1] === b) ||
+    (edge[0] === b && edge[1] === a)
+  );
 }
 
 function addEdge(a, b) {
-  if (a === b) return;
-  const exists = edges.some(edge =>
-    (edge[0] === a && edge[1] === b) || (edge[0] === b && edge[1] === a)
-  );
-  if (!exists) edges.push([a, b]);
+  if (a === b || edgeExists(a, b)) return false;
+  edges.push([a, b]);
+  return true;
 }
 
-function useVertex(index) {
-  if (chain.length === 0) {
-    saveHistory();
-    chain.push(index);
-    message('START POINT SELECTED · ADD MORE POINTS');
-  } else if (index === chain[chain.length - 1]) {
-    saveHistory();
-    chain = [];
-    message('LINE DRAWING STOPPED');
-  } else if (index === chain[0] && chain.length >= 3) {
-    saveHistory();
-    addEdge(chain[chain.length - 1], chain[0]);
-    faces.push(chain.slice());
-    chain = [];
-    message('FACE CREATED · START ANOTHER SHAPE');
-  } else if (!chain.includes(index)) {
-    saveHistory();
-    addEdge(chain[chain.length - 1], index);
-    chain.push(index);
-    message('POINT CONNECTED');
+function findExistingPath(start, end) {
+  const neighbours = Array.from({ length: points.length }, () => []);
+  edges.forEach(([a, b]) => {
+    neighbours[a].push(b);
+    neighbours[b].push(a);
+  });
+
+  const previous = Array(points.length).fill(-1);
+  const visited = Array(points.length).fill(false);
+  const queue = [start];
+  visited[start] = true;
+
+  while (queue.length) {
+    const current = queue.shift();
+    if (current === end) break;
+
+    neighbours[current].forEach(next => {
+      if (!visited[next]) {
+        visited[next] = true;
+        previous[next] = current;
+        queue.push(next);
+      }
+    });
   }
-  drawModel();
+
+  if (!visited[end]) return null;
+
+  const path = [];
+  let current = end;
+  while (current !== -1) {
+    path.push(current);
+    if (current === start) break;
+    current = previous[current];
+  }
+
+  path.reverse();
+  return path[0] === start ? path : null;
 }
 
-function placePoint(position) {
-  saveHistory();
-  const index = points.length;
-  points.push(position.clone());
-  if (chain.length) addEdge(chain[chain.length - 1], index);
-  chain.push(index);
-  drawModel();
-  message(chain.length === 1 ? 'POINT PLACED · ADD ANOTHER' : 'POINT ADDED · CLICK THE FIRST POINT TO CLOSE');
-}
+function startDrawing(hand) {
+  if (!renderer.xr.isPresenting) return;
 
-function closeFace() {
-  if (chain.length < 3) {
-    message('A FACE NEEDS AT LEAST THREE POINTS');
+  // The first trigger press chooses the main hand. It does not draw.
+  if (!mainHand) {
+    mainHand = hand.controller;
+    instruction.visible = false;
     return;
   }
-  saveHistory();
-  addEdge(chain[chain.length - 1], chain[0]);
-  faces.push(chain.slice());
-  chain = [];
-  drawModel();
-  message('FACE CREATED');
+
+  if (viewMode || hand.drawing || hand.dragging) return;
+
+  updateHandPosition(hand);
+  const before = snapshot();
+  let startIndex = findPoint(hand.selectedPosition);
+
+  // A point appears immediately when the trigger is pressed.
+  if (startIndex === -1) {
+    startIndex = points.length;
+    points.push(hand.selectedPosition.clone());
+    drawModel();
+  }
+
+  hand.drawing = {
+    startIndex,
+    before
+  };
 }
 
-function undo() {
-  const state = history.pop();
-  if (!state) return;
-  points = state.points.map(point => new THREE.Vector3(...point));
-  edges = state.edges;
-  faces = state.faces;
-  chain = state.chain;
-  drawModel();
-  message('UNDONE');
-}
-
-function clearModel() {
-  saveHistory();
-  points = [];
-  edges = [];
-  faces = [];
-  chain = [];
-  drawModel();
-  message('MODEL CLEARED');
-}
-
-function deletePoint(index) {
-  if (index === null || index === undefined || index < 0 || index >= points.length) return;
-  saveHistory();
-  points.splice(index, 1);
-  edges = edges.filter(edge => edge[0] !== index && edge[1] !== index)
-    .map(edge => edge.map(value => value > index ? value - 1 : value));
-  faces = faces.map(face => face.filter(value => value !== index)
-    .map(value => value > index ? value - 1 : value))
-    .filter(face => face.length >= 3);
-  chain = chain.filter(value => value !== index)
-    .map(value => value > index ? value - 1 : value);
-  dragging = null;
-  hoveredIndex = null;
-  drawModel();
-  message('POINT DELETED');
-}
-
-function updatePreview(hit) {
-  if (!chain.length || !hit || hit.type !== 'dot' || dragging !== null) {
-    previewLine.visible = false;
+function updatePreview(hand) {
+  if (!hand.drawing || viewMode) {
+    hand.preview.visible = false;
     return;
   }
-  previewLine.geometry.dispose();
-  previewLine.geometry = new THREE.BufferGeometry().setFromPoints([
-    points[chain[chain.length - 1]], hit.position
-  ]);
-  previewLine.visible = true;
-}
 
-function hitTest() {
-  const vertexHit = raycaster.intersectObjects(pointGroup.children)[0];
-  const dotHit = raycaster.intersectObject(grid)[0];
-
-  if (vertexHit && (!dotHit || vertexHit.distance < dotHit.distance)) {
-    return { type: 'vertex', index: vertexHit.object.userData.index };
+  const start = points[hand.drawing.startIndex];
+  if (!start) {
+    hand.preview.visible = false;
+    return;
   }
-  if (dotHit) return { type: 'dot', position: gridPoints[dotHit.instanceId] };
-  return null;
+
+  const end = hand.selectedPosition;
+  if (start.distanceToSquared(end) < 0.000001) {
+    hand.preview.visible = false;
+    return;
+  }
+
+  const attribute = hand.preview.geometry.attributes.position;
+  attribute.array[0] = start.x;
+  attribute.array[1] = start.y;
+  attribute.array[2] = start.z;
+  attribute.array[3] = end.x;
+  attribute.array[4] = end.y;
+  attribute.array[5] = end.z;
+  attribute.needsUpdate = true;
+  hand.preview.geometry.computeBoundingSphere();
+  hand.preview.visible = true;
 }
 
-function aimFromController(controller) {
-  controller.updateMatrixWorld(true);
-  controller.getWorldPosition(origin);
-  rotation.extractRotation(controller.matrixWorld);
-  direction.set(0, 0, -1).applyMatrix4(rotation).normalize();
-  raycaster.set(origin, direction);
+function finishDrawing(hand) {
+  if (!hand.drawing) return;
+
+  const drawing = hand.drawing;
+  hand.drawing = null;
+  hand.preview.visible = false;
+
+  if (viewMode || !points[drawing.startIndex]) return;
+
+  updateHandPosition(hand);
+  let endIndex = findPoint(hand.selectedPosition);
+
+  // Reuse an existing point at this grid position. Otherwise create it.
+  if (endIndex === -1) {
+    endIndex = points.length;
+    points.push(hand.selectedPosition.clone());
+  }
+
+  const startIndex = drawing.startIndex;
+
+  if (endIndex !== startIndex && !edgeExists(startIndex, endIndex)) {
+    // If this new edge joins the ends of an existing path of at least
+    // three points, it explicitly closes a polygon.
+    const existingPath = findExistingPath(startIndex, endIndex);
+    addEdge(startIndex, endIndex);
+
+    if (existingPath && existingPath.length >= 3) {
+      faces.push(existingPath);
+    }
+  }
+
+  commitHistory(drawing.before);
+  drawModel();
 }
 
-function aimFromMouse(event) {
-  const rect = renderer.domElement.getBoundingClientRect();
-  const mouse = new THREE.Vector2(
-    ((event.clientX - rect.left) / rect.width) * 2 - 1,
-    -((event.clientY - rect.top) / rect.height) * 2 + 1
-  );
-  raycaster.setFromCamera(mouse, camera);
+function startMoving(hand) {
+  if (!renderer.xr.isPresenting || !mainHand || viewMode) return;
+  if (hand.drawing || hand.dragging) return;
+
+  updateHandPosition(hand);
+  const index = findPoint(hand.selectedPosition);
+  if (index === -1) return;
+
+  hand.dragging = {
+    index,
+    before: snapshot()
+  };
 }
 
-function useTarget() {
-  const hit = hitTest();
-  if (!hit) return;
-  if (hit.type === 'vertex') useVertex(hit.index);
-  else placePoint(hit.position);
-}
+function updateMoving(hand) {
+  if (!hand.dragging || viewMode) return;
 
-function dragToTarget() {
-  if (dragging === null) return;
-  const hit = raycaster.intersectObject(grid)[0];
-  if (hit) {
-    points[dragging].copy(gridPoints[hit.instanceId]);
+  const index = hand.dragging.index;
+  if (!points[index]) return;
+
+  const occupied = findPoint(hand.selectedPosition);
+  if (occupied !== -1 && occupied !== index) return;
+
+  if (positionKey(points[index]) !== hand.selectedKey) {
+    points[index].copy(hand.selectedPosition);
     drawModel();
   }
 }
 
-// Trigger adds points. Grip grabs and moves existing vertices.
-const controllers = [];
-for (let i = 0; i < 2; i++) {
-  const controller = renderer.xr.getController(i);
-  controller.addEventListener('selectstart', () => { aimFromController(controller); useTarget(); });
-  controller.userData.buttonWasDown = [false, false];
-  controller.addEventListener('squeezestart', () => {
-    aimFromController(controller);
-    const hit = hitTest();
-    if (hit && hit.type === 'vertex') {
-      saveHistory();
-      dragging = hit.index;
-      draggingController = controller;
-      message('MOVING VERTEX');
-    }
-  });
-  controller.addEventListener('squeezeend', () => {
-    if (draggingController === controller) {
-      dragging = null;
-      draggingController = null;
-      message('VERTEX RELEASED');
-    }
-  });
+function mergePoints(fromIndex, intoIndex) {
+  if (fromIndex === intoIndex) return intoIndex;
 
-  const ray = new THREE.Line(
-    new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3(0, 0, -6)]),
-    new THREE.LineBasicMaterial({ color: 0x00ffc8, transparent: true, opacity: 0.55 })
-  );
-  controller.add(ray);
-  scene.add(controller);
-  controllers.push(controller);
-}
-
-// Mouse controls make the same page usable without a headset.
-renderer.domElement.addEventListener('pointerdown', event => {
-  if (renderer.xr.isPresenting) return;
-  aimFromMouse(event);
-  const hit = hitTest();
-  if (hit && hit.type === 'vertex') {
-    if (event.button === 2) useVertex(hit.index);
-    else {
-      saveHistory();
-      dragging = hit.index;
-      draggingController = null;
-      renderer.domElement.setPointerCapture(event.pointerId);
-    }
-  } else if (hit && hit.type === 'dot' && event.button === 0) {
-    placePoint(hit.position);
+  function remap(index) {
+    const redirected = index === fromIndex ? intoIndex : index;
+    return redirected > fromIndex ? redirected - 1 : redirected;
   }
-});
 
-renderer.domElement.addEventListener('pointermove', event => {
-  if (renderer.xr.isPresenting) return;
-  aimFromMouse(event);
-  const hit = hitTest();
-  target.visible = !!hit;
-  hoveredIndex = hit && hit.type === 'vertex' ? hit.index : null;
-  if (hit) target.position.copy(hit.type === 'vertex' ? points[hit.index] : hit.position);
-  updatePreview(hit);
-  dragToTarget();
-});
+  points.splice(fromIndex, 1);
 
-renderer.domElement.addEventListener('pointerup', () => {
-  dragging = null;
-});
-renderer.domElement.addEventListener('contextmenu', event => event.preventDefault());
-window.addEventListener('keydown', event => {
-  if (event.key === 'Delete' || event.key === 'Backspace') deletePoint(hoveredIndex);
-  if (event.key.toLowerCase() === 'b') undo();
-});
+  const nextEdges = [];
+  const seenEdges = new Set();
+  edges.forEach(([a, b]) => {
+    const first = remap(a);
+    const second = remap(b);
+    if (first === second) return;
+    const key = Math.min(first, second) + ':' + Math.max(first, second);
+    if (!seenEdges.has(key)) {
+      seenEdges.add(key);
+      nextEdges.push([first, second]);
+    }
+  });
+  edges = nextEdges;
 
-document.getElementById('close').addEventListener('click', closeFace);
-document.getElementById('undo').addEventListener('click', undo);
-document.getElementById('clear').addEventListener('click', clearModel);
+  faces = faces.map(face => {
+    const mapped = [];
+    face.forEach(index => {
+      const next = remap(index);
+      if (!mapped.includes(next)) mapped.push(next);
+    });
+    return mapped;
+  }).filter(face => face.length >= 3);
 
-if (!navigator.xr || !window.isSecureContext) {
-  document.getElementById('notice').style.display = 'block';
+  return remap(intoIndex);
 }
+
+function finishMoving(hand) {
+  if (!hand.dragging) return;
+
+  const drag = hand.dragging;
+  hand.dragging = null;
+  if (!points[drag.index]) return;
+
+  updateHandPosition(hand);
+  const occupied = findPoint(hand.selectedPosition);
+
+  if (occupied !== -1 && occupied !== drag.index) {
+    mergePoints(drag.index, occupied);
+  } else {
+    points[drag.index].copy(hand.selectedPosition);
+  }
+
+  commitHistory(drag.before);
+  drawModel();
+}
+
+function deletePoint(index) {
+  if (index < 0 || index >= points.length) return;
+
+  const before = snapshot();
+  points.splice(index, 1);
+
+  edges = edges.filter(edge => edge[0] !== index && edge[1] !== index)
+    .map(edge => edge.map(value => value > index ? value - 1 : value));
+
+  // A face that used the deleted point is no longer a complete polygon.
+  faces = faces.filter(face => !face.includes(index))
+    .map(face => face.map(value => value > index ? value - 1 : value));
+
+  hands.forEach(hand => {
+    hand.drawing = null;
+    hand.dragging = null;
+    hand.preview.visible = false;
+  });
+
+  commitHistory(before);
+  drawModel();
+}
+
+function deleteSelectedPoint(hand) {
+  if (viewMode || hand.drawing || hand.dragging) return;
+  updateHandPosition(hand);
+  deletePoint(findPoint(hand.selectedPosition));
+}
+
+function canRunHistoryAction() {
+  return !hands.some(hand => hand.drawing || hand.dragging);
+}
+
+function undo() {
+  if (viewMode || !canRunHistoryAction() || !undoStack.length) return;
+  redoStack.push(snapshot());
+  restore(undoStack.pop());
+}
+
+function redo() {
+  if (viewMode || !canRunHistoryAction() || !redoStack.length) return;
+  undoStack.push(snapshot());
+  restore(redoStack.pop());
+}
+
+function toggleViewMode() {
+  if (hands.some(hand => hand.drawing || hand.dragging)) return;
+  viewMode = !viewMode;
+
+  hands.forEach(hand => {
+    hand.marker.visible = false;
+    hand.preview.visible = false;
+  });
+}
+
+function pollButtons(hand) {
+  const inputSource = hand.inputSource || hand.controller.userData.inputSource;
+  const gamepad = inputSource && inputSource.gamepad;
+  if (!gamepad) return;
+
+  const buttonA = !!gamepad.buttons[4]?.pressed;
+  const buttonB = !!gamepad.buttons[5]?.pressed;
+
+  if (buttonA && !hand.buttonWasDown[0]) {
+    if (hand.controller === mainHand) deleteSelectedPoint(hand);
+    else undo();
+  }
+
+  if (buttonB && !hand.buttonWasDown[1]) {
+    if (hand.controller === mainHand) toggleViewMode();
+    else redo();
+  }
+
+  hand.buttonWasDown[0] = buttonA;
+  hand.buttonWasDown[1] = buttonB;
+}
+
+function updateInstruction() {
+  if (!instruction.visible) return;
+
+  const xrCamera = renderer.xr.getCamera(camera);
+  xrCamera.updateMatrixWorld(true);
+
+  const cameraPosition = new THREE.Vector3();
+  const forward = new THREE.Vector3();
+  xrCamera.getWorldPosition(cameraPosition);
+  xrCamera.getWorldDirection(forward);
+
+  instruction.position.copy(cameraPosition).addScaledVector(forward, 1.4);
+  instruction.quaternion.copy(xrCamera.quaternion);
+}
+
+renderer.xr.addEventListener('sessionstart', () => {
+  mainHand = null;
+  viewMode = false;
+  instruction.visible = true;
+
+  hands.forEach(hand => {
+    hand.drawing = null;
+    hand.dragging = null;
+    hand.buttonWasDown = [false, false];
+    hand.marker.visible = false;
+    hand.preview.visible = false;
+  });
+});
+
+renderer.xr.addEventListener('sessionend', () => {
+  mainHand = null;
+  viewMode = false;
+  instruction.visible = false;
+
+  hands.forEach(hand => {
+    hand.drawing = null;
+    hand.dragging = null;
+    hand.marker.visible = false;
+    hand.preview.visible = false;
+  });
+});
 
 function animate() {
   if (renderer.xr.isPresenting) {
-    for (const controller of controllers) {
-      aimFromController(controller);
-      const hit = hitTest();
+    updateInstruction();
 
-      target.visible = !!hit;
-      if (hit) target.position.copy(hit.type === 'vertex' ? points[hit.index] : hit.position);
+    hands.forEach(hand => {
+      updateHandPosition(hand);
+      pollButtons(hand);
 
-      if (draggingController === controller) dragToTarget();
-      else if (!draggingController) updatePreview(hit);
-
-      const gamepad = controller.userData.inputSource?.gamepad;
-      if (gamepad) {
-        const buttons = [gamepad.buttons[4], gamepad.buttons[5]];
-        buttons.forEach((button, index) => {
-          const down = !!button?.pressed;
-          if (down && !controller.userData.buttonWasDown?.[index]) {
-            if (index === 0 && hit?.type === 'vertex') deletePoint(hit.index);
-            if (index === 1) undo();
-          }
-          if (!controller.userData.buttonWasDown) controller.userData.buttonWasDown = [false, false];
-          controller.userData.buttonWasDown[index] = down;
-        });
+      const editing = !!mainHand && !viewMode;
+      hand.marker.visible = editing;
+      if (editing) {
+        hand.marker.position.copy(hand.selectedPosition);
+        updatePreview(hand);
+        updateMoving(hand);
+      } else {
+        hand.preview.visible = false;
       }
-    }
+    });
   }
+
   renderer.render(scene, camera);
 }
 
