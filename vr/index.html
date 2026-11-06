@@ -42,6 +42,7 @@ canvas{display:block;width:100%;height:100%}
 <script type="module">
 import * as THREE from 'three';
 import { VRButton } from 'three/addons/webxr/VRButton.js';
+import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
 
 // DOTFORM uses an invisible, infinite grid. Only each hand's selected
 // grid position is shown; the grid itself is never rendered.
@@ -191,6 +192,10 @@ const redoStack = [];
 
 let mainHand = null;
 let viewMode = false;
+let menuOpen = false;
+const menuRaycaster = new THREE.Raycaster();
+let menuPanel = null;
+let selectedFaceIndex = -1;
 
 function makeInstruction() {
   const canvas = document.createElement('canvas');
@@ -274,7 +279,9 @@ for (let i = 0; i < 2; i++) {
   controller.addEventListener('disconnected', () => {
     hand.inputSource = null;
   });
-  controller.addEventListener('selectstart', () => startDrawing(hand));
+  controller.addEventListener('selectstart', () => {
+    if (!handleMenuPress(hand)) startDrawing(hand);
+  });
   controller.addEventListener('selectend', () => finishDrawing(hand));
   controller.addEventListener('squeezestart', () => startMoving(hand));
   controller.addEventListener('squeezeend', () => finishMoving(hand));
@@ -549,6 +556,7 @@ function findExistingPath(start, end) {
 }
 
 function startDrawing(hand) {
+  if (menuOpen) return;
   if (!renderer.xr.isPresenting) return;
 
   // The first trigger press chooses the main hand. It does not draw.
@@ -645,6 +653,7 @@ function finishDrawing(hand) {
 }
 
 function startMoving(hand) {
+  if (menuOpen) return;
   if (!renderer.xr.isPresenting || !mainHand || viewMode) return;
   if (hand.drawing || hand.dragging) return;
 
@@ -776,6 +785,7 @@ function redo() {
 }
 
 function toggleViewMode() {
+  if (menuOpen) return;
   if (hands.some(hand => hand.drawing || hand.dragging)) return;
   viewMode = !viewMode;
 
@@ -794,18 +804,339 @@ function pollButtons(hand) {
   const buttonB = !!gamepad.buttons[5]?.pressed;
 
   if (buttonA && !hand.buttonWasDown[0]) {
-    if (hand.controller === mainHand) toggleViewMode();
+    if (hand.controller === mainHand) deleteSelectedPoint(hand);
     else undo();
   }
 
   if (buttonB && !hand.buttonWasDown[1]) {
-    if (hand.controller === mainHand) deleteSelectedPoint(hand);
+    if (hand.controller === mainHand) toggleMenu();
     else redo();
   }
 
   hand.buttonWasDown[0] = buttonA;
   hand.buttonWasDown[1] = buttonB;
 }
+
+function makeMenuPanel() {
+  const canvas = document.createElement('canvas');
+  canvas.width = 1100;
+  canvas.height = 820;
+  const context = canvas.getContext('2d');
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  const material = new THREE.MeshBasicMaterial({
+    map: texture, transparent: true, side: THREE.DoubleSide, depthTest: false
+  });
+  const panel = new THREE.Mesh(new THREE.PlaneGeometry(1.15, 0.86), material);
+  panel.visible = false;
+  panel.renderOrder = 90;
+  scene.add(panel);
+  menuPanel = panel;
+  panel.userData.canvas = canvas;
+  panel.userData.context = context;
+  panel.userData.texture = texture;
+  drawMenu();
+  return panel;
+}
+
+const menuButtons = [
+  { id: 'view', label: 'VIEW / EDIT', x: 55, y: 150, w: 475, h: 125 },
+  { id: 'cube', label: 'CREATE CUBE', x: 570, y: 150, w: 475, h: 125 },
+  { id: 'extrude', label: 'EXTRUDE LAST FACE', x: 55, y: 305, w: 475, h: 125 },
+  { id: 'rotate', label: 'ROTATE MODEL', x: 570, y: 305, w: 475, h: 125 },
+  { id: 'scale', label: 'SCALE MODEL', x: 55, y: 460, w: 475, h: 125 },
+  { id: 'save', label: 'SAVE PROJECT', x: 570, y: 460, w: 475, h: 125 },
+  { id: 'load', label: 'LOAD PROJECT', x: 55, y: 615, w: 475, h: 125 },
+  { id: 'export', label: 'EXPORT GLB', x: 570, y: 615, w: 475, h: 125 }
+];
+
+function drawMenu() {
+  if (!menuPanel) return;
+  const canvas = menuPanel.userData.canvas;
+  const context = menuPanel.userData.context;
+  context.clearRect(0, 0, canvas.width, canvas.height);
+  context.fillStyle = 'rgba(5, 8, 16, 0.94)';
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.strokeStyle = '#00ffc8';
+  context.lineWidth = 5;
+  context.strokeRect(3, 3, canvas.width - 6, canvas.height - 6);
+  context.fillStyle = '#eafff9';
+  context.font = '700 48px system-ui, sans-serif';
+  context.textAlign = 'left';
+  context.fillText('DOTFORM', 55, 85);
+  context.font = '22px system-ui, sans-serif';
+  context.fillStyle = '#8ca9a5';
+  context.fillText('TOOLS', 57, 120);
+  context.fillStyle = '#ff7b9d';
+  context.fillRect(970, 35, 75, 65);
+  context.fillStyle = '#071310';
+  context.font = '700 36px system-ui, sans-serif';
+  context.textAlign = 'center';
+  context.fillText('X', 1007, 80);
+  menuButtons.forEach(button => {
+    context.fillStyle = '#101c25';
+    context.fillRect(button.x, button.y, button.w, button.h);
+    context.strokeStyle = '#00ffc8';
+    context.lineWidth = 3;
+    context.strokeRect(button.x, button.y, button.w, button.h);
+    context.fillStyle = '#eafff9';
+    context.font = '700 25px system-ui, sans-serif';
+    context.fillText(button.label, button.x + button.w / 2, button.y + button.h / 2 + 9);
+  });
+  menuPanel.userData.texture.needsUpdate = true;
+}
+
+function positionMenu() {
+  if (!menuPanel) return;
+  const xrCamera = renderer.xr.getCamera(camera);
+  xrCamera.updateMatrixWorld(true);
+  const position = new THREE.Vector3();
+  const forward = new THREE.Vector3();
+  xrCamera.getWorldPosition(position);
+  xrCamera.getWorldDirection(forward);
+  menuPanel.position.copy(position).addScaledVector(forward, 1.15);
+  menuPanel.quaternion.copy(xrCamera.quaternion);
+}
+
+function toggleMenu() {
+  if (hands.some(hand => hand.drawing || hand.dragging)) return;
+  menuOpen = !menuOpen;
+  if (menuOpen) {
+    drawMenu();
+    positionMenu();
+    menuPanel.visible = true;
+    hands.forEach(hand => {
+      hand.marker.visible = false;
+      hand.preview.visible = false;
+    });
+  } else if (menuPanel) {
+    menuPanel.visible = false;
+  }
+}
+
+function handleMenuPress(hand) {
+  if (!menuOpen || !menuPanel) return false;
+  menuPanel.updateMatrixWorld(true);
+  hand.controller.updateMatrixWorld(true);
+  const origin = new THREE.Vector3();
+  const direction = new THREE.Vector3();
+  hand.controller.getWorldPosition(origin);
+  hand.controller.getWorldDirection(direction);
+  menuRaycaster.set(origin, direction);
+  const hit = menuRaycaster.intersectObject(menuPanel, false)[0];
+  if (!hit || !hit.uv) return true;
+  const x = hit.uv.x * menuPanel.userData.canvas.width;
+  const y = (1 - hit.uv.y) * menuPanel.userData.canvas.height;
+  if (x >= 970 && x <= 1045 && y >= 35 && y <= 100) {
+    toggleMenu();
+    return true;
+  }
+  const button = menuButtons.find(item =>
+    x >= item.x && x <= item.x + item.w &&
+    y >= item.y && y <= item.y + item.h
+  );
+  if (button) runMenuAction(button.id);
+  return true;
+}
+
+function saveProject() {
+  const project = {
+    format: 'dotform',
+    version: 1,
+    points: points.map(point => point.toArray()),
+    edges: edges.map(edge => edge.slice()),
+    faces: faces.map(face => face.slice())
+  };
+  downloadFile(
+    new Blob([JSON.stringify(project, null, 2)], { type: 'application/json' }),
+    'model.dotform'
+  );
+}
+
+function downloadFile(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+const projectPicker = document.createElement('input');
+projectPicker.type = 'file';
+projectPicker.accept = '.dotform,.json,application/json';
+projectPicker.style.display = 'none';
+document.body.appendChild(projectPicker);
+projectPicker.addEventListener('change', async () => {
+  const file = projectPicker.files && projectPicker.files[0];
+  projectPicker.value = '';
+  if (!file) return;
+  try {
+    const data = JSON.parse(await file.text());
+    if (data.format !== 'dotform' || data.version !== 1 ||
+        !Array.isArray(data.points) || !Array.isArray(data.edges) ||
+        !Array.isArray(data.faces)) throw new Error('Invalid DOTFORM project');
+    const nextPoints = data.points.map(point => {
+      if (!Array.isArray(point) || point.length !== 3 ||
+          !point.every(Number.isFinite)) throw new Error('Invalid point');
+      return new THREE.Vector3(...point);
+    });
+    const validIndex = index => Number.isInteger(index) && index >= 0 && index < nextPoints.length;
+    if (!data.edges.every(edge => Array.isArray(edge) && edge.length === 2 &&
+        validIndex(edge[0]) && validIndex(edge[1]) && edge[0] !== edge[1])) {
+      throw new Error('Invalid edge');
+    }
+    if (!data.faces.every(face => Array.isArray(face) && face.length >= 3 &&
+        face.every(validIndex))) throw new Error('Invalid face');
+    const before = snapshot();
+    points.length = 0;
+    nextPoints.forEach(point => points.push(point));
+    edges = data.edges.map(edge => edge.slice());
+    faces = data.faces.map(face => face.slice());
+    commitHistory(before);
+    drawModel();
+    toggleMenu();
+  } catch (error) {
+    alert('Could not load that DOTFORM project. The file may be damaged or unsupported.');
+  }
+});
+
+function exportGLB() {
+  const exportScene = new THREE.Scene();
+  faces.forEach(face => {
+    const geometry = makeFaceGeometry(face);
+    if (geometry) {
+      const material = new THREE.MeshStandardMaterial({
+        color: 0x00ffc8, side: THREE.DoubleSide, roughness: 0.8
+      });
+      exportScene.add(new THREE.Mesh(geometry, material));
+    }
+  });
+  if (edges.length) {
+    const positions = [];
+    edges.forEach(([a, b]) => {
+      positions.push(...points[a].toArray(), ...points[b].toArray());
+    });
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+    exportScene.add(new THREE.LineSegments(geometry, new THREE.LineBasicMaterial({ color: 0xffffff })));
+  }
+  points.forEach(point => {
+    const mesh = new THREE.Mesh(
+      new THREE.SphereGeometry(0.018, 8, 6),
+      new THREE.MeshStandardMaterial({ color: 0xffffff })
+    );
+    mesh.position.copy(point);
+    exportScene.add(mesh);
+  });
+  new GLTFExporter().parse(exportScene, result => {
+    const blob = new Blob([result], { type: 'model/gltf-binary' });
+    downloadFile(blob, 'model.glb');
+  }, error => {
+    console.error('DOTFORM GLB export failed:', error);
+    alert('The GLB export could not be created.');
+  }, { binary: true });
+}
+
+function createCube() {
+  const xrCamera = renderer.xr.getCamera(camera);
+  const origin = new THREE.Vector3();
+  const forward = new THREE.Vector3();
+  xrCamera.getWorldPosition(origin);
+  xrCamera.getWorldDirection(forward);
+  const center = snapPosition(origin.addScaledVector(forward, 1.25));
+  const half = GRID_SPACING * 2.5;
+  const before = snapshot();
+  const base = points.length;
+  const corners = [
+    [-1,-1,-1],[1,-1,-1],[1,1,-1],[-1,1,-1],
+    [-1,-1,1],[1,-1,1],[1,1,1],[-1,1,1]
+  ];
+  corners.forEach(([x,y,z]) => points.push(center.clone().add(new THREE.Vector3(x*half,y*half,z*half))));
+  [
+    [0,1],[1,2],[2,3],[3,0],[4,5],[5,6],[6,7],[7,4],
+    [0,4],[1,5],[2,6],[3,7]
+  ].forEach(([a,b]) => addEdge(base+a,base+b));
+  [
+    [0,3,2,1],[4,5,6,7],[0,1,5,4],
+    [1,2,6,5],[2,3,7,6],[3,0,4,7]
+  ].forEach(face => faces.push(face.map(index => base+index)));
+  commitHistory(before);
+  drawModel();
+}
+
+function faceNormal(face) {
+  const normal = new THREE.Vector3();
+  for (let i = 0; i < face.length; i++) {
+    const a = points[face[i]];
+    const b = points[face[(i+1)%face.length]];
+    normal.x += (a.y-b.y)*(a.z+b.z);
+    normal.y += (a.z-b.z)*(a.x+b.x);
+    normal.z += (a.x-b.x)*(a.y+b.y);
+  }
+  return normal.lengthSq() > 0.000001 ? normal.normalize() : null;
+}
+
+function extrudeLastFace() {
+  if (!faces.length) return;
+  const source = faces[faces.length - 1];
+  const normal = faceNormal(source);
+  if (!normal) return;
+  const before = snapshot();
+  const offset = GRID_SPACING * 3;
+  const base = points.length;
+  source.forEach(index => points.push(points[index].clone().addScaledVector(normal, offset)));
+  const top = source.map((_, index) => base + index);
+  for (let i = 0; i < source.length; i++) {
+    const next = (i + 1) % source.length;
+    addEdge(source[i], source[next]);
+    addEdge(top[i], top[next]);
+    addEdge(source[i], top[i]);
+    faces.push([source[i], source[next], top[next], top[i]]);
+  }
+  faces.push(top);
+  commitHistory(before);
+  drawModel();
+}
+
+function transformModel(kind) {
+  if (!points.length) return;
+  const before = snapshot();
+  const center = new THREE.Vector3();
+  points.forEach(point => center.add(point));
+  center.divideScalar(points.length);
+  points.forEach(point => {
+    point.sub(center);
+    if (kind === 'rotate') point.applyAxisAngle(new THREE.Vector3(0,1,0), Math.PI/12);
+    else point.multiplyScalar(1.1);
+    point.add(center);
+  });
+  commitHistory(before);
+  drawModel();
+}
+
+function runMenuAction(action) {
+  if (action === 'view') {
+    toggleMenu();
+    toggleViewMode();
+  } else if (action === 'cube') {
+    createCube();
+  } else if (action === 'extrude') {
+    extrudeLastFace();
+  } else if (action === 'rotate') {
+    transformModel('rotate');
+  } else if (action === 'scale') {
+    transformModel('scale');
+  } else if (action === 'save') {
+    saveProject();
+  } else if (action === 'load') {
+    projectPicker.click();
+  } else if (action === 'export') {
+    exportGLB();
+  }
+}
+
+makeMenuPanel();
 
 function updateInstruction() {
   if (!instruction.visible) return;
@@ -825,6 +1156,8 @@ function updateInstruction() {
 renderer.xr.addEventListener('sessionstart', () => {
   mainHand = null;
   viewMode = false;
+  menuOpen = false;
+  if (menuPanel) menuPanel.visible = false;
   instruction.visible = true;
 
   hands.forEach(hand => {
@@ -839,6 +1172,8 @@ renderer.xr.addEventListener('sessionstart', () => {
 renderer.xr.addEventListener('sessionend', () => {
   mainHand = null;
   viewMode = false;
+  menuOpen = false;
+  if (menuPanel) menuPanel.visible = false;
   instruction.visible = false;
 
   hands.forEach(hand => {
@@ -852,6 +1187,7 @@ renderer.xr.addEventListener('sessionend', () => {
 function animate() {
   if (renderer.xr.isPresenting) {
     updateInstruction();
+    if (menuOpen) positionMenu();
 
     hands.forEach(hand => {
       updateHandPosition(hand);
