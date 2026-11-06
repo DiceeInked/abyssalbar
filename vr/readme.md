@@ -110,4 +110,5 @@ The first set of modeling tools is intentionally small. They provide a foundatio
 
 - View / Edit in the floating menu switches view mode on or off.
 - View mode is for inspecting the model.
-- While view mode is active, drawing, deleting, and moving geometry are disabled so the model cannot be changed accidentally.
+- While view mode is active, drawing, deleting, moving, and geometry-changing menu tools are disabled so the model cannot be changed accidentally.
+- Save Project and Export GLB remain available in view mode. Select Face can also be chosen to leave view mode and enter face selection.
