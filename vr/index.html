@@ -707,8 +707,7 @@ function findEdgeIntersections(startIndex, endIndex) {
   edges.slice().forEach(([a, b]) => {
     if (a === startIndex || a === endIndex || b === startIndex || b === endIndex) return;
     const closest = closestSegmentPoints(start, end, points[a], points[b]);
-    if (closest.t <= 0.0001 || closest.t >= 0.9999 ||
-        closest.u <= 0.0001 || closest.u >= 0.9999) return;
+    if (closest.t <= 0.0001 || closest.t >= 0.9999) return;
     if (closest.pointA.distanceToSquared(closest.pointB) > tolerance * tolerance) return;
 
     const snapped = snapPosition(
@@ -723,8 +722,8 @@ function findEdgeIntersections(startIndex, endIndex) {
     if (index === -1) {
       index = points.length;
       points.push(snapped);
-      splitEdgesAtPoint(index);
     }
+    splitEdgesAtPoint(index);
     if (index !== startIndex && index !== endIndex &&
         !intersections.some(item => item.index === index)) {
       intersections.push({ index, t: closest.t });
