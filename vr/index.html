@@ -183,6 +183,10 @@ const faceMaterial = new THREE.MeshBasicMaterial({
   side: THREE.DoubleSide,
   depthWrite: false
 });
+const selectedFaceMaterial = new THREE.MeshBasicMaterial({
+  color: 0xff7b9d, transparent: true, opacity: 0.32,
+  side: THREE.DoubleSide, depthWrite: false
+});
 
 const points = [];
 let edges = [];
@@ -196,6 +200,7 @@ let menuOpen = false;
 const menuRaycaster = new THREE.Raycaster();
 let menuPanel = null;
 let selectedFaceIndex = -1;
+let faceSelectMode = false;
 
 function makeInstruction() {
   const canvas = document.createElement('canvas');
@@ -415,9 +420,16 @@ function drawModel() {
   clearGroup(lineGroup);
   clearGroup(pointGroup);
 
-  faces.forEach(face => {
+  faces.forEach((face, faceIndex) => {
     const geometry = makeFaceGeometry(face);
-    if (geometry) faceGroup.add(new THREE.Mesh(geometry, faceMaterial));
+    if (geometry) {
+      const mesh = new THREE.Mesh(
+        geometry,
+        faceIndex === selectedFaceIndex ? selectedFaceMaterial : faceMaterial
+      );
+      mesh.userData.faceIndex = faceIndex;
+      faceGroup.add(mesh);
+    }
   });
 
   edges.forEach(edge => {
@@ -567,6 +579,21 @@ function startDrawing(hand) {
   }
 
   if (viewMode || hand.drawing || hand.dragging) return;
+
+  if (faceSelectMode) {
+    hand.controller.updateMatrixWorld(true);
+    const origin = new THREE.Vector3();
+    const direction = new THREE.Vector3();
+    hand.controller.getWorldPosition(origin);
+    hand.controller.getWorldDirection(direction);
+    menuRaycaster.set(origin, direction);
+    const hit = menuRaycaster.intersectObjects(faceGroup.children, false)[0];
+    if (hit) {
+      selectedFaceIndex = hit.object.userData.faceIndex;
+      drawModel();
+    }
+    return;
+  }
 
   updateHandPosition(hand);
   const before = snapshot();
@@ -820,14 +847,14 @@ function pollButtons(hand) {
 function makeMenuPanel() {
   const canvas = document.createElement('canvas');
   canvas.width = 1100;
-  canvas.height = 820;
+  canvas.height = 980;
   const context = canvas.getContext('2d');
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
   const material = new THREE.MeshBasicMaterial({
     map: texture, transparent: true, side: THREE.DoubleSide, depthTest: false
   });
-  const panel = new THREE.Mesh(new THREE.PlaneGeometry(1.15, 0.86), material);
+  const panel = new THREE.Mesh(new THREE.PlaneGeometry(1.15, 1.02), material);
   panel.visible = false;
   panel.renderOrder = 90;
   scene.add(panel);
@@ -842,12 +869,13 @@ function makeMenuPanel() {
 const menuButtons = [
   { id: 'view', label: 'VIEW / EDIT', x: 55, y: 150, w: 475, h: 125 },
   { id: 'cube', label: 'CREATE CUBE', x: 570, y: 150, w: 475, h: 125 },
-  { id: 'extrude', label: 'EXTRUDE LAST FACE', x: 55, y: 305, w: 475, h: 125 },
-  { id: 'rotate', label: 'ROTATE MODEL', x: 570, y: 305, w: 475, h: 125 },
-  { id: 'scale', label: 'SCALE MODEL', x: 55, y: 460, w: 475, h: 125 },
-  { id: 'save', label: 'SAVE PROJECT', x: 570, y: 460, w: 475, h: 125 },
-  { id: 'load', label: 'LOAD PROJECT', x: 55, y: 615, w: 475, h: 125 },
-  { id: 'export', label: 'EXPORT GLB', x: 570, y: 615, w: 475, h: 125 }
+  { id: 'select-face', label: 'SELECT FACE', x: 55, y: 305, w: 475, h: 125 },
+  { id: 'extrude', label: 'EXTRUDE FACE', x: 570, y: 305, w: 475, h: 125 },
+  { id: 'rotate', label: 'ROTATE MODEL', x: 55, y: 460, w: 475, h: 125 },
+  { id: 'scale', label: 'SCALE MODEL', x: 570, y: 460, w: 475, h: 125 },
+  { id: 'save', label: 'SAVE PROJECT', x: 55, y: 615, w: 475, h: 125 },
+  { id: 'load', label: 'LOAD PROJECT', x: 570, y: 615, w: 475, h: 125 },
+  { id: 'export', label: 'EXPORT GLB', x: 55, y: 770, w: 475, h: 125 }
 ];
 
 function drawMenu() {
@@ -1045,7 +1073,7 @@ function createCube() {
   xrCamera.getWorldPosition(origin);
   xrCamera.getWorldDirection(forward);
   const center = snapPosition(origin.addScaledVector(forward, 1.25));
-  const half = GRID_SPACING * 2.5;
+  const half = GRID_SPACING * 2;
   const before = snapshot();
   const base = points.length;
   const corners = [
@@ -1079,7 +1107,9 @@ function faceNormal(face) {
 
 function extrudeLastFace() {
   if (!faces.length) return;
-  const source = faces[faces.length - 1];
+  const sourceIndex = selectedFaceIndex >= 0 && selectedFaceIndex < faces.length
+    ? selectedFaceIndex : faces.length - 1;
+  const source = faces[sourceIndex];
   const normal = faceNormal(source);
   if (!normal) return;
   const before = snapshot();
@@ -1095,6 +1125,7 @@ function extrudeLastFace() {
     faces.push([source[i], source[next], top[next], top[i]]);
   }
   faces.push(top);
+  selectedFaceIndex = faces.length - 1;
   commitHistory(before);
   drawModel();
 }
@@ -1121,6 +1152,10 @@ function runMenuAction(action) {
     toggleViewMode();
   } else if (action === 'cube') {
     createCube();
+  } else if (action === 'select-face') {
+    toggleMenu();
+    faceSelectMode = !faceSelectMode;
+    viewMode = false;
   } else if (action === 'extrude') {
     extrudeLastFace();
   } else if (action === 'rotate') {
