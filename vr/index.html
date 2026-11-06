@@ -263,10 +263,20 @@ for (let i = 0; i < 2; i++) {
   const controller = renderer.xr.getController(i);
   const grip = renderer.xr.getControllerGrip(i);
   scene.add(controller, grip);
+  const pointer = new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 0, -1.5)
+    ]),
+    new THREE.LineBasicMaterial({ color: 0x00ffc8, transparent: true, opacity: 0.8 })
+  );
+  pointer.visible = false;
+  pointer.renderOrder = 95;
+  controller.add(pointer);
 
   const hand = {
     controller,
     grip,
+    pointer,
     inputSource: null,
     selectedPosition: new THREE.Vector3(),
     selectedKey: '',
@@ -792,7 +802,7 @@ function deletePoint(index) {
 }
 
 function deleteSelectedPoint(hand) {
-  if (viewMode || hand.drawing || hand.dragging) return;
+  if (viewMode || menuOpen || hand.drawing || hand.dragging) return;
   updateHandPosition(hand);
   deletePoint(findPoint(hand.selectedPosition));
 }
@@ -938,10 +948,14 @@ function toggleMenu() {
     hands.forEach(hand => {
       hand.marker.visible = false;
       hand.preview.visible = false;
+      hand.pointer.visible = true;
     });
   } else if (menuPanel) {
     menuPanel.visible = false;
   }
+  hands.forEach(hand => {
+    hand.pointer.visible = menuOpen || faceSelectMode;
+  });
 }
 
 function handleMenuPress(hand) {
@@ -1205,6 +1219,7 @@ renderer.xr.addEventListener('sessionstart', () => {
     hand.buttonWasDown = [false, false];
     hand.marker.visible = false;
     hand.preview.visible = false;
+    hand.pointer.visible = false;
   });
 });
 
@@ -1220,6 +1235,7 @@ renderer.xr.addEventListener('sessionend', () => {
     hand.dragging = null;
     hand.marker.visible = false;
     hand.preview.visible = false;
+    hand.pointer.visible = false;
   });
 });
 
@@ -1232,8 +1248,9 @@ function animate() {
       updateHandPosition(hand);
       pollButtons(hand);
 
-      const editing = !!mainHand && !viewMode && !menuOpen;
+      const editing = !!mainHand && !viewMode && !menuOpen && !faceSelectMode;
       hand.marker.visible = editing;
+      hand.pointer.visible = menuOpen || faceSelectMode;
       if (editing) {
         hand.marker.position.copy(hand.selectedPosition);
         updatePreview(hand);
