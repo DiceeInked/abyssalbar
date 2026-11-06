@@ -938,6 +938,8 @@ function finishMoving(hand) {
 }
 
 function deletePoint(index) {
+  // Deleting changes point indices, so never interrupt another active gesture.
+  if (hands.some(hand => hand.drawing || hand.dragging)) return;
   if (index < 0 || index >= points.length) return;
 
   const before = snapshot();
@@ -1334,6 +1336,10 @@ function transformModel(kind) {
 }
 
 function runMenuAction(action) {
+  // View mode is read-only. Only allow leaving it, entering face selection,
+  // or using non-editing file actions while it is active.
+  if (viewMode && !['view', 'select-face', 'save', 'export'].includes(action)) return;
+
   if (action === 'view') {
     toggleMenu();
     faceSelectMode = false;
