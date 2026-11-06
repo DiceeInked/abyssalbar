@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   applyHitImpulse,
+  applySurfaceBounce,
   createPlayer,
   MOVEMENT,
   PLAYER_SIZE,
@@ -154,8 +155,7 @@ test("an upward hit impulse cancels an active midair hold", () => {
   assert.equal(player.vy, 40);
 });
 
-test("a surface bounce overrides an active midair hold", async () => {
-  const { applySurfaceBounce } = await import("../scripts/physics.js");
+test("a surface bounce overrides an active midair hold", () => {
   const player = createPlayer();
   player.grounded = false;
   player.airHoldTimer = 1.5;
