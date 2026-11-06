@@ -35,7 +35,7 @@ button:hover{border-color:var(--mint);color:var(--mint)}
   <div id="logo">DOTFORM</div>
   <div id="message">AIM AT A DOT AND PRESS THE TRIGGER</div>
   <div id="stats"><b id="point-count">0</b> POINTS<br><b id="face-count">0</b> FACES</div>
-  <div id="help"><strong>BUILD</strong> · Trigger adds a point. Click the first point again to close a face.<br><strong>EDIT</strong> · Hold grip on a vertex and move to another dot.<br><strong>DESKTOP</strong> · Click dots. Drag vertices. Right-click a vertex to reuse it.</div>
+  <div id="help"><strong>BUILD</strong> · Trigger places points. A live line shows the next connection. Trigger the last point again to stop drawing.<br><strong>EDIT</strong> · Hold grip to move a point.<br><strong>DELETE / UNDO</strong> · A/X deletes the pointed-at point. B/Y undoes. Desktop: Delete removes a point.</div>
   <div id="buttons"><button id="close">CLOSE FACE</button><button id="undo">UNDO</button><button id="clear">CLEAR</button></div>
   <div id="notice">VR needs a compatible headset/browser and an HTTPS page. Desktop mode still works.</div>
 </div>
@@ -101,6 +101,13 @@ const target = new THREE.Mesh(
 target.visible = false;
 scene.add(target);
 
+const previewLine = new THREE.Line(
+  new THREE.BufferGeometry(),
+  new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.65 })
+);
+previewLine.visible = false;
+scene.add(previewLine);
+
 let points = [];
 let edges = [];
 let faces = [];
@@ -109,6 +116,7 @@ let history = [];
 let vertexMeshes = [];
 let dragging = null;
 let draggingController = null;
+let hoveredIndex = null;
 
 const raycaster = new THREE.Raycaster();
 raycaster.near = 0.01;
@@ -192,6 +200,10 @@ function useVertex(index) {
     saveHistory();
     chain.push(index);
     message('START POINT SELECTED · ADD MORE POINTS');
+  } else if (index === chain[chain.length - 1]) {
+    saveHistory();
+    chain = [];
+    message('LINE DRAWING STOPPED');
   } else if (index === chain[0] && chain.length >= 3) {
     saveHistory();
     addEdge(chain[chain.length - 1], chain[0]);
@@ -251,6 +263,35 @@ function clearModel() {
   message('MODEL CLEARED');
 }
 
+function deletePoint(index) {
+  if (index === null || index === undefined || index < 0 || index >= points.length) return;
+  saveHistory();
+  points.splice(index, 1);
+  edges = edges.filter(edge => edge[0] !== index && edge[1] !== index)
+    .map(edge => edge.map(value => value > index ? value - 1 : value));
+  faces = faces.map(face => face.filter(value => value !== index)
+    .map(value => value > index ? value - 1 : value))
+    .filter(face => face.length >= 3);
+  chain = chain.filter(value => value !== index)
+    .map(value => value > index ? value - 1 : value);
+  dragging = null;
+  hoveredIndex = null;
+  drawModel();
+  message('POINT DELETED');
+}
+
+function updatePreview(hit) {
+  if (!chain.length || !hit || hit.type !== 'dot' || dragging !== null) {
+    previewLine.visible = false;
+    return;
+  }
+  previewLine.geometry.dispose();
+  previewLine.geometry = new THREE.BufferGeometry().setFromPoints([
+    points[chain[chain.length - 1]], hit.position
+  ]);
+  previewLine.visible = true;
+}
+
 function hitTest() {
   const vertexHit = raycaster.intersectObjects(pointGroup.children)[0];
   const dotHit = raycaster.intersectObject(grid)[0];
@@ -300,6 +341,7 @@ const controllers = [];
 for (let i = 0; i < 2; i++) {
   const controller = renderer.xr.getController(i);
   controller.addEventListener('selectstart', () => { aimFromController(controller); useTarget(); });
+  controller.userData.buttonWasDown = [false, false];
   controller.addEventListener('squeezestart', () => {
     aimFromController(controller);
     const hit = hitTest();
@@ -350,7 +392,9 @@ renderer.domElement.addEventListener('pointermove', event => {
   aimFromMouse(event);
   const hit = hitTest();
   target.visible = !!hit;
+  hoveredIndex = hit && hit.type === 'vertex' ? hit.index : null;
   if (hit) target.position.copy(hit.type === 'vertex' ? points[hit.index] : hit.position);
+  updatePreview(hit);
   dragToTarget();
 });
 
@@ -358,6 +402,10 @@ renderer.domElement.addEventListener('pointerup', () => {
   dragging = null;
 });
 renderer.domElement.addEventListener('contextmenu', event => event.preventDefault());
+window.addEventListener('keydown', event => {
+  if (event.key === 'Delete' || event.key === 'Backspace') deletePoint(hoveredIndex);
+  if (event.key.toLowerCase() === 'b') undo();
+});
 
 document.getElementById('close').addEventListener('click', closeFace);
 document.getElementById('undo').addEventListener('click', undo);
@@ -372,13 +420,26 @@ function animate() {
     for (const controller of controllers) {
       aimFromController(controller);
       const hit = hitTest();
-      if (hit) {
-        target.visible = true;
-        target.position.copy(hit.type === 'vertex' ? points[hit.index] : hit.position);
-      } else {
-        target.visible = false;
+
+      target.visible = !!hit;
+      if (hit) target.position.copy(hit.type === 'vertex' ? points[hit.index] : hit.position);
+
+      if (draggingController === controller) dragToTarget();
+      else if (!draggingController) updatePreview(hit);
+
+      const gamepad = controller.userData.inputSource?.gamepad;
+      if (gamepad) {
+        const buttons = [gamepad.buttons[4], gamepad.buttons[5]];
+        buttons.forEach((button, index) => {
+          const down = !!button?.pressed;
+          if (down && !controller.userData.buttonWasDown?.[index]) {
+            if (index === 0 && hit?.type === 'vertex') deletePoint(hit.index);
+            if (index === 1) undo();
+          }
+          if (!controller.userData.buttonWasDown) controller.userData.buttonWasDown = [false, false];
+          controller.userData.buttonWasDown[index] = down;
+        });
       }
-      dragToTarget();
     }
   }
   renderer.render(scene, camera);
