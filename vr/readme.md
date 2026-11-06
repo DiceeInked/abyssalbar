@@ -34,6 +34,8 @@ If the user presses and releases the trigger without moving to another grid posi
 
 When drawing from or onto an existing point, reuse that point rather than creating a duplicate. The temporary line is only a preview; it becomes permanent when the trigger is released.
 
+When a new point lands on an existing line, that line is split so the point becomes a real connection. When a new line crosses an existing line in 3D space, DOTFORM attempts to create a shared intersection point and split both lines automatically. Crossings that are not close in 3D space are left alone.
+
 ## Open lines and filled polygons
 
 - A single point is valid geometry.
@@ -86,10 +88,10 @@ Both hands can select grid positions, draw, and move points independently. The m
 ## Tool menu and modeling tools
 
 - Press B on the main hand to open or close the floating menu in front of the user.
-- Point the controller at a menu button and press its trigger to activate it.
+- A thin cyan pointer shows where the controller is aiming. Point at a menu button and press its trigger to activate it.
 - **View / Edit** switches between inspecting and editing. View mode disables geometry changes.
 - **Create Cube** adds a basic cube in front of the user.
-- **Select Face** switches to face-picking mode. Point at a face and press the trigger to select it. Open the menu and choose Select Face again to return to normal drawing.
+- **Select Face** switches to face-picking mode. Point at a face and press the trigger to select it. The selected face is highlighted. Open the menu and choose Select Face again to return to normal drawing.
 - **Extrude Face** extrudes the selected face. If no face is selected, it uses the most recently created face.
 - **Rotate Model** rotates the current model around its center.
 - **Scale Model** slightly enlarges the current model around its center.
