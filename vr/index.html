@@ -576,7 +576,33 @@ function findExistingPath(start, end) {
   }
 
   path.reverse();
-  return path[0] === start ? path : null;
+  if (path[0] !== start) return null;
+
+  // A branched mesh can contain several routes between the same points.
+  // Only treat the connection as a face boundary when this route is unique.
+  for (let i = 0; i < path.length - 1; i++) {
+    const blockedA = path[i];
+    const blockedB = path[i + 1];
+    const checked = Array(points.length).fill(false);
+    const alternateQueue = [start];
+    checked[start] = true;
+
+    while (alternateQueue.length) {
+      const current = alternateQueue.shift();
+      neighbours[current].forEach(next => {
+        const isBlocked = (current === blockedA && next === blockedB) ||
+          (current === blockedB && next === blockedA);
+        if (!isBlocked && !checked[next]) {
+          checked[next] = true;
+          alternateQueue.push(next);
+        }
+      });
+    }
+
+    if (checked[end]) return null;
+  }
+
+  return path;
 }
 
 function getControllerRay(hand, origin, direction) {
@@ -1165,6 +1191,7 @@ projectPicker.addEventListener('change', async () => {
     const edgeKeys = new Set(data.edges.map(([a, b]) =>
       Math.min(a, b) + ':' + Math.max(a, b)
     ));
+    if (edgeKeys.size !== data.edges.length) throw new Error('Duplicate edge');
     if (!data.faces.every(face => {
       if (!Array.isArray(face) || face.length < 3 ||
           !face.every(validIndex) || new Set(face).size !== face.length) return false;
