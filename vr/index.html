@@ -796,6 +796,38 @@ function startMoving(hand) {
   };
 }
 
+function updateMovedPoint(index) {
+  const point = points[index];
+  if (!point) return;
+
+  if (pointGroup.children[index]) {
+    pointGroup.children[index].position.copy(point);
+  }
+
+  edges.forEach(([a, b], edgeIndex) => {
+    if (a !== index && b !== index) return;
+    const line = lineGroup.children[edgeIndex];
+    if (!line) return;
+    const geometry = new THREE.BufferGeometry().setFromPoints([points[a], points[b]]);
+    line.geometry.dispose();
+    line.geometry = geometry;
+  });
+
+  faces.forEach((face, faceIndex) => {
+    if (!face.includes(index)) return;
+    const mesh = faceGroup.children[faceIndex];
+    if (!mesh) return;
+    const geometry = makeFaceGeometry(face);
+    if (!geometry) {
+      mesh.visible = false;
+      return;
+    }
+    mesh.geometry.dispose();
+    mesh.geometry = geometry;
+    mesh.visible = true;
+  });
+}
+
 function updateMoving(hand) {
   if (!hand.dragging || viewMode) return;
 
@@ -807,7 +839,7 @@ function updateMoving(hand) {
 
   if (positionKey(points[index]) !== hand.selectedKey) {
     points[index].copy(hand.selectedPosition);
-    drawModel();
+    updateMovedPoint(index);
   }
 }
 
