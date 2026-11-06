@@ -1210,6 +1210,7 @@ renderer.xr.addEventListener('sessionstart', () => {
   mainHand = null;
   viewMode = false;
   menuOpen = false;
+  faceSelectMode = false;
   if (menuPanel) menuPanel.visible = false;
   instruction.visible = true;
 
@@ -1227,6 +1228,7 @@ renderer.xr.addEventListener('sessionend', () => {
   mainHand = null;
   viewMode = false;
   menuOpen = false;
+  faceSelectMode = false;
   if (menuPanel) menuPanel.visible = false;
   instruction.visible = false;
 
