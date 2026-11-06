@@ -141,3 +141,30 @@ test("repeated airborne hit impulses add upward velocity", () => {
   applyHitImpulse(player, 80);
   assert.equal(player.vy, -40);
 });
+
+test("an upward hit impulse cancels an active midair hold", () => {
+  const player = createPlayer();
+  player.grounded = false;
+  player.airHoldTimer = 1.5;
+  player.vy = 120;
+
+  applyHitImpulse(player, 80);
+
+  assert.equal(player.airHoldTimer, 0);
+  assert.equal(player.vy, 40);
+});
+
+test("a surface bounce overrides an active midair hold", async () => {
+  const { applySurfaceBounce } = await import("../scripts/physics.js");
+  const player = createPlayer();
+  player.grounded = false;
+  player.airHoldTimer = 1.5;
+
+  applySurfaceBounce(player);
+
+  assert.equal(player.airHoldTimer, 0);
+  assert.equal(player.vy, -MOVEMENT.jumpVelocity);
+  const startY = player.y;
+  updatePlayer(player, { move: 0, jumpHeld: false }, step);
+  assert.ok(player.y < startY);
+});
