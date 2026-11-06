@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#080b0d">
+<title>DOTFORM</title>
+<style>
+:root{color-scheme:dark;--mint:#00ffc8}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#080b0d;color:#eafff9;font-family:system-ui,sans-serif}
+canvas{display:block}
+#hud{position:fixed;inset:0;pointer-events:none}
+#logo{position:absolute;top:20px;left:22px;color:var(--mint);font-size:13px;font-weight:800;letter-spacing:.28em}
+#message{position:absolute;top:22px;left:50%;transform:translateX(-50%);color:#a9c3bc;font-size:12px;text-align:center;white-space:nowrap}
+#stats{position:absolute;top:20px;right:22px;color:#8fa9a2;font-size:11px;text-align:right;letter-spacing:.1em}
+#stats b{color:white;font-size:14px}
+#help{position:absolute;bottom:18px;left:20px;max-width:290px;padding:12px 14px;border:1px solid #29413d;border-radius:10px;background:#0a1211e8;color:#a8bdb8;font-size:12px;line-height:1.5}
+#help strong{color:white}
+#buttons{position:absolute;right:20px;bottom:20px;display:flex;gap:8px;pointer-events:auto}
+button{border:1px solid #31504b;border-radius:8px;padding:10px 13px;background:#101b1a;color:#eafff9;font:600 12px system-ui;cursor:pointer}
+button:hover{border-color:var(--mint);color:var(--mint)}
+#back{position:absolute;top:16px;left:16px;pointer-events:auto;color:#9bb5ae;text-decoration:none;font-size:11px;letter-spacing:.12em}
+#notice{display:none;position:absolute;bottom:82px;left:20px;padding:10px 12px;border:1px solid #594a2b;border-radius:8px;background:#201a10;color:#f3d9a8;font-size:11px}
+#VRButton{left:50%!important;transform:translateX(-50%)!important;bottom:18px!important}
+@media(max-width:600px){#logo{top:14px;left:14px}#stats{top:14px;right:14px}#message{top:48px;font-size:10px}#help{left:10px;bottom:10px;max-width:210px;font-size:10px}#buttons{right:10px;bottom:10px;flex-direction:column}#back{top:44px;left:14px}}
+</style>
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
+</script>
+</head>
+<body>
+<div id="hud">
+  <a id="back" href="../menu/">← BAR</a>
+  <div id="logo">DOTFORM</div>
+  <div id="message">AIM AT A DOT AND PRESS THE TRIGGER</div>
+  <div id="stats"><b id="point-count">0</b> POINTS<br><b id="face-count">0</b> FACES</div>
+  <div id="help"><strong>BUILD</strong> · Trigger adds a point. Click the first point again to close a face.<br><strong>EDIT</strong> · Hold grip on a vertex and move to another dot.<br><strong>DESKTOP</strong> · Click dots. Drag vertices. Right-click a vertex to reuse it.</div>
+  <div id="buttons"><button id="close">CLOSE FACE</button><button id="undo">UNDO</button><button id="clear">CLEAR</button></div>
+  <div id="notice">VR needs a compatible headset/browser and an HTTPS page. Desktop mode still works.</div>
+</div>
+<script type="module">
+import * as THREE from 'three';
+import { VRButton } from 'three/addons/webxr/VRButton.js';
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x080b0d);
+
+const camera = new THREE.PerspectiveCamera(65, innerWidth / innerHeight, 0.01, 50);
+camera.position.set(0, 1.6, 4.5);
+
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.setSize(innerWidth, innerHeight);
+renderer.xr.enabled = true;
+document.body.appendChild(renderer.domElement);
+document.body.appendChild(VRButton.createButton(renderer));
+
+scene.add(new THREE.HemisphereLight(0xcffff5, 0x17201e, 1.5));
+const light = new THREE.DirectionalLight(0xffffff, 1);
+light.position.set(2, 4, 3);
+scene.add(light);
+
+// Make one 3D grid using a single instanced object.
+const gridPoints = [];
+const dotSize = 0.022;
+const dotGeometry = new THREE.SphereGeometry(dotSize, 8, 8);
+const grid = new THREE.InstancedMesh(dotGeometry, new THREE.MeshBasicMaterial({ color: 0x45635c }), 13 * 11 * 9);
+const dotMatrix = new THREE.Object3D();
+let dotNumber = 0;
+
+for (let x = 0; x < 13; x++) {
+  for (let y = 0; y < 11; y++) {
+    for (let z = 0; z < 9; z++) {
+      const point = new THREE.Vector3((x - 6) * 0.3, 1.6 + (y - 5) * 0.3, -3 - (z - 4) * 0.3);
+      gridPoints.push(point);
+      dotMatrix.position.copy(point);
+      dotMatrix.updateMatrix();
+      grid.setMatrixAt(dotNumber++, dotMatrix.matrix);
+    }
+  }
+}
+grid.instanceMatrix.needsUpdate = true;
+scene.add(grid);
+
+const pointGroup = new THREE.Group();
+const lineGroup = new THREE.Group();
+const faceGroup = new THREE.Group();
+scene.add(faceGroup, lineGroup, pointGroup);
+
+const pointGeometry = new THREE.SphereGeometry(0.055, 12, 10);
+const pointMaterial = new THREE.MeshStandardMaterial({ color: 0x00ffc8, emissive: 0x004c3b });
+const lineMaterial = new THREE.LineBasicMaterial({ color: 0x00dcb0 });
+const faceMaterial = new THREE.MeshBasicMaterial({
+  color: 0x00a987, transparent: true, opacity: 0.2, side: THREE.DoubleSide
+});
+const target = new THREE.Mesh(
+  new THREE.SphereGeometry(0.045, 10, 8),
+  new THREE.MeshBasicMaterial({ color: 0xffffff })
+);
+target.visible = false;
+scene.add(target);
+
+let points = [];
+let edges = [];
+let faces = [];
+let chain = [];
+let history = [];
+let vertexMeshes = [];
+let dragging = null;
+
+const raycaster = new THREE.Raycaster();
+raycaster.near = 0.01;
+raycaster.far = 10;
+const direction = new THREE.Vector3();
+const origin = new THREE.Vector3();
+const rotation = new THREE.Matrix4();
+
+function message(text) {
+  document.getElementById('message').textContent = text;
+}
+
+function stats() {
+  document.getElementById('point-count').textContent = points.length;
+  document.getElementById('face-count').textContent = faces.length;
+}
+
+function saveHistory() {
+  history.push({
+    points: points.map(point => point.toArray()),
+    edges: edges.map(edge => edge.slice()),
+    faces: faces.map(face => face.slice()),
+    chain: chain.slice()
+  });
+  if (history.length > 30) history.shift();
+}
+
+function clearGroup(group) {
+  while (group.children.length) {
+    const object = group.children[0];
+    group.remove(object);
+    if (object.geometry && object.geometry !== pointGeometry) object.geometry.dispose();
+  }
+}
+
+function drawModel() {
+  clearGroup(pointGroup);
+  clearGroup(lineGroup);
+  clearGroup(faceGroup);
+  vertexMeshes = [];
+
+  points.forEach((position, index) => {
+    const vertex = new THREE.Mesh(pointGeometry, pointMaterial);
+    vertex.position.copy(position);
+    vertex.userData.index = index;
+    pointGroup.add(vertex);
+    vertexMeshes.push(vertex);
+  });
+
+  edges.forEach(([a, b]) => {
+    const geometry = new THREE.BufferGeometry().setFromPoints([points[a], points[b]]);
+    lineGroup.add(new THREE.Line(geometry, lineMaterial));
+  });
+
+  faces.forEach(face => {
+    const vertices = [];
+    for (let i = 1; i < face.length - 1; i++) {
+      for (const index of [face[0], face[i], face[i + 1]]) {
+        vertices.push(points[index].x, points[index].y, points[index].z);
+      }
+    }
+    const geometry = new THREE.BufferGeometry();
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+    geometry.computeVertexNormals();
+    faceGroup.add(new THREE.Mesh(geometry, faceMaterial));
+  });
+
+  stats();
+}
+
+function addEdge(a, b) {
+  if (a === b) return;
+  const exists = edges.some(edge =>
+    (edge[0] === a && edge[1] === b) || (edge[0] === b && edge[1] === a)
+  );
+  if (!exists) edges.push([a, b]);
+}
+
+function useVertex(index) {
+  if (chain.length === 0) {
+    saveHistory();
+    chain.push(index);
+    message('START POINT SELECTED · ADD MORE POINTS');
+  } else if (index === chain[0] && chain.length >= 3) {
+    saveHistory();
+    addEdge(chain[chain.length - 1], chain[0]);
+    faces.push(chain.slice());
+    chain = [];
+    message('FACE CREATED · START ANOTHER SHAPE');
+  } else if (!chain.includes(index)) {
+    saveHistory();
+    addEdge(chain[chain.length - 1], index);
+    chain.push(index);
+    message('POINT CONNECTED');
+  }
+  drawModel();
+}
+
+function placePoint(position) {
+  saveHistory();
+  const index = points.length;
+  points.push(position.clone());
+  if (chain.length) addEdge(chain[chain.length - 1], index);
+  chain.push(index);
+  drawModel();
+  message(chain.length === 1 ? 'POINT PLACED · ADD ANOTHER' : 'POINT ADDED · CLICK THE FIRST POINT TO CLOSE');
+}
+
+function closeFace() {
+  if (chain.length < 3) {
+    message('A FACE NEEDS AT LEAST THREE POINTS');
+    return;
+  }
+  saveHistory();
+  addEdge(chain[chain.length - 1], chain[0]);
+  faces.push(chain.slice());
+  chain = [];
+  drawModel();
+  message('FACE CREATED');
+}
+
+function undo() {
+  const state = history.pop();
+  if (!state) return;
+  points = state.points.map(point => new THREE.Vector3(...point));
+  edges = state.edges;
+  faces = state.faces;
+  chain = state.chain;
+  drawModel();
+  message('UNDONE');
+}
+
+function clearModel() {
+  saveHistory();
+  points = [];
+  edges = [];
+  faces = [];
+  chain = [];
+  drawModel();
+  message('MODEL CLEARED');
+}
+
+function hitTest() {
+  const vertexHit = raycaster.intersectObjects(pointGroup.children)[0];
+  const dotHit = raycaster.intersectObject(grid)[0];
+
+  if (vertexHit && (!dotHit || vertexHit.distance < dotHit.distance)) {
+    return { type: 'vertex', index: vertexHit.object.userData.index };
+  }
+  if (dotHit) return { type: 'dot', position: gridPoints[dotHit.instanceId] };
+  return null;
+}
+
+function aimFromController(controller) {
+  controller.updateMatrixWorld(true);
+  controller.getWorldPosition(origin);
+  rotation.extractRotation(controller.matrixWorld);
+  direction.set(0, 0, -1).applyMatrix4(rotation).normalize();
+  raycaster.set(origin, direction);
+}
+
+function aimFromMouse(event) {
+  const rect = renderer.domElement.getBoundingClientRect();
+  const mouse = new THREE.Vector2(
+    ((event.clientX - rect.left) / rect.width) * 2 - 1,
+    -((event.clientY - rect.top) / rect.height) * 2 + 1
+  );
+  raycaster.setFromCamera(mouse, camera);
+}
+
+function useTarget() {
+  const hit = hitTest();
+  if (!hit) return;
+  if (hit.type === 'vertex') useVertex(hit.index);
+  else placePoint(hit.position);
+}
+
+function dragToTarget() {
+  if (dragging === null) return;
+  const hit = hitTest();
+  if (hit && hit.type === 'dot') {
+    points[dragging].copy(hit.position);
+    drawModel();
+  }
+}
+
+// Trigger adds points. Grip grabs and moves existing vertices.
+const controllers = [];
+for (let i = 0; i < 2; i++) {
+  const controller = renderer.xr.getController(i);
+  controller.addEventListener('selectstart', useTarget);
+  controller.addEventListener('squeezestart', () => {
+    aimFromController(controller);
+    const hit = hitTest();
+    if (hit && hit.type === 'vertex') {
+      saveHistory();
+      dragging = hit.index;
+      message('MOVING VERTEX');
+    }
+  });
+  controller.addEventListener('squeezeend', () => {
+    dragging = null;
+    message('VERTEX RELEASED');
+  });
+
+  const ray = new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3(0, 0, -6)]),
+    new THREE.LineBasicMaterial({ color: 0x00ffc8, transparent: true, opacity: 0.55 })
+  );
+  controller.add(ray);
+  scene.add(controller);
+  controllers.push(controller);
+}
+
+// Mouse controls make the same page usable without a headset.
+renderer.domElement.addEventListener('pointerdown', event => {
+  if (renderer.xr.isPresenting) return;
+  aimFromMouse(event);
+  const hit = hitTest();
+  if (hit && hit.type === 'vertex') {
+    if (event.button === 2) useVertex(hit.index);
+    else {
+      saveHistory();
+      dragging = hit.index;
+      renderer.domElement.setPointerCapture(event.pointerId);
+    }
+  } else if (hit && hit.type === 'dot' && event.button === 0) {
+    placePoint(hit.position);
+  }
+});
+
+renderer.domElement.addEventListener('pointermove', event => {
+  if (renderer.xr.isPresenting) return;
+  aimFromMouse(event);
+  const hit = hitTest();
+  target.visible = !!hit;
+  if (hit) target.position.copy(hit.type === 'vertex' ? points[hit.index] : hit.position);
+  dragToTarget();
+});
+
+renderer.domElement.addEventListener('pointerup', () => {
+  dragging = null;
+});
+renderer.domElement.addEventListener('contextmenu', event => event.preventDefault());
+
+document.getElementById('close').addEventListener('click', closeFace);
+document.getElementById('undo').addEventListener('click', undo);
+document.getElementById('clear').addEventListener('click', clearModel);
+
+if (!navigator.xr || !window.isSecureContext) {
+  document.getElementById('notice').style.display = 'block';
+}
+
+function animate() {
+  for (const controller of controllers) {
+    aimFromController(controller);
+    const hit = hitTest();
+    if (hit) {
+      target.visible = true;
+      target.position.copy(hit.type === 'vertex' ? points[hit.index] : hit.position);
+    }
+    dragToTarget();
+  }
+  renderer.render(scene, camera);
+}
+
+renderer.setAnimationLoop(animate);
+
+window.addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+</script>
+</body>
+</html>
