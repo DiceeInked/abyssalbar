@@ -441,6 +441,74 @@ function addEdge(a, b) {
   return true;
 }
 
+function splitEdgesAtPoint(pointIndex) {
+  const point = points[pointIndex];
+  if (!point) return false;
+
+  let changed = false;
+  const nextEdges = [];
+
+  edges.forEach(([a, b]) => {
+    if (a === pointIndex || b === pointIndex) {
+      nextEdges.push([a, b]);
+      return;
+    }
+
+    const start = points[a];
+    const end = points[b];
+    const segment = new THREE.Vector3().subVectors(end, start);
+    const lengthSquared = segment.lengthSq();
+    if (lengthSquared < 0.0000001) {
+      nextEdges.push([a, b]);
+      return;
+    }
+
+    const offset = new THREE.Vector3().subVectors(point, start);
+    const t = offset.dot(segment) / lengthSquared;
+    if (t <= 0.0001 || t >= 0.9999) {
+      nextEdges.push([a, b]);
+      return;
+    }
+
+    const closest = start.clone().addScaledVector(segment, t);
+    const tolerance = GRID_SPACING * 0.18;
+    if (closest.distanceToSquared(point) > tolerance * tolerance) {
+      nextEdges.push([a, b]);
+      return;
+    }
+
+    nextEdges.push([a, pointIndex], [pointIndex, b]);
+    changed = true;
+
+    // Keep polygon boundaries in sync with the newly split edge.
+    faces = faces.map(face => {
+      const expanded = [];
+      for (let i = 0; i < face.length; i++) {
+        const current = face[i];
+        const next = face[(i + 1) % face.length];
+        expanded.push(current);
+        if ((current === a && next === b) || (current === b && next === a)) {
+          expanded.push(pointIndex);
+        }
+      }
+      return expanded;
+    });
+  });
+
+  if (changed) {
+    edges = nextEdges;
+    const unique = new Set();
+    edges = edges.filter(([a, b]) => {
+      const key = Math.min(a, b) + ':' + Math.max(a, b);
+      if (unique.has(key)) return false;
+      unique.add(key);
+      return true;
+    });
+  }
+
+  return changed;
+}
+
 function findExistingPath(start, end) {
   const neighbours = Array.from({ length: points.length }, () => []);
   edges.forEach(([a, b]) => {
@@ -500,6 +568,7 @@ function startDrawing(hand) {
   if (startIndex === -1) {
     startIndex = points.length;
     points.push(hand.selectedPosition.clone());
+    splitEdgesAtPoint(startIndex);
     drawModel();
   }
 
@@ -555,6 +624,7 @@ function finishDrawing(hand) {
   if (endIndex === -1) {
     endIndex = points.length;
     points.push(hand.selectedPosition.clone());
+    splitEdgesAtPoint(endIndex);
   }
 
   const startIndex = drawing.startIndex;
@@ -653,6 +723,7 @@ function finishMoving(hand) {
     mergePoints(drag.index, occupied);
   } else {
     points[drag.index].copy(hand.selectedPosition);
+    splitEdgesAtPoint(drag.index);
   }
 
   commitHistory(drag.before);
