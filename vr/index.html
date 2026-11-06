@@ -416,6 +416,7 @@ function makeFaceGeometry(face) {
 }
 
 function drawModel() {
+  if (selectedFaceIndex < 0 || selectedFaceIndex >= faces.length) selectedFaceIndex = -1;
   clearGroup(faceGroup);
   clearGroup(lineGroup);
   clearGroup(pointGroup);
@@ -680,7 +681,7 @@ function finishDrawing(hand) {
 }
 
 function startMoving(hand) {
-  if (menuOpen) return;
+  if (menuOpen || faceSelectMode) return;
   if (!renderer.xr.isPresenting || !mainHand || viewMode) return;
   if (hand.drawing || hand.dragging) return;
 
@@ -771,6 +772,7 @@ function deletePoint(index) {
 
   const before = snapshot();
   points.splice(index, 1);
+  selectedFaceIndex = -1;
 
   edges = edges.filter(edge => edge[0] !== index && edge[1] !== index)
     .map(edge => edge.map(value => value > index ? value - 1 : value));
@@ -1018,6 +1020,7 @@ projectPicker.addEventListener('change', async () => {
         face.every(validIndex))) throw new Error('Invalid face');
     const before = snapshot();
     points.length = 0;
+    selectedFaceIndex = -1;
     nextPoints.forEach(point => points.push(point));
     edges = data.edges.map(edge => edge.slice());
     faces = data.faces.map(face => face.slice());
@@ -1149,6 +1152,7 @@ function transformModel(kind) {
 function runMenuAction(action) {
   if (action === 'view') {
     toggleMenu();
+    faceSelectMode = false;
     toggleViewMode();
   } else if (action === 'cube') {
     createCube();
@@ -1228,7 +1232,7 @@ function animate() {
       updateHandPosition(hand);
       pollButtons(hand);
 
-      const editing = !!mainHand && !viewMode;
+      const editing = !!mainHand && !viewMode && !menuOpen;
       hand.marker.visible = editing;
       if (editing) {
         hand.marker.position.copy(hand.selectedPosition);
