@@ -298,7 +298,7 @@ function dragToTarget() {
 const controllers = [];
 for (let i = 0; i < 2; i++) {
   const controller = renderer.xr.getController(i);
-  controller.addEventListener('selectstart', useTarget);
+  controller.addEventListener('selectstart', () => { aimFromController(controller); useTarget(); });
   controller.addEventListener('squeezestart', () => {
     aimFromController(controller);
     const hit = hitTest();
@@ -362,14 +362,18 @@ if (!navigator.xr || !window.isSecureContext) {
 }
 
 function animate() {
-  for (const controller of controllers) {
-    aimFromController(controller);
-    const hit = hitTest();
-    if (hit) {
-      target.visible = true;
-      target.position.copy(hit.type === 'vertex' ? points[hit.index] : hit.position);
+  if (renderer.xr.isPresenting) {
+    for (const controller of controllers) {
+      aimFromController(controller);
+      const hit = hitTest();
+      if (hit) {
+        target.visible = true;
+        target.position.copy(hit.type === 'vertex' ? points[hit.index] : hit.position);
+      } else {
+        target.visible = false;
+      }
+      dragToTarget();
     }
-    dragToTarget();
   }
   renderer.render(scene, camera);
 }
