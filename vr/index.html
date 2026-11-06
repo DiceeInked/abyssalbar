@@ -578,6 +578,14 @@ function findExistingPath(start, end) {
   return path[0] === start ? path : null;
 }
 
+function getControllerRay(hand, origin, direction) {
+  hand.controller.updateMatrixWorld(true);
+  hand.controller.getWorldPosition(origin);
+  const rotation = new THREE.Quaternion();
+  hand.controller.getWorldQuaternion(rotation);
+  direction.set(0, 0, -1).applyQuaternion(rotation).normalize();
+}
+
 function startDrawing(hand) {
   if (menuOpen) return;
   if (!renderer.xr.isPresenting) return;
@@ -592,11 +600,9 @@ function startDrawing(hand) {
   if (viewMode || hand.drawing || hand.dragging) return;
 
   if (faceSelectMode) {
-    hand.controller.updateMatrixWorld(true);
     const origin = new THREE.Vector3();
     const direction = new THREE.Vector3();
-    hand.controller.getWorldPosition(origin);
-    hand.controller.getWorldDirection(direction);
+    getControllerRay(hand, origin, direction);
     menuRaycaster.set(origin, direction);
     const hit = menuRaycaster.intersectObjects(faceGroup.children, false)[0];
     if (hit) {
@@ -1046,11 +1052,9 @@ function toggleMenu() {
 function handleMenuPress(hand) {
   if (!menuOpen || !menuPanel) return false;
   menuPanel.updateMatrixWorld(true);
-  hand.controller.updateMatrixWorld(true);
   const origin = new THREE.Vector3();
   const direction = new THREE.Vector3();
-  hand.controller.getWorldPosition(origin);
-  hand.controller.getWorldDirection(direction);
+  getControllerRay(hand, origin, direction);
   menuRaycaster.set(origin, direction);
   const hit = menuRaycaster.intersectObject(menuPanel, false)[0];
   if (!hit || !hit.uv) return true;
