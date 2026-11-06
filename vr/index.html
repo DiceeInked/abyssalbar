@@ -771,9 +771,11 @@ function finishDrawing(hand) {
       addEdge(chain[i], chain[i + 1]);
     }
 
-    // Closing a loop still requires the user to draw the closing line.
-    if (existingPath && existingPath.length >= 3) {
-      faces.push(existingPath.concat(intersections.slice().reverse()));
+    // Only create a face when the closing path stays unambiguous.
+    // Crossings still split the lines, but a complex crossing is not
+    // guessed into a polygon boundary.
+    if (existingPath && existingPath.length >= 3 && intersections.length === 0) {
+      faces.push(existingPath);
     }
   }
 
@@ -815,7 +817,9 @@ function updateMovedPoint(index) {
 
   faces.forEach((face, faceIndex) => {
     if (!face.includes(index)) return;
-    const mesh = faceGroup.children[faceIndex];
+    const mesh = faceGroup.children.find(
+      child => child.userData.faceIndex === faceIndex
+    );
     if (!mesh) return;
     const geometry = makeFaceGeometry(face);
     if (!geometry) {
