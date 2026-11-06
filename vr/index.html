@@ -97,8 +97,8 @@ const sunset = new THREE.Mesh(
       void main() {
         float stripe = mod(vUv.y * 19.0, 1.0);
         if (vUv.y < 0.48 && stripe < 0.22) discard;
-        vec3 top = vec3(1.0, 0.55, 0.48);
-        vec3 bottom = vec3(1.0, 0.20, 0.58);
+        vec3 top = vec3(1.0, 0.88, 0.30);
+        vec3 bottom = vec3(1.0, 0.58, 0.12);
         gl_FragColor = vec4(mix(bottom, top, vUv.y), 1.0);
       }
     `
