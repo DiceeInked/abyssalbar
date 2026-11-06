@@ -617,12 +617,12 @@ function pollButtons(hand) {
   const buttonB = !!gamepad.buttons[5]?.pressed;
 
   if (buttonA && !hand.buttonWasDown[0]) {
-    if (hand.controller === mainHand) deleteSelectedPoint(hand);
+    if (hand.controller === mainHand) toggleViewMode();
     else undo();
   }
 
   if (buttonB && !hand.buttonWasDown[1]) {
-    if (hand.controller === mainHand) toggleViewMode();
+    if (hand.controller === mainHand) deleteSelectedPoint(hand);
     else redo();
   }
 
