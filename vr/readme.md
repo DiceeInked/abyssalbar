@@ -34,7 +34,7 @@ If the user presses and releases the trigger without moving to another grid posi
 
 When drawing from or onto an existing point, reuse that point rather than creating a duplicate. The temporary line is only a preview; it becomes permanent when the trigger is released.
 
-When a new point lands on an existing line, that line is split so the point becomes a real connection. When a new line crosses an existing line in 3D space, DOTFORM attempts to create a shared intersection point and split both lines automatically. Crossings that are not close in 3D space are left alone.
+When a new point lands on an existing line, that line is split so the point becomes a real connection. When a new line crosses an existing line in 3D space, DOTFORM attempts to create a shared intersection point and split both lines automatically. Crossings that are not close in 3D space are left alone. If a crossing makes the boundary of a new face ambiguous, DOTFORM keeps the connected lines but does not guess which face to fill.
 
 ## Open lines and filled polygons
 
@@ -83,7 +83,7 @@ The main hand is whichever controller the user chooses at the beginning of the V
 | Redo | Not assigned | Y |
 | Grab and move selected point | Grip | Grip |
 
-Both hands can select grid positions, draw, and move points independently. The main/non-dominant distinction only determines the special buttons.
+Both hands can select grid positions and draw. Point movement is handled by one controller at a time so a merge cannot change point indices while the other hand is editing. The main/non-dominant distinction only determines the special buttons.
 
 ## Tool menu and modeling tools
 
