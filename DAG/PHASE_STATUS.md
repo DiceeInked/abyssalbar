@@ -14,6 +14,7 @@ This file tracks what is actually in the browser prototype. It is separate from 
 - [x] Creature hit while airborne pauses vertical movement for about two seconds; horizontal air control remains available.
 - [x] A later swing can hit the same practice creature again while the hold is still active.
 - [x] Successful attacks against solid surfaces apply an upward velocity boost for floor, wall, and ceiling cases.
+- [x] Upward hit effects override an active creature-hit midair hold instead of being suppressed by its timer.
 - [x] Three generic ore deposits can be mined with the same HIT action.
 - [x] Each test deposit takes three hits and gives five units of raw test ink.
 - [x] One-button test reset for the player, target, ores, and raw ink.
