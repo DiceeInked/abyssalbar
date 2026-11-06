@@ -108,6 +108,7 @@ let chain = [];
 let history = [];
 let vertexMeshes = [];
 let dragging = null;
+let draggingController = null;
 
 const raycaster = new THREE.Raycaster();
 raycaster.near = 0.01;
@@ -287,9 +288,9 @@ function useTarget() {
 
 function dragToTarget() {
   if (dragging === null) return;
-  const hit = hitTest();
-  if (hit && hit.type === 'dot') {
-    points[dragging].copy(hit.position);
+  const hit = raycaster.intersectObject(grid)[0];
+  if (hit) {
+    points[dragging].copy(gridPoints[hit.instanceId]);
     drawModel();
   }
 }
@@ -305,12 +306,16 @@ for (let i = 0; i < 2; i++) {
     if (hit && hit.type === 'vertex') {
       saveHistory();
       dragging = hit.index;
+      draggingController = controller;
       message('MOVING VERTEX');
     }
   });
   controller.addEventListener('squeezeend', () => {
-    dragging = null;
-    message('VERTEX RELEASED');
+    if (draggingController === controller) {
+      dragging = null;
+      draggingController = null;
+      message('VERTEX RELEASED');
+    }
   });
 
   const ray = new THREE.Line(
@@ -332,6 +337,7 @@ renderer.domElement.addEventListener('pointerdown', event => {
     else {
       saveHistory();
       dragging = hit.index;
+      draggingController = null;
       renderer.domElement.setPointerCapture(event.pointerId);
     }
   } else if (hit && hit.type === 'dot' && event.button === 0) {
