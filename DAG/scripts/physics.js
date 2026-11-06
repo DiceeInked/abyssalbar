@@ -166,6 +166,7 @@ export function applyHitImpulse(player, strength = MOVEMENT.hitImpulse) {
   const impulse = Math.max(0, Number(strength) || 0);
   if (impulse === 0 || player.grounded) return player.vy;
   player.vy -= impulse;
+  player.airHoldTimer = 0;
   player.grounded = false;
   player.contacts.floor = false;
   return player.vy;
@@ -175,6 +176,7 @@ export function applySurfaceBounce(player, strength = MOVEMENT.jumpVelocity) {
   const boost = Math.max(0, Number(strength) || 0);
   if (boost === 0) return player.vy;
   player.vy = -boost;
+  player.airHoldTimer = 0;
   player.grounded = false;
   player.contacts.floor = false;
   player.contacts.ceiling = false;
