@@ -359,6 +359,7 @@ function commitHistory(before) {
 }
 
 function restore(state) {
+  selectedFaceIndex = -1;
   points.length = 0;
   state.points.forEach(point => points.push(new THREE.Vector3(...point)));
   edges = state.edges.map(edge => edge.slice());
@@ -589,6 +590,8 @@ function getControllerRay(hand, origin, direction) {
 function startDrawing(hand) {
   if (menuOpen) return;
   if (!renderer.xr.isPresenting) return;
+  // Do not let a point move change indices while the other hand draws.
+  if (hands.some(other => other !== hand && other.dragging)) return;
 
   // The first trigger press chooses the main hand. It does not draw.
   if (!mainHand) {
@@ -787,6 +790,9 @@ function startMoving(hand) {
   if (menuOpen || faceSelectMode) return;
   if (!renderer.xr.isPresenting || !mainHand || viewMode) return;
   if (hand.drawing || hand.dragging) return;
+  // Moving can merge vertices and change their indices, so wait until
+  // the other controller has finished its current drawing or move.
+  if (hands.some(other => other !== hand && (other.drawing || other.dragging))) return;
 
   updateHandPosition(hand);
   const index = findPoint(hand.selectedPosition);
@@ -878,8 +884,9 @@ function mergePoints(fromIndex, intoIndex) {
       if (!mapped.includes(next)) mapped.push(next);
     });
     return mapped;
-  }).filter(face => face.length >= 3);
+  }).filter(face => face.length >= 3 && new Set(face).size === face.length);
 
+  selectedFaceIndex = -1;
   return remap(intoIndex);
 }
 
@@ -1155,8 +1162,19 @@ projectPicker.addEventListener('change', async () => {
         validIndex(edge[0]) && validIndex(edge[1]) && edge[0] !== edge[1])) {
       throw new Error('Invalid edge');
     }
-    if (!data.faces.every(face => Array.isArray(face) && face.length >= 3 &&
-        face.every(validIndex))) throw new Error('Invalid face');
+    const edgeKeys = new Set(data.edges.map(([a, b]) =>
+      Math.min(a, b) + ':' + Math.max(a, b)
+    ));
+    if (!data.faces.every(face => {
+      if (!Array.isArray(face) || face.length < 3 ||
+          !face.every(validIndex) || new Set(face).size !== face.length) return false;
+      for (let i = 0; i < face.length; i++) {
+        const a = face[i];
+        const b = face[(i + 1) % face.length];
+        if (!edgeKeys.has(Math.min(a, b) + ':' + Math.max(a, b))) return false;
+      }
+      return true;
+    })) throw new Error('Invalid face');
     const before = snapshot();
     points.length = 0;
     selectedFaceIndex = -1;
