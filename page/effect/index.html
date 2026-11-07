@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#050505">
+<meta name="description" content="Abyssal's procedural 3D object generator.">
+<title>Oddform | Abyssal</title>
+<style>
+:root{color-scheme:dark;--bg:#050505;--panel:rgba(12,15,19,.88);--text:#f5f7f8;--muted:#929da5;--line:#ffffff20;--accent:#00ffc8}
+*{box-sizing:border-box}html,body{width:100%;height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+button{font:inherit;-webkit-tap-highlight-color:transparent}button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+#scene{position:fixed;inset:0;touch-action:none}#scene canvas{display:block;width:100%;height:100%}
+.top{position:fixed;z-index:2;top:16px;left:18px;right:18px;display:flex;align-items:center;justify-content:space-between;gap:12px;pointer-events:none}
+.brand{display:flex;align-items:center;gap:9px;color:#eee;text-decoration:none;font-size:11px;letter-spacing:.16em;text-transform:uppercase;pointer-events:auto}
+.brand-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 15px #00ffc880}
+.seed{max-width:58vw;padding:8px 11px;border:1px solid var(--line);border-radius:999px;background:#080b10d9;color:#b8c6cf;font:10px ui-monospace,monospace;cursor:pointer;pointer-events:auto}
+.panel{position:fixed;z-index:2;left:18px;bottom:18px;width:min(340px,calc(100vw - 36px));padding:15px;border:1px solid var(--line);border-radius:16px;background:var(--panel);backdrop-filter:blur(16px);box-shadow:0 18px 55px #0008}
+.eyebrow{margin:0 0 5px;color:var(--accent);font-size:9px;font-weight:800;letter-spacing:.18em;text-transform:uppercase}
+h1{margin:0 0 4px;font-size:20px;line-height:1.15;letter-spacing:-.035em}
+#description{min-height:32px;margin:0;color:var(--muted);font-size:11px;line-height:1.45}
+.actions{display:flex;gap:8px;margin-top:13px}
+.button{min-height:42px;padding:9px 13px;border:1px solid var(--line);border-radius:10px;background:#ffffff09;color:var(--text);font-size:11px;font-weight:700;cursor:pointer;transition:background .15s,border-color .15s,transform .15s}
+.button:active{transform:scale(.97)}.button:hover{border-color:#00ffc880;background:#00ffc812}
+.primary{flex:1;border-color:var(--accent);background:var(--accent);color:#001b14;font-weight:850}.primary:hover{background:#71ffe0}
+.toggles{display:flex;gap:7px;margin-top:8px}.toggles .button{flex:1;padding:8px 6px;color:#aab5bf;font-size:10px}.toggles .active{border-color:#00ffc866;background:#00ffc812;color:var(--accent)}
+.hint{position:fixed;right:18px;bottom:20px;color:#7e8b94;font-size:9px;line-height:1.7;text-align:right;pointer-events:none}
+#VRButton{position:fixed!important;z-index:3!important;right:18px!important;bottom:18px!important;left:auto!important;width:auto!important;height:auto!important;margin:0!important;padding:10px 13px!important;border:1px solid #ffffff30!important;border-radius:10px!important;background:rgba(12,15,19,.9)!important;color:#f5f7f8!important;font:700 10px system-ui,sans-serif!important;letter-spacing:.08em!important;opacity:.96!important}
+#VRButton:hover{border-color:#00ffc8!important}
+@media(max-width:600px){.top{top:12px;left:12px;right:12px}.panel{left:12px;bottom:12px;width:calc(100vw - 24px);padding:13px}.hint{display:none}#VRButton{right:12px!important;bottom:12px!important;transform:translateY(-170px)!important}.seed{font-size:9px}}
+@media(prefers-reduced-motion:reduce){.button{transition:none}}
+</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.166.1/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.166.1/examples/jsm/"}}</script>
+</head>
+<body>
+<div id="scene" aria-label="Interactive procedural 3D sculpture"></div>
+<header class="top">
+<a class="brand" href="../../" aria-label="Abyssal home"><span class="brand-dot"></span><span>Abyssal / Effect</span></a>
+<button class="seed" id="seed" type="button" title="Copy a link to recreate this object">SEED · loading</button>
+</header>
+<section class="panel" aria-live="polite">
+<p class="eyebrow">Procedural object laboratory</p>
+<h1 id="name">Building a specimen…</h1>
+<p id="description">Mixing geometry, color, and shader effects.</p>
+<div class="actions"><button class="button primary" id="generate" type="button">✦ &nbsp; Generate new</button><button class="button" id="reset" type="button" aria-label="Reset camera view">↺</button></div>
+<div class="toggles"><button class="button" id="wire" type="button" aria-pressed="false">Wireframe: off</button><button class="button active" id="motion" type="button" aria-pressed="true">Motion: on</button></div>
+</section>
+<div class="hint">DRAG TO ORBIT · PINCH / SCROLL TO ZOOM<br>CLICK THE SEED TO COPY A REPLAY LINK</div>
+<script type="module">
+import * as THREE from 'three';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+import {VRButton} from 'three/addons/webxr/VRButton.js';
+
+const mount=document.querySelector('#scene');
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x05080d);
+scene.fog=new THREE.FogExp2(0x05080d,.035);
+const camera=new THREE.PerspectiveCamera(47,innerWidth/innerHeight,.1,100);
+camera.position.set(0,1.8,8.2);
+const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth,innerHeight);
+renderer.outputColorSpace=THREE.SRGBColorSpace;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure=1.12;
+renderer.xr.enabled=true;
+mount.appendChild(renderer.domElement);
+document.body.appendChild(VRButton.createButton(renderer));
+const controls=new OrbitControls(camera,renderer.domElement);
+controls.enableDamping=true;controls.minDistance=3;controls.maxDistance=15;controls.target.set(0,.1,0);
+
+scene.add(new THREE.HemisphereLight(0xc8e6ff,0x171020,1.15));
+const keyLight=new THREE.DirectionalLight(0xffffff,2.1);keyLight.position.set(4,6,5);scene.add(keyLight);
+const tealLight=new THREE.PointLight(0x00ffc8,22,18);tealLight.position.set(-4,1,-3);scene.add(tealLight);
+const pinkLight=new THREE.PointLight(0xff58bd,16,16);pinkLight.position.set(3,-1,3);scene.add(pinkLight);
+const floor=new THREE.GridHelper(28,56,0x24434b,0x17232d);floor.position.y=-2.25;floor.material.transparent=true;floor.material.opacity=.34;scene.add(floor);
+const glow=new THREE.Mesh(new THREE.CircleGeometry(5,64),new THREE.MeshBasicMaterial({color:0x00ffc8,transparent:true,opacity:.035,side:THREE.DoubleSide}));
+glow.rotation.x=-Math.PI/2;glow.position.y=-2.24;scene.add(glow);
+
+const sculpture=new THREE.Group();scene.add(sculpture);
+let wireMeshes=[],shaderMaterials=[],wireEnabled=false,motionEnabled=true,activeSeed=0,rng=Math.random,animationTime=0;
+function seededRandom(seed){let state=seed>>>0;return function(){state=(state+0x6D2B79F5)>>>0;let t=state;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296;};}
+const between=(a,b)=>a+rng()*(b-a);
+const choose=a=>a[Math.floor(rng()*a.length)];
+const palettes=[[0x00ffc8,0x087cff,0xd9fff8],[0xff5ebc,0x805cff,0xffd9f1],[0xffb347,0xff4d6d,0xffe9a8],[0x9dff6e,0x21cdb5,0xe5ffb8],[0x9a8cff,0x55d6ff,0xffffff],[0xffef70,0xff7838,0xffd7a0],[0xd4e1f0,0x687caa,0xffffff]];
+function makeShader(palette){
+const material=new THREE.ShaderMaterial({
+uniforms:{uTime:{value:0},uA:{value:new THREE.Color(palette[0])},uB:{value:new THREE.Color(palette[1])},uC:{value:new THREE.Color(palette[2])},uSeed:{value:between(0,24)}},
+vertexShader:[
+'varying vec3 vNormal;','varying vec3 vPosition;','varying vec3 vWorld;',
+'void main(){','vNormal=normalize(normalMatrix*normal);','vPosition=position;',
+'vec4 worldPosition=modelMatrix*vec4(position,1.0);','vWorld=worldPosition.xyz;',
+'gl_Position=projectionMatrix*viewMatrix*worldPosition;','}'
+].join('\n'),
+fragmentShader:[
+'uniform float uTime;','uniform float uSeed;','uniform vec3 uA;','uniform vec3 uB;','uniform vec3 uC;',
+'varying vec3 vNormal;','varying vec3 vPosition;','varying vec3 vWorld;',
+'void main(){','vec3 n=normalize(vNormal);',
+'float facing=abs(dot(n,normalize(cameraPosition-vWorld)));',
+'float rim=pow(1.0-facing,2.0);',
+'float bands=0.5+0.5*sin(vPosition.y*4.7+vPosition.x*3.1+uTime*0.45+uSeed);',
+'float drift=0.5+0.5*sin(vPosition.z*2.4-uTime*0.2+uSeed);',
+'vec3 color=mix(uA,uB,smoothstep(0.08,0.92,bands));',
+'color=mix(color,uC,drift*0.42);color+=rim*vec3(0.28,0.48,0.52);',
+'float glint=pow(max(0.0,sin((vPosition.x+vPosition.y)*17.0+uTime*0.65)),18.0);',
+'color+=glint*0.12;gl_FragColor=vec4(color,1.0);',
+'#include <tonemapping_fragment>','#include <colorspace_fragment>','}'
+].join('\n')
+});
+shaderMaterials.push(material);return material;
+}
+const types=['crystal','ring','spike','orb','gear','column','knot','polyhedron'];
+function makeGeometry(type,detail){
+const r=between(.72,1.16);let g;
+switch(type){
+case'crystal':g=new THREE.IcosahedronGeometry(r,detail);break;
+case'ring':g=new THREE.TorusGeometry(r*.72,between(.13,.28),8+detail*3,18+detail*12);break;
+case'spike':g=new THREE.OctahedronGeometry(r,detail);break;
+case'orb':g=new THREE.SphereGeometry(r,18+detail*12,14+detail*8);break;
+case'gear':g=new THREE.TorusKnotGeometry(r*.68,.16+detail*.025,80+detail*35,8+detail*2,2+Math.floor(rng()*4),3+Math.floor(rng()*4));break;
+case'column':g=new THREE.CylinderGeometry(between(.35,.65),between(.55,.9),between(1.1,2),5+detail*3,2+detail,false);break;
+case'knot':g=new THREE.TorusKnotGeometry(r*.65,.2,100+detail*30,9,3,5);break;
+default:g=new THREE.DodecahedronGeometry(r,detail);
+}
+const p=g.attributes.position,amount=between(.025,.2);
+for(let i=0;i<p.count;i++){const x=p.getX(i),y=p.getY(i),z=p.getZ(i);const wave=Math.sin(x*4.1+y*3.2)*Math.cos(z*4.7-y*2.1);const scale=1+wave*amount+between(-.018,.018);p.setXYZ(i,x*scale,y*scale,z*scale);}
+p.needsUpdate=true;g.computeVertexNormals();return g;
+}
+function addForm(type,position,scale,palette,detail,spin){
+const group=new THREE.Group();group.position.copy(position);group.scale.setScalar(scale);
+group.rotation.set(between(0,Math.PI),between(0,Math.PI),between(0,Math.PI));group.userData.spin=spin;
+const geometry=makeGeometry(type,detail);
+group.add(new THREE.Mesh(geometry,makeShader(palette)));
+const wire=new THREE.Mesh(geometry,new THREE.MeshBasicMaterial({color:palette[2],wireframe:true,transparent:true,opacity:.28,depthWrite:false}));
+wire.scale.setScalar(1.008);wire.visible=wireEnabled;wire.userData.wire=true;group.add(wire);wireMeshes.push(wire);
+sculpture.add(group);return group;
+}
+function clearSculpture(){
+const geometries=new Set(),materials=new Set();
+sculpture.traverse(o=>{if(o.geometry)geometries.add(o.geometry);if(o.material){if(Array.isArray(o.material))o.material.forEach(m=>materials.add(m));else materials.add(o.material);}});
+while(sculpture.children.length)sculpture.remove(sculpture.children[0]);
+geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());
+wireMeshes=[];shaderMaterials=[];
+}
+const first=['Velvet','Quantum','Prism','Orbit','Melted','Electric','Lunar','Fractal','Glacier','Static','Blooming','Chrome','Aether','Soft'];
+const last=['Reliquary','Anomaly','Spindle','Bloom','Engine','Shard','Organism','Helix','Totem','Echo','Artifact','Nest','Machine','Memory'];
+const labels={crystal:'faceted crystal',ring:'open ring structure',spike:'angular spiked form',orb:'rounded organic form',gear:'interwoven mechanical knot',column:'geometric column',knot:'twisted knot structure',polyhedron:'polyhedral sculpture'};
+function generate(seedValue){
+clearSculpture();
+const n=Number(seedValue);
+activeSeed=Number.isSafeInteger(n)&&n>=0&&n<=4294967295?n:Math.floor(Math.random()*900000000+100000000);
+rng=seededRandom(activeSeed);animationTime=0;
+document.querySelector('#seed').textContent='SEED · '+activeSeed;
+const url=new URL(location.href);url.searchParams.set('seed',String(activeSeed));history.replaceState(null,'',url);
+const palette=choose(palettes),mainType=choose(types),detail=Math.floor(between(0,3));
+const complexity=choose([0,2,4,6,8,11,15,19]);
+const main=addForm(mainType,new THREE.Vector3(0,0,0),between(1,1.38),palette,detail,between(-.18,.18));
+main.rotation.x+=between(-.12,.12);
+for(let i=0;i<complexity;i++){
+const angle=i/Math.max(complexity,1)*Math.PI*2+between(-.24,.24),radius=between(.82,1.9);
+const pos=new THREE.Vector3(Math.cos(angle)*radius,between(-1.35,1.35),Math.sin(angle)*radius);
+addForm(choose(types),pos,between(.14,.48)*(complexity>10?.82:1),palette,Math.floor(between(0,3)),between(-.42,.42));
+}
+const bands=Math.floor(between(0,4));
+for(let i=0;i<bands;i++){
+const band=new THREE.Mesh(new THREE.TorusGeometry(between(1.25,2.05),between(.012,.035),5,96),new THREE.MeshBasicMaterial({color:choose(palette),transparent:true,opacity:.7}));
+band.rotation.set(between(0,Math.PI),between(0,Math.PI),between(0,Math.PI));band.userData.spin=between(-.12,.12);sculpture.add(band);
+}
+const count=Math.floor(between(18,54)),fragmentGeometry=new THREE.TetrahedronGeometry(.045,0),fragmentMaterial=new THREE.MeshBasicMaterial({color:palette[2],transparent:true,opacity:.7});
+const fragments=new THREE.InstancedMesh(fragmentGeometry,fragmentMaterial,count),dummy=new THREE.Object3D();
+for(let i=0;i<count;i++){const a=between(0,Math.PI*2),r=between(1.35,2.8);dummy.position.set(Math.cos(a)*r,between(-1.9,1.9),Math.sin(a)*r);dummy.rotation.set(between(0,Math.PI),between(0,Math.PI),between(0,Math.PI));dummy.scale.setScalar(between(.35,1.35));dummy.updateMatrix();fragments.setMatrixAt(i,dummy.matrix);}
+fragments.instanceMatrix.needsUpdate=true;sculpture.add(fragments);
+document.querySelector('#name').textContent=choose(first)+' '+choose(last);
+document.querySelector('#description').textContent=labels[mainType]+' · '+(complexity+1)+' forms · '+(['coarse','medium','fine'][detail])+' geometry · animated shader finish';
+sculpture.rotation.set(0,0,0);
+}
+document.querySelector('#generate').addEventListener('click',()=>generate());
+document.querySelector('#reset').addEventListener('click',()=>{camera.position.set(0,1.8,8.2);controls.target.set(0,.1,0);controls.update();});
+document.querySelector('#wire').addEventListener('click',e=>{wireEnabled=!wireEnabled;wireMeshes.forEach(m=>m.visible=wireEnabled);e.currentTarget.classList.toggle('active',wireEnabled);e.currentTarget.textContent='Wireframe: '+(wireEnabled?'on':'off');e.currentTarget.setAttribute('aria-pressed',String(wireEnabled));});
+document.querySelector('#motion').addEventListener('click',e=>{motionEnabled=!motionEnabled;e.currentTarget.classList.toggle('active',motionEnabled);e.currentTarget.textContent='Motion: '+(motionEnabled?'on':'off');e.currentTarget.setAttribute('aria-pressed',String(motionEnabled));});
+document.querySelector('#seed').addEventListener('click',async e=>{const url=new URL(location.href);url.searchParams.set('seed',String(activeSeed));try{await navigator.clipboard.writeText(url.toString());e.currentTarget.textContent='COPIED · '+activeSeed;window.setTimeout(()=>{e.currentTarget.textContent='SEED · '+activeSeed;},1300);}catch{e.currentTarget.textContent='SEED · '+activeSeed;}});
+const requested=new URLSearchParams(location.search).get('seed');generate(requested!==null&&/^\d+$/.test(requested)?requested:undefined);
+const clock=new THREE.Clock();
+renderer.setAnimationLoop(()=>{
+const delta=Math.min(clock.getDelta(),.05);
+if(motionEnabled)animationTime+=delta;
+if(motionEnabled){
+sculpture.rotation.y=Math.sin(animationTime*.16)*.2+animationTime*.045;
+sculpture.rotation.x=Math.sin(animationTime*.2)*.055;
+sculpture.children.forEach(child=>{if(child.userData.spin)child.rotation.y+=child.userData.spin*delta;});
+}
+shaderMaterials.forEach(material=>{material.uniforms.uTime.value=animationTime;});
+controls.update();renderer.render(scene,camera);
+});
+window.addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,2));});
+</script>
+</body>
+</html>
