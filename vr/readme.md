@@ -34,8 +34,6 @@ If the user presses and releases the trigger without moving to another grid posi
 
 When drawing from or onto an existing point, reuse that point rather than creating a duplicate. The temporary line is only a preview; it becomes permanent when the trigger is released.
 
-When a new point lands on an existing line, that line is split so the point becomes a real connection. When a new line crosses an existing line in 3D space, DOTFORM attempts to create a shared intersection point and split both lines automatically. Crossings that are not close in 3D space are left alone. If a crossing makes the boundary of a new face ambiguous, DOTFORM keeps the connected lines but does not guess which face to fill.
-
 ## Open lines and filled polygons
 
 - A single point is valid geometry.
@@ -78,37 +76,39 @@ The main hand is whichever controller the user chooses at the beginning of the V
 | --- | --- | --- |
 | Draw / place | Trigger | Trigger |
 | Delete selected point | A | Not assigned |
-| Open / close tool menu | B | Not assigned |
+| Toggle view mode | B | Not assigned |
 | Undo | Not assigned | X |
 | Redo | Not assigned | Y |
 | Grab and move selected point | Grip | Grip |
 
-Both hands can select grid positions and draw. Point movement is handled by one controller at a time so a merge cannot change point indices while the other hand is editing. The main/non-dominant distinction only determines the special buttons.
-
-## Tool menu and modeling tools
-
-- Press B on the main hand to open or close the floating menu in front of the user.
-- A thin cyan pointer shows where the controller is aiming. Point at a menu button and press its trigger to activate it.
-- **View / Edit** switches between inspecting and editing. View mode disables geometry changes.
-- **Create Cube** adds a basic cube in front of the user.
-- **Select Face** switches to face-picking mode. Point at a face and press the trigger to select it. The selected face is highlighted. Open the menu and choose Select Face again to return to normal drawing.
-- **Extrude Face** extrudes the selected face. If no face is selected, it uses the most recently created face.
-- **Rotate Model** rotates the current model around its center.
-- **Scale Model** slightly enlarges the current model around its center.
-- The menu also includes project saving, loading, and GLB export.
-
-The first set of modeling tools is intentionally small. They provide a foundation for adding more operations without filling the controller with extra buttons.
-
-## Saving, loading, and exporting
-
-- **Save Project** downloads a .dotform file containing the points, edges, and faces.
-- **Load Project** opens a .dotform project file and replaces the current model after validating its data.
-- **Export GLB** exports the current geometry as a .glb file for use in compatible 3D software.
-- The native project format is versioned so it can be expanded later without silently changing old files.
+Both hands can select grid positions, draw, and move points independently. The main/non-dominant distinction only determines the special buttons.
 
 ## View mode
 
-- View / Edit in the floating menu switches view mode on or off.
+- Pressing B on the main hand toggles view mode on or off.
 - View mode is for inspecting the model.
-- While view mode is active, drawing, deleting, moving, and geometry-changing menu tools are disabled so the model cannot be changed accidentally.
-- Save Project and Export GLB remain available in view mode. Select Face can also be chosen to leave view mode and enter face selection.
+- While view mode is active, drawing, deleting, and moving geometry are disabled so the model cannot be changed accidentally.
+- Pressing B again returns to editing mode.
+
+## Undo and redo
+
+- X on the non-dominant controller undoes the previous editing action.
+- Y on the non-dominant controller redoes the most recently undone action.
+- Undo and redo should cover geometry edits, including creating points and lines, closing polygons, deleting points, and moving points.
+- A new edit after undo should clear the redo history, following normal undo/redo behavior.
+
+## Visual style
+
+- Keep the environment minimal and dark, with no unnecessary visual effects.
+- Do not show the full grid or a cloud of nearby dots.
+- The selected grid dot is the only visible indication of the current snap position for each hand.
+- User-created points, permanent white lines, and filled polygon faces remain visible.
+- The temporary line while holding the trigger should be visually distinct enough to recognize as a preview, without adding distracting effects.
+
+## Implementation notes
+
+- Build this as a browser-based WebXR experience using HTML, CSS, and JavaScript.
+- Keep the code straightforward and understandable. Prefer a simple implementation over unnecessary complexity.
+- The grid can be calculated procedurally: it does not need to create and render an actual infinite collection of dot objects.
+- Test controller input and interactions on a real compatible VR headset. Desktop mouse controls can be useful for development, but they do not replace headset testing.
+- Treat the behavior in this document as the design specification. If an implementation detail conflicts with these interaction rules, preserve the intended user experience.
