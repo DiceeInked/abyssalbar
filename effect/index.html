@@ -182,7 +182,13 @@ const palettes=[
 ];
 const systemSeeds=[31415926,7812301,9182736,19283746,7263519,8392017,4928173,6351928,12847365,9817263,5728194,3619284,8273619,4192837,6382719];
 const nouns=['Amber','Anchor','Anvil','Apple','Ash','Badger','Bamboo','Beacon','Berry','Birch','Bison','Blossom','Boulder','Breeze','Bronze','Canyon','Cedar','Cinder','Cloud','Comet','Copper','Coral','Cricket','Crown','Crystal','Dawn','Delta','Dew','Dolphin','Drift','Dune','Eagle','Echo','Ember','Falcon','Feather','Fern','Finch','Flame','Flint','Forest','Fox','Frost','Galaxy','Garden','Glacier','Glimmer','Grove','Harbor','Hawk','Hazel','Hearth','Heron','Hollow','Honey','Horizon','Island','Ivory','Jade','Juniper','Kestrel','Lagoon','Lantern','Laurel','Lemon','Lichen','Lotus','Maple','Marble','Meadow','Meteor','Midnight','Mirage','Moss','Mountain','Mushroom','Nebula','Nickel','Nimbus','Nova','Ocean','Olive','Onyx','Orchid','Otter','Owl','Pebble','Peach','Pearl','Pine','Pollen','Quartz','Quill','Rain','Raven','Reef','River','Robin','Rocket','Rose','Saffron','Sapphire','Shadow','Shell','Silver','Sky','Sparrow','Spruce','Star','Stone','Storm','Thistle','Thunder','Tiger','Topaz','Tulip','Valley','Velvet','Violet','Willow','Winter','Wolf','Wren'];
-function generateName(){let first=choose(nouns),second=choose(nouns);while(second===first)second=choose(nouns);return first+' '+second;}
+function generateName(){
+ const pick=()=>nouns[Math.floor(rng()*nouns.length)];
+ const first=pick();
+ let second=pick();
+ while(second===first)second=pick();
+ return first+' '+second;
+}
 function nameFromSeed(seed){const previous=rng;rng=seededRandom(seed);const result=generateName();rng=previous;return result;}
 const systemNames=systemSeeds.map((seed,i)=>nameFromSeed(seed+i*73));
 function seededRandom(seed){
