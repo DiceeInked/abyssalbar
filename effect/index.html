@@ -13,9 +13,9 @@ button{font:inherit;-webkit-tap-highlight-color:transparent}button:focus-visible
 #scene{position:fixed;inset:0;touch-action:none}#scene canvas{display:block;width:100%;height:100%}
 .top{position:fixed;z-index:2;top:16px;left:18px;right:18px;display:flex;align-items:center;justify-content:space-between;gap:12px;pointer-events:none}
 .brand{display:flex;align-items:center;gap:9px;color:#eee;text-decoration:none;font-size:11px;letter-spacing:.16em;text-transform:uppercase;pointer-events:auto}
-.brand-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 15px #00ffc880}
+.brand-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:none}
 .seed{max-width:58vw;padding:8px 11px;border:1px solid var(--line);border-radius:999px;background:#080b10d9;color:#b8c6cf;font:10px ui-monospace,monospace;cursor:pointer;pointer-events:auto}
-.panel{position:fixed;z-index:2;left:18px;bottom:18px;width:min(340px,calc(100vw - 36px));padding:15px;border:1px solid var(--line);border-radius:16px;background:var(--panel);backdrop-filter:blur(16px);box-shadow:0 18px 55px #0008}
+.panel{position:fixed;z-index:2;left:18px;bottom:18px;width:min(340px,calc(100vw - 36px));padding:15px;border:1px solid var(--line);border-radius:16px;background:var(--panel);box-shadow:none}
 .eyebrow{margin:0 0 5px;color:var(--accent);font-size:9px;font-weight:800;letter-spacing:.18em;text-transform:uppercase}
 h1{margin:0 0 4px;font-size:20px;line-height:1.15;letter-spacing:-.035em}
 #description{min-height:32px;margin:0;color:var(--muted);font-size:11px;line-height:1.45}
@@ -25,7 +25,7 @@ h1{margin:0 0 4px;font-size:20px;line-height:1.15;letter-spacing:-.035em}
 .primary{flex:1;border-color:var(--accent);background:var(--accent);color:#001b14;font-weight:850}.primary:hover{background:#71ffe0}
 .toggles{display:flex;gap:7px;margin-top:8px}.toggles .button{flex:1;padding:8px 6px;color:#aab5bf;font-size:10px}.toggles .active{border-color:#00ffc866;background:#00ffc812;color:var(--accent)}
 .hint{position:fixed;right:18px;bottom:70px;color:#7e8b94;font-size:9px;line-height:1.7;text-align:right;pointer-events:none}
-#VRButton{position:fixed!important;z-index:3!important;right:18px!important;bottom:18px!important;left:auto!important;width:auto!important;height:auto!important;margin:0!important;padding:10px 13px!important;border:1px solid #ffffff30!important;border-radius:10px!important;background:rgba(12,15,19,.9)!important;color:#f5f7f8!important;font:700 10px system-ui,sans-serif!important;letter-spacing:.08em!important;opacity:.96!important}
+#VRButton{position:fixed!important;z-index:3!important;right:18px!important;bottom:18px!important;left:auto!important;width:auto!important;height:auto!important;margin:0!important;padding:10px 13px!important;border:1px solid #ffffff30!important;border-radius:10px!important;background:rgba(12,15,19,.9)!important;color:#f5f7f8!important;font:700 10px system-ui,sans-serif!important;letter-spacing:.08em!important;opacity:1!important}
 #VRButton:hover{border-color:#00ffc8!important}
 @media(max-width:600px){.top{top:12px;left:12px;right:12px}.panel{left:12px;bottom:12px;width:calc(100vw - 24px);padding:13px}.hint{display:none}#VRButton{right:12px!important;top:54px!important;bottom:auto!important;transform:none!important}.seed{font-size:9px}}
 @media(prefers-reduced-motion:reduce){.button{transition:none}}
@@ -54,7 +54,7 @@ import {VRButton} from 'three/addons/webxr/VRButton.js';
 const mount=document.querySelector('#scene');
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(0x05080d);
-scene.fog=new THREE.FogExp2(0x05080d,.035);
+// No atmospheric fog: the scene stays crisp at every distance.
 const camera=new THREE.PerspectiveCamera(47,innerWidth/innerHeight,.1,100);
 camera.position.set(0,1.8,8.2);
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
@@ -69,19 +69,14 @@ document.body.appendChild(VRButton.createButton(renderer));
 const controls=new OrbitControls(camera,renderer.domElement);
 controls.enableDamping=true;controls.minDistance=3;controls.maxDistance=15;controls.target.set(0,.1,0);
 
-scene.add(new THREE.HemisphereLight(0xc8e6ff,0x171020,1.15));
-const keyLight=new THREE.DirectionalLight(0xffffff,2.1);keyLight.position.set(4,6,5);scene.add(keyLight);
-const tealLight=new THREE.PointLight(0x00ffc8,22,18);tealLight.position.set(-4,1,-3);scene.add(tealLight);
-const pinkLight=new THREE.PointLight(0xff58bd,16,16);pinkLight.position.set(3,-1,3);scene.add(pinkLight);
-const floor=new THREE.GridHelper(28,56,0x24434b,0x17232d);floor.position.y=-2.25;floor.material.transparent=true;floor.material.opacity=.34;scene.add(floor);
-const glow=new THREE.Mesh(new THREE.CircleGeometry(5,64),new THREE.MeshBasicMaterial({color:0x00ffc8,transparent:true,opacity:.035,side:THREE.DoubleSide}));
-glow.rotation.x=-Math.PI/2;glow.position.y=-2.24;scene.add(glow);
+// Flat-color materials keep every shape sharply defined.
+const floor=new THREE.GridHelper(28,56,0x24434b,0x17232d);floor.position.y=-2.25;scene.add(floor);
 
 const starsGeometry=new THREE.BufferGeometry();
 const starPositions=new Float32Array(900*3);
 for(let i=0;i<900;i++){const radius=9+Math.random()*15,a=Math.random()*Math.PI*2;starPositions[i*3]=Math.cos(a)*radius;starPositions[i*3+1]=(Math.random()-.5)*18;starPositions[i*3+2]=Math.sin(a)*radius;}
 starsGeometry.setAttribute('position',new THREE.BufferAttribute(starPositions,3));
-const stars=new THREE.Points(starsGeometry,new THREE.PointsMaterial({color:0x9bbfc4,size:.025,transparent:true,opacity:.72,sizeAttenuation:true}));
+const stars=new THREE.Points(starsGeometry,new THREE.PointsMaterial({color:0x9bbfc4,size:.025,sizeAttenuation:true}));
 scene.add(stars);
 const sculpture=new THREE.Group();scene.add(sculpture);
 let wireMeshes=[],shaderMaterials=[],wireEnabled=false,motionEnabled=true,activeSeed=0,rng=Math.random,animationTime=0;
@@ -89,31 +84,15 @@ function seededRandom(seed){let state=seed>>>0;return function(){state=(state+0x
 const between=(a,b)=>a+rng()*(b-a);
 const choose=a=>a[Math.floor(rng()*a.length)];
 const palettes=[[0x00ffc8,0x087cff,0xd9fff8],[0xff5ebc,0x805cff,0xffd9f1],[0xffb347,0xff4d6d,0xffe9a8],[0x9dff6e,0x21cdb5,0xe5ffb8],[0x9a8cff,0x55d6ff,0xffffff],[0xffef70,0xff7838,0xffd7a0],[0xd4e1f0,0x687caa,0xffffff]];
-function makeShader(palette){
-const material=new THREE.ShaderMaterial({
-uniforms:{uTime:{value:0},uA:{value:new THREE.Color(palette[0])},uB:{value:new THREE.Color(palette[1])},uC:{value:new THREE.Color(palette[2])},uSeed:{value:between(0,24)}},
-vertexShader:[
-'varying vec3 vNormal;','varying vec3 vPosition;','varying vec3 vWorld;',
-'void main(){','vNormal=normalize(normalMatrix*normal);','vPosition=position;',
-'vec4 worldPosition=modelMatrix*vec4(position,1.0);','vWorld=worldPosition.xyz;',
-'gl_Position=projectionMatrix*viewMatrix*worldPosition;','}'
-].join('\n'),
-fragmentShader:[
-'uniform float uTime;','uniform float uSeed;','uniform vec3 uA;','uniform vec3 uB;','uniform vec3 uC;',
-'varying vec3 vNormal;','varying vec3 vPosition;','varying vec3 vWorld;',
-'void main(){','vec3 n=normalize(vNormal);',
-'float facing=abs(dot(n,normalize(cameraPosition-vWorld)));',
-'float rim=pow(1.0-facing,2.0);',
-'float bands=0.5+0.5*sin(vPosition.y*4.7+vPosition.x*3.1+uTime*0.45+uSeed);',
-'float drift=0.5+0.5*sin(vPosition.z*2.4-uTime*0.2+uSeed);',
-'vec3 color=mix(uA,uB,smoothstep(0.08,0.92,bands));',
-'color=mix(color,uC,drift*0.42);color+=rim*vec3(0.28,0.48,0.52);',
-'float glint=pow(max(0.0,sin((vPosition.x+vPosition.y)*17.0+uTime*0.65)),18.0);',
-'color+=glint*0.12;gl_FragColor=vec4(color,1.0);',
-'#include <tonemapping_fragment>','#include <colorspace_fragment>','}'
-].join('\n')
-});
-shaderMaterials.push(material);return material;
+function makeShader(palette,geometry){
+const position=geometry.attributes.position;
+const colors=new Float32Array(position.count*3);
+for(let i=0;i<position.count;i+=3){
+const color=new THREE.Color(rng()<.22?choose(palette):palette[Math.floor(rng()*palette.length)]);
+for(let j=0;j<3;j++){colors[(i+j)*3]=color.r;colors[(i+j)*3+1]=color.g;colors[(i+j)*3+2]=color.b;}
+}
+geometry.setAttribute('color',new THREE.BufferAttribute(colors,3));
+return new THREE.MeshBasicMaterial({vertexColors:true,flatShading:true});
 }
 const types=['crystal','ring','spike','orb','gear','column','knot','polyhedron','cone','torus','star'];
 function makeGeometry(type,detail){
@@ -138,9 +117,10 @@ p.needsUpdate=true;g.computeVertexNormals();return g;
 function addForm(type,position,scale,palette,detail,spin,parent=sculpture){
 const group=new THREE.Group();group.position.copy(position);group.scale.setScalar(scale);
 group.rotation.set(between(0,Math.PI),between(0,Math.PI),between(0,Math.PI));group.userData.spin=spin;
-const geometry=makeGeometry(type,detail);
-const formPalette=rng()<.28?choose(palettes):palette;
-group.add(new THREE.Mesh(geometry,makeShader(formPalette)));
+let geometry=makeGeometry(type,detail);
+if(geometry.index)geometry=geometry.toNonIndexed();
+const formPalette=rng()<.4?choose(palettes):palette;
+group.add(new THREE.Mesh(geometry,makeShader(formPalette,geometry)));
 const wire=new THREE.Mesh(geometry,new THREE.MeshBasicMaterial({color:formPalette[2],wireframe:true,transparent:true,opacity:.22,depthWrite:false}));
 wire.scale.setScalar(1.008);wire.visible=wireEnabled;wire.userData.wire=true;group.add(wire);wireMeshes.push(wire);
 parent.add(group);return group;
@@ -170,43 +150,35 @@ rng=seededRandom(activeSeed);animationTime=0;
 document.querySelector('#seed').textContent='SEED · '+activeSeed;
 const url=new URL(location.href);url.searchParams.set('seed',String(activeSeed));history.replaceState(null,'',url);
 const palette=choose(palettes),detail=Math.floor(between(0,3));
-const planetCount=choose([4,5,6,7]);
+const planetCount=choose([3,4,5,6,7,8,9]);
 const system=new THREE.Group();sculpture.add(system);
 
 // A bright, irregular star gives every system a clear center.
 const starGroup=new THREE.Group();system.add(starGroup);starGroup.userData.spin=between(.025,.07);
 const starColor=choose(palette);
-const star=new THREE.Mesh(
-new THREE.IcosahedronGeometry(between(.39,.49),2),
-new THREE.MeshStandardMaterial({color:starColor,emissive:starColor,emissiveIntensity:2.1,metalness:.08,roughness:.3})
-);
+const starGeometry=choose([new THREE.IcosahedronGeometry(between(.38,.58),0),new THREE.OctahedronGeometry(between(.4,.62),0),new THREE.DodecahedronGeometry(between(.4,.57),0)]);
+const star=new THREE.Mesh(starGeometry,new THREE.MeshBasicMaterial({color:starColor,flatShading:true}));
 starGroup.add(star);
-const corona=new THREE.Mesh(
-new THREE.SphereGeometry(.68,32,24),
-new THREE.MeshBasicMaterial({color:palette[1],transparent:true,opacity:.095,blending:THREE.AdditiveBlending,depthWrite:false})
-);
-starGroup.add(corona);
-for(let i=0;i<2;i++){
-const flare=new THREE.Mesh(
-new THREE.TorusGeometry(.62+i*.13,.012+i*.006,6,96),
-new THREE.MeshBasicMaterial({color:palette[(i+1)%palette.length],transparent:true,opacity:.52,blending:THREE.AdditiveBlending,depthWrite:false})
-);
-flare.rotation.set(between(-.7,.7),between(-.7,.7),between(-.7,.7));starGroup.add(flare);
+// A few hard-edged rays make the star silhouette different each time.
+const rayCount=Math.floor(between(5,13));
+for(let i=0;i<rayCount;i++){
+const ray=new THREE.Mesh(new THREE.ConeGeometry(between(.035,.12),between(.22,.7),3),new THREE.MeshBasicMaterial({color:choose(palette)}));
+const angle=i/rayCount*Math.PI*2+between(-.2,.2),tilt=between(-.7,.7),distance=between(.43,.63);
+ray.position.set(Math.cos(angle)*distance,Math.sin(tilt)*distance,Math.sin(angle)*distance);
+ray.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),ray.position.clone().normalize());starGroup.add(ray);
 }
-const starLight=new THREE.PointLight(starColor,between(18,28),13);
-starGroup.add(starLight);
 
 // Each planet gets its own inclined elliptical orbit.
 const orbitRadii=[];
 for(let i=0;i<planetCount;i++){
-const orbitRadius=1.25+i*.54+between(-.1,.1);
-const depthRadius=orbitRadius*between(.78,1.08);
+const orbitRadius=1.05+i*between(.39,.72)+between(-.2,.2);
+const depthRadius=orbitRadius*between(.55,1.28);
 orbitRadii.push({x:orbitRadius,z:depthRadius});
 const orbitalPlane=new THREE.Group();
-orbitalPlane.rotation.set(between(-.52,.52),between(0,Math.PI*2),between(-.28,.28));
+orbitalPlane.rotation.set(between(-1.05,1.05),between(0,Math.PI*2),between(-.8,.8));
 orbitalPlane.userData.orbitSpeed=between(.07,.19)*(rng()<.5?-1:1);
 system.add(orbitalPlane);
-createOrbitPath(orbitalPlane,orbitRadius,depthRadius,choose(palette),between(.17,.34));
+createOrbitPath(orbitalPlane,orbitRadius,depthRadius,choose(palette),1);
 
 const angle=between(0,Math.PI*2);
 const anchor=new THREE.Group();
@@ -214,46 +186,44 @@ anchor.position.set(Math.cos(angle)*orbitRadius,0,Math.sin(angle)*depthRadius);
 anchor.userData.spin=between(.18,.52);
 orbitalPlane.add(anchor);
 
-const planetSize=between(.14,.34)*(i===0?1.12:1);
+const planetSize=between(.09,.43)*(rng()<.18?1.55:1);
 const planetType=choose(types);
 const planetPalette=rng()<.32?choose(palettes):palette;
 addForm(planetType,new THREE.Vector3(0,0,0),planetSize,planetPalette,Math.floor(between(0,3)),between(-.16,.16),anchor);
 
 // Some planets have their own thin rings.
-if(rng()<.38){
+if(rng()<.58){
 const ring=new THREE.Mesh(
 new THREE.TorusGeometry(planetSize*1.65,planetSize*.105,6,64),
-new THREE.MeshBasicMaterial({color:choose(planetPalette),transparent:true,opacity:.7,blending:THREE.AdditiveBlending,depthWrite:false})
+new THREE.MeshBasicMaterial({color:choose(planetPalette)})
 );
 ring.rotation.set(Math.PI/2+between(-.35,.35),between(-.3,.3),between(-.3,.3));
 anchor.add(ring);
 }
 
 // A few planets have a tiny moon travelling around them.
-if(rng()<.48){
-const moonPath=new THREE.Mesh(
-new THREE.TorusGeometry(planetSize*2.25,.004,4,48),
-new THREE.MeshBasicMaterial({color:planetPalette[2],transparent:true,opacity:.38,depthWrite:false})
-);
-moonPath.rotation.x=Math.PI/2;anchor.add(moonPath);
-const moonAngle=between(0,Math.PI*2),moonDistance=planetSize*2.25;
-addForm(choose(['orb','crystal','polyhedron','star']),new THREE.Vector3(Math.cos(moonAngle)*moonDistance,0,Math.sin(moonAngle)*moonDistance),planetSize*between(.18,.29),planetPalette,0,between(-.25,.25),anchor);
+const moonCount=Math.floor(between(0,rng()<.35?4:2));
+for(let m=0;m<moonCount;m++){
+const moonDistance=planetSize*between(1.8,4.2),moonAngle=between(0,Math.PI*2);
+const moonOrbit=new THREE.Group();moonOrbit.rotation.set(between(-.8,.8),between(0,Math.PI*2),between(-.5,.5));moonOrbit.userData.orbitSpeed=between(.3,1.2)*(rng()<.5?-1:1);anchor.add(moonOrbit);
+const moonPath=new THREE.Mesh(new THREE.TorusGeometry(moonDistance,.003,3,48),new THREE.MeshBasicMaterial({color:choose(planetPalette)}));moonPath.rotation.x=Math.PI/2;moonOrbit.add(moonPath);
+addForm(choose(['orb','crystal','polyhedron','star','cone']),new THREE.Vector3(Math.cos(moonAngle)*moonDistance,0,Math.sin(moonAngle)*moonDistance),planetSize*between(.12,.34),planetPalette,0,between(-.25,.25),moonOrbit);
 }
 }
 
 // A loose asteroid belt sits between two planetary lanes.
-if(planetCount>=4){
+if(planetCount>=3){
 const beltRadius=(orbitRadii[1].x+orbitRadii[2].x)/2;
 const belt=new THREE.Group();belt.rotation.set(between(-.3,.3),between(0,Math.PI*2),between(-.15,.15));
 belt.userData.orbitSpeed=between(.018,.045)*(rng()<.5?-1:1);system.add(belt);
-const asteroidCount=Math.floor(between(65,105));
+const asteroidCount=Math.floor(between(90,190));
 const asteroidGeometry=new THREE.IcosahedronGeometry(.035,0);
-const asteroidMaterial=new THREE.MeshBasicMaterial({color:choose(palette),transparent:true,opacity:.74});
+const asteroidMaterial=new THREE.MeshBasicMaterial({color:choose(palette)});
 const asteroids=new THREE.InstancedMesh(asteroidGeometry,asteroidMaterial,asteroidCount);
 const dummy=new THREE.Object3D();
 for(let i=0;i<asteroidCount;i++){
-const angle=between(0,Math.PI*2),radius=beltRadius+between(-.17,.17);
-dummy.position.set(Math.cos(angle)*radius,between(-.075,.075),Math.sin(angle)*radius);
+const angle=between(0,Math.PI*2),radius=beltRadius+between(-.26,.26);
+dummy.position.set(Math.cos(angle)*radius,between(-.16,.16),Math.sin(angle)*radius);
 dummy.rotation.set(between(0,Math.PI),between(0,Math.PI),between(0,Math.PI));
 dummy.scale.setScalar(between(.35,1.8));dummy.updateMatrix();asteroids.setMatrixAt(i,dummy.matrix);
 }
@@ -276,11 +246,10 @@ const delta=Math.min(clock.getDelta(),.05);
 if(motionEnabled)animationTime+=delta;
 if(motionEnabled){
 stars.rotation.y=animationTime*.004;
-sculpture.rotation.y=Math.sin(animationTime*.16)*.2+animationTime*.045;
-sculpture.rotation.x=Math.sin(animationTime*.2)*.055;
+sculpture.rotation.y=animationTime*.018;
 sculpture.traverse(child=>{if(child.userData.orbitSpeed)child.rotation.y+=child.userData.orbitSpeed*delta;if(child.userData.spin){child.rotation.y+=child.userData.spin*delta;child.rotation.x+=child.userData.spin*.12*delta;}if(child.userData.float)child.position.y=child.userData.baseY+Math.sin(animationTime*child.userData.float+child.id)*.12;});
 }
-shaderMaterials.forEach(material=>{material.uniforms.uTime.value=animationTime;});
+// Geometry uses solid flat colors; there are no animated color gradients.
 controls.update();renderer.render(scene,camera);
 });
 window.addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,2));});
