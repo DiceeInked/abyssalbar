@@ -508,6 +508,7 @@ const rightLeg=new THREE.Group();rightLeg.position.set(.085,.37,0);group.add(rig
 addBox(rightLeg,[.12,.34,.14],[0,-.16,0],0x354652);
 const tool=addBox(group,[.08,.27,.08],[.31,.48,.02],record.toolColor||0xb8b9ae);
 tool.rotation.z=-.25;
+addWorldLabel(record.name,new THREE.Vector3(0,1.35,0),.82,group);
 group.userData={
 name:record.name,role:record.role,activity:record.activity,route:record.route,routeIndex:0,state:'walk',stateTime:0,
 speed:record.speed||between(.55,.95),phase:between(0,Math.PI*2),leftArm,rightArm,leftLeg,rightLeg,tool,home:record.home
