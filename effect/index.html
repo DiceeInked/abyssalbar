@@ -19,7 +19,7 @@ button{font:inherit;-webkit-tap-highlight-color:transparent}button:focus-visible
 .eyebrow{margin:0 0 5px;color:var(--accent);font-size:9px;font-weight:800;letter-spacing:.18em;text-transform:uppercase}
 h1{margin:0 0 4px;font-size:20px;line-height:1.15;letter-spacing:-.035em}
 #description{min-height:32px;margin:0;color:var(--muted);font-size:11px;line-height:1.45}
-.actions{display:flex;gap:8px;margin-top:13px}
+.actions{display:flex;gap:8px;margin-top:13px}.tools{display:flex;gap:7px;margin-top:8px}.tools .button{flex:1;padding:8px 6px;color:#aab5bf;font-size:10px}
 .button{min-height:42px;padding:9px 13px;border:1px solid var(--line);border-radius:10px;background:#ffffff09;color:var(--text);font-size:11px;font-weight:700;cursor:pointer;transition:background .15s,border-color .15s,transform .15s}
 .button:active{transform:scale(.97)}.button:hover{border-color:#00ffc880;background:#00ffc812}
 .primary{flex:1;border-color:var(--accent);background:var(--accent);color:#001b14;font-weight:850}.primary:hover{background:#71ffe0}
@@ -43,6 +43,7 @@ h1{margin:0 0 4px;font-size:20px;line-height:1.15;letter-spacing:-.035em}
 <h1 id="name">Building a specimen…</h1>
 <p id="description">Mixing geometry, color, and shader effects.</p>
 <div class="actions"><button class="button primary" id="generate" type="button">✦ &nbsp; Generate new</button><button class="button" id="reset" type="button" aria-label="Reset camera view">↺</button></div>
+<div class="tools"><button class="button" id="palette" type="button">Palette: random</button><button class="button" id="save" type="button">Save image</button></div>
 <div class="toggles"><button class="button" id="wire" type="button" aria-pressed="false">Wireframe: off</button><button class="button active" id="motion" type="button" aria-pressed="true">Motion: on</button></div>
 </section>
 <div class="hint">DRAG TO ORBIT · PINCH / SCROLL TO ZOOM<br>CLICK THE SEED TO COPY A REPLAY LINK</div>
@@ -77,8 +78,14 @@ const floor=new THREE.GridHelper(28,56,0x24434b,0x17232d);floor.position.y=-2.25
 const glow=new THREE.Mesh(new THREE.CircleGeometry(5,64),new THREE.MeshBasicMaterial({color:0x00ffc8,transparent:true,opacity:.035,side:THREE.DoubleSide}));
 glow.rotation.x=-Math.PI/2;glow.position.y=-2.24;scene.add(glow);
 
+const starsGeometry=new THREE.BufferGeometry();
+const starPositions=new Float32Array(900*3);
+for(let i=0;i<900;i++){const radius=9+Math.random()*15,a=Math.random()*Math.PI*2;starPositions[i*3]=Math.cos(a)*radius;starPositions[i*3+1]=(Math.random()-.5)*18;starPositions[i*3+2]=Math.sin(a)*radius;}
+starsGeometry.setAttribute('position',new THREE.BufferAttribute(starPositions,3));
+const stars=new THREE.Points(starsGeometry,new THREE.PointsMaterial({color:0x9bbfc4,size:.025,transparent:true,opacity:.72,sizeAttenuation:true}));
+scene.add(stars);
 const sculpture=new THREE.Group();scene.add(sculpture);
-let wireMeshes=[],shaderMaterials=[],wireEnabled=false,motionEnabled=true,activeSeed=0,rng=Math.random,animationTime=0;
+let wireMeshes=[],shaderMaterials=[],wireEnabled=false,motionEnabled=true,activeSeed=0,rng=Math.random,animationTime=0,paletteIndex=-1;
 function seededRandom(seed){let state=seed>>>0;return function(){state=(state+0x6D2B79F5)>>>0;let t=state;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296;};}
 const between=(a,b)=>a+rng()*(b-a);
 const choose=a=>a[Math.floor(rng()*a.length)];
@@ -145,14 +152,14 @@ wireMeshes=[];shaderMaterials=[];
 const first=['Velvet','Quantum','Prism','Orbit','Melted','Electric','Lunar','Fractal','Glacier','Static','Blooming','Chrome','Aether','Soft'];
 const last=['Reliquary','Anomaly','Spindle','Bloom','Engine','Shard','Organism','Helix','Totem','Echo','Artifact','Nest','Machine','Memory'];
 const labels={crystal:'faceted crystal',ring:'open ring structure',spike:'angular spiked form',orb:'rounded organic form',gear:'interwoven mechanical knot',column:'geometric column',knot:'twisted knot structure',polyhedron:'polyhedral sculpture'};
-function generate(seedValue){
+function generate(seedValue,keepPalette=false,nextPaletteIndex=-1){
 clearSculpture();
 const n=Number(seedValue);
 activeSeed=Number.isSafeInteger(n)&&n>=0&&n<=4294967295?n:Math.floor(Math.random()*900000000+100000000);
-rng=seededRandom(activeSeed);animationTime=0;
+rng=seededRandom(activeSeed);animationTime=0;if(!keepPalette)paletteIndex=-1;else paletteIndex=nextPaletteIndex;
 document.querySelector('#seed').textContent='SEED · '+activeSeed;
 const url=new URL(location.href);url.searchParams.set('seed',String(activeSeed));history.replaceState(null,'',url);
-const palette=choose(palettes),mainType=choose(types),detail=Math.floor(between(0,3));
+const randomPalette=choose(palettes),palette=paletteIndex>=0?palettes[paletteIndex]:randomPalette,mainType=choose(types),detail=Math.floor(between(0,3));
 const complexity=choose([0,2,4,6,8,11,15,19]);
 const main=addForm(mainType,new THREE.Vector3(0,0,0),between(1,1.38),palette,detail,between(-.18,.18));
 main.rotation.x+=between(-.12,.12);
@@ -172,9 +179,11 @@ for(let i=0;i<count;i++){const a=between(0,Math.PI*2),r=between(1.35,2.8);dummy.
 fragments.instanceMatrix.needsUpdate=true;sculpture.add(fragments);
 document.querySelector('#name').textContent=choose(first)+' '+choose(last);
 document.querySelector('#description').textContent=labels[mainType]+' · '+(complexity+1)+' forms · '+(['coarse','medium','fine'][detail])+' geometry · animated shader finish';
-sculpture.rotation.set(0,0,0);
+sculpture.rotation.set(0,0,0);document.querySelector('#palette').textContent=paletteIndex<0?'Palette: random':'Palette: '+(paletteIndex+1)+' / '+palettes.length;
 }
 document.querySelector('#generate').addEventListener('click',()=>generate());
+document.querySelector('#palette').addEventListener('click',()=>{const next=(paletteIndex<0?0:paletteIndex+1)%palettes.length;generate(activeSeed,true,next);});
+document.querySelector('#save').addEventListener('click',()=>{renderer.render(scene,camera);const link=document.createElement('a');link.download='oddform-'+activeSeed+'.png';link.href=renderer.domElement.toDataURL('image/png');link.click();const button=document.querySelector('#save');button.textContent='Saved image';window.setTimeout(()=>button.textContent='Save image',1400);});
 document.querySelector('#reset').addEventListener('click',()=>{camera.position.set(0,1.8,8.2);controls.target.set(0,.1,0);controls.update();});
 document.querySelector('#wire').addEventListener('click',e=>{wireEnabled=!wireEnabled;wireMeshes.forEach(m=>m.visible=wireEnabled);e.currentTarget.classList.toggle('active',wireEnabled);e.currentTarget.textContent='Wireframe: '+(wireEnabled?'on':'off');e.currentTarget.setAttribute('aria-pressed',String(wireEnabled));});
 document.querySelector('#motion').addEventListener('click',e=>{motionEnabled=!motionEnabled;e.currentTarget.classList.toggle('active',motionEnabled);e.currentTarget.textContent='Motion: '+(motionEnabled?'on':'off');e.currentTarget.setAttribute('aria-pressed',String(motionEnabled));});
@@ -185,6 +194,7 @@ renderer.setAnimationLoop(()=>{
 const delta=Math.min(clock.getDelta(),.05);
 if(motionEnabled)animationTime+=delta;
 if(motionEnabled){
+stars.rotation.y=animationTime*.004;
 sculpture.rotation.y=Math.sin(animationTime*.16)*.2+animationTime*.045;
 sculpture.rotation.x=Math.sin(animationTime*.2)*.055;
 sculpture.children.forEach(child=>{if(child.userData.spin)child.rotation.y+=child.userData.spin*delta;});
