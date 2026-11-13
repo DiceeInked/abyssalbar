@@ -97,7 +97,7 @@ const controls=new OrbitControls(camera,renderer.domElement);
 controls.enableDamping=true;
 controls.dampingFactor=.07;
 controls.minDistance=.5;
-controls.maxDistance=130;
+controls.maxDistance=160;
 controls.target.set(0,0,0);
 
 let world=new THREE.Group();
@@ -132,9 +132,11 @@ const palettes=[
 [0xd4e1f0,0x687caa,0xffffff,0x50627f],
 [0xff795d,0xe7dc68,0xf5f0d5,0x8b5947]
 ];
-const systemNames=['Sol System','Cobalt Drift','Morrow System','Thistle Reach','Vela System','Sable Orbit','Rook System','Lumen Verge','Aster System','Prax Cluster','Nacre System','Eidolon Reach','Tern System','Glasswind','Hollowstar'];
 const systemSeeds=[31415926,7812301,9182736,19283746,7263519,8392017,4928173,6351928,12847365,9817263,5728194,3619284,8273619,4192837,6382719];
-
+const nouns=['Amber','Anchor','Anvil','Apple','Ash','Badger','Bamboo','Beacon','Berry','Birch','Bison','Blossom','Boulder','Breeze','Bronze','Canyon','Cedar','Cinder','Cloud','Comet','Copper','Coral','Cricket','Crown','Crystal','Dawn','Delta','Dew','Dolphin','Drift','Dune','Eagle','Echo','Ember','Falcon','Feather','Fern','Finch','Flame','Flint','Forest','Fox','Frost','Galaxy','Garden','Glacier','Glimmer','Grove','Harbor','Hawk','Hazel','Hearth','Heron','Hollow','Honey','Horizon','Island','Ivory','Jade','Juniper','Kestrel','Lagoon','Lantern','Laurel','Lemon','Lichen','Lotus','Maple','Marble','Meadow','Meteor','Midnight','Mirage','Moss','Mountain','Mushroom','Nebula','Nickel','Nimbus','Nova','Ocean','Olive','Onyx','Orchid','Otter','Owl','Pebble','Peach','Pearl','Pine','Pollen','Quartz','Quill','Rain','Raven','Reef','River','Robin','Rocket','Rose','Saffron','Sapphire','Shadow','Shell','Silver','Sky','Sparrow','Spruce','Star','Stone','Storm','Thistle','Thunder','Tiger','Topaz','Tulip','Valley','Velvet','Violet','Willow','Winter','Wolf','Wren'];
+function generateName(){let first=choose(nouns),second=choose(nouns);while(second===first)second=choose(nouns);return first+' '+second;}
+function nameFromSeed(seed){const previous=rng;rng=seededRandom(seed);const result=generateName();rng=previous;return result;}
+const systemNames=systemSeeds.map((seed,i)=>nameFromSeed(seed+i*73));
 function seededRandom(seed){
 let state=seed>>>0;
 return function(){
@@ -162,22 +164,37 @@ function addPick(mesh,handler){
 mesh.userData.onPick=handler;
 pickTargets.push(mesh);
 }
-function addWorldLabel(text,position,width=1.4,parent=world){
-const canvas=document.createElement('canvas');
-canvas.width=512;canvas.height=112;
-const ctx=canvas.getContext('2d');
-ctx.fillStyle='#101820';ctx.fillRect(2,2,508,108);
-ctx.strokeStyle='#00a98b';ctx.lineWidth=5;ctx.strokeRect(3,3,506,106);
-ctx.fillStyle='#f1fbf9';ctx.font='bold 38px Arial';ctx.textAlign='center';ctx.textBaseline='middle';
-ctx.fillText(text,256,57,480);
-const texture=new THREE.CanvasTexture(canvas);
-texture.colorSpace=THREE.SRGBColorSpace;
-const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:texture,transparent:false,depthTest:false}));
-sprite.scale.set(width,.25,1);
-sprite.position.copy(position);
-parent.add(sprite);
-return sprite;
+function addWorldLabel(){return null;}
+const polygonTextures=new Map();
+function polygonTexture(baseColor){
+const key=String(baseColor);if(polygonTextures.has(key))return polygonTextures.get(key);
+const canvas=document.createElement('canvas');canvas.width=512;canvas.height=256;
+const ctx=canvas.getContext('2d');const base=new THREE.Color(baseColor);
+const gradient=ctx.createLinearGradient(0,0,512,256);
+gradient.addColorStop(0,'#'+base.clone().multiplyScalar(1.3).getHexString());
+gradient.addColorStop(.5,'#'+base.getHexString());
+gradient.addColorStop(1,'#'+base.clone().multiplyScalar(.48).getHexString());
+ctx.fillStyle=gradient;ctx.fillRect(0,0,512,256);
+let state=(baseColor>>>0)||1;const rand=()=>{state=(Math.imul(state,1664525)+1013904223)>>>0;return state/4294967296;};
+for(let i=0;i<220;i++){
+const x=rand()*512,y=rand()*256,r=8+rand()*44;
+const shade=base.clone().multiplyScalar(.55+rand()*.95);
+ctx.globalAlpha=.12+rand()*.28;ctx.fillStyle='#'+shade.getHexString();
+ctx.beginPath();ctx.moveTo(x-r,y-r*.45);ctx.lineTo(x+r*(.4+rand()),y-r*.3);ctx.lineTo(x+r*.8,y+r*.7);ctx.lineTo(x-r*.7,y+r*.6);ctx.closePath();ctx.fill();
 }
+ctx.globalAlpha=1;
+const fade=ctx.createRadialGradient(155,75,5,155,75,250);
+fade.addColorStop(0,'rgba(255,255,255,.2)');fade.addColorStop(.55,'rgba(255,255,255,.025)');fade.addColorStop(1,'rgba(0,0,0,.24)');
+ctx.fillStyle=fade;ctx.fillRect(0,0,512,256);
+const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;
+polygonTextures.set(key,texture);return texture;
+}
+function addTexturedSphere(parent,radius,color,detail=3){
+const mesh=new THREE.Mesh(new THREE.IcosahedronGeometry(radius,detail),new THREE.MeshBasicMaterial({map:polygonTexture(color)}));
+wireMaterials.push(mesh.material);if(wireEnabled)mesh.material.wireframe=true;
+parent.add(mesh);return mesh;
+}
+
 function disposeWorld(){
 world.traverse(obj=>{
 if(obj.geometry)obj.geometry.dispose();
@@ -227,8 +244,14 @@ const url=new URL(location.href);url.searchParams.set('seed',String(activeSeed))
 }
 function focusSystemCamera(){moveCamera(new THREE.Vector3(0,18,35),new THREE.Vector3(0,0,0),850,12,90);}
 function focusGalaxyCamera(){moveCamera(new THREE.Vector3(0,21,31),new THREE.Vector3(0,0,0),900,10,90);}
-function focusPlanetCamera(){moveCamera(new THREE.Vector3(0,1.5,9.1),new THREE.Vector3(0,0,0),900,5.2,18);}
-function focusCountyCamera(){moveCamera(new THREE.Vector3(0,12,15),new THREE.Vector3(0,0,0),900,7,32);}
+function focusPlanetCamera(){moveCamera(new THREE.Vector3(0,1.5,9.1),new THREE.Vector3(0,0,0),900,4.2,70);}
+function focusCountyCamera(){
+if(!currentCounty)return;
+const target=currentCounty.marker.getWorldPosition(new THREE.Vector3());
+const normal=currentCounty.normal.clone().transformDirection(currentPlanet.globe.matrixWorld);
+moveCamera(target.clone().add(normal.multiplyScalar(5.3)),target,900,1.1,70);
+}
+
 function surfacePoint(radius,latitude,longitude){
 return new THREE.Vector3(
 Math.cos(latitude)*Math.cos(longitude)*radius,
@@ -251,13 +274,9 @@ geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
 geometry.computeVertexNormals();
 parent.add(new THREE.Mesh(geometry,material(color,{side:THREE.DoubleSide})));
 }
-function addSphere(parent,radius,color,segments=32){
-const mesh=new THREE.Mesh(new THREE.SphereGeometry(radius,segments,Math.max(12,Math.floor(segments*.66))),material(color));
-parent.add(mesh);return mesh;
-}
-function createTextName(index){
-return ['Ari','Bex','Cato','Demi','Elo','Fenn','Gio','Hali','Ivo','Juno','Kip','Lumi','Mika','Nori','Orrin','Pax','Quin','Rumi','Soli','Tavi'][index%20];
-}
+function addSphere(parent,radius,color,segments=32){return addTexturedSphere(parent,radius,color,Math.min(4,Math.max(1,Math.floor(segments/16))));}
+
+function createTextName(){return generateName();}
 
 function buildGalaxy(){
 disposeWorld();
@@ -293,7 +312,7 @@ const rays= new THREE.Mesh(new THREE.TetrahedronGeometry(.34,0),material([0xffdf
 node.add(rays);
 const ring=new THREE.Mesh(new THREE.TorusGeometry(.3,.012,4,24),material(0xd7e6ef));
 ring.rotation.x=Math.PI/2;node.add(ring);
-addWorldLabel(systemNames[i],new THREE.Vector3(pos.x,pos.y+.48,pos.z),1.45);
+
 addPick(star,()=>showSystem(i));
 galaxySystems.push(node);
 }
@@ -320,32 +339,18 @@ dummy.scale.setScalar(between(.35,1.8));dummy.updateMatrix();mesh.setMatrixAt(i,
 mesh.instanceMatrix.needsUpdate=true;parent.add(mesh);
 }
 function buildSystemData(index){
-if(index===0){
-return [
-{name:'Mercury',radius:.19,distance:2.25,color:0x9c8c7b},
-{name:'Venus',radius:.29,distance:3.45,color:0xd7ad70},
-{name:'Earth',radius:.32,distance:4.8,color:0x378bd6},
-{name:'Mars',radius:.25,distance:6.15,color:0xb85f43},
-{name:'Jupiter',radius:.77,distance:8.65,color:0xd5a77f},
-{name:'Saturn',radius:.67,distance:11.3,color:0xd8c28d,ring:true},
-{name:'Uranus',radius:.49,distance:13.8,color:0x71cbd1,ring:true},
-{name:'Neptune',radius:.47,distance:16.1,color:0x456dd5}
+const defaults=[
+{radius:.19,distance:2.25,color:0x9c8c7b},{radius:.29,distance:3.45,color:0xd7ad70},
+{radius:.32,distance:4.8,color:0x378bd6},{radius:.25,distance:6.15,color:0xb85f43},
+{radius:.77,distance:8.65,color:0xd5a77f},{radius:.67,distance:11.3,color:0xd8c28d,ring:true},
+{radius:.49,distance:13.8,color:0x71cbd1,ring:true},{radius:.47,distance:16.1,color:0x456dd5}
 ];
-}
-const palette=choose(palettes);
-const count=Math.floor(between(4,10));
-const planets=[];
-for(let i=0;i<count;i++){
-planets.push({
-name:choose(['Astra','Numa','Kairo','Vesper','Oryn','Luma','Tethys','Calyx','Mira','Rill'])+' '+(i+1),
-radius:between(.17,.66),
-distance:2.4+i*between(1.45,2.05),
-color:choose(palette),
-ring:rng()<.32
-});
-}
+if(index===0)return defaults.map(p=>({...p,name:generateName()}));
+const palette=choose(palettes),count=Math.floor(between(4,10)),planets=[];
+for(let i=0;i<count;i++)planets.push({name:generateName(),radius:between(.17,.66),distance:2.4+i*between(1.45,2.05),color:choose(palette),ring:rng()<.32});
 return planets;
 }
+
 function makeSystemPlanet(data,index,parent){
 const plane=new THREE.Group();
 plane.rotation.set(between(-.11,.11),between(0,Math.PI*2),between(-.08,.08));
@@ -363,7 +368,7 @@ if(data.ring){
 const ring=new THREE.Mesh(new THREE.TorusGeometry(data.radius*1.55,data.radius*.14,5,64),material(choose([0xb9a77d,0xd5e1e6,0x9cc5c7,0xb58f74])));
 ring.rotation.set(Math.PI/2+between(-.22,.22),between(-.15,.15),between(-.15,.15));planetGroup.add(ring);
 }
-addWorldLabel(data.name,new THREE.Vector3(0,data.radius+.48,0),.95,planetGroup);
+
 if(rng()<.38){
 const moon=new THREE.Group();moon.userData.orbitSpeed=between(.18,.55)*(rng()<.5?-1:1);planetGroup.add(moon);
 const moonDistance=data.radius*2.15;
@@ -408,45 +413,36 @@ setCrumbs([{label:'MILKY WAY',action:buildGalaxy},{label:currentSystemName,curre
 focusSystemCamera();
 }
 function showPlanet(data,index){
-currentPlanet={...data,index:index,systemIndex:currentSystemIndex,systemName:currentSystemName,seed:activeSeed+index*9176};
-disposeWorld();
-currentMode='planet';currentCounty=null;currentCreature=null;
-const radius=3.15;
-const globe=new THREE.Group();world.add(globe);
-const sphere=addSphere(globe,radius,data.color,64);
-const landColors=[0x6b9b68,0x9dbb65,0xb8a16a,0x3d8c86,0xc39b63,0x77a7a1];
-const patchCount=12;
-for(let i=0;i<patchCount;i++){
-const lat=between(-1.15,1.15),lon=between(-Math.PI,Math.PI);
-addLandPatch(globe,radius,lat,lon,between(.09,.24),between(.07,.19),choose(landColors));
+currentPlanet={...data,index,systemIndex:currentSystemIndex,systemName:currentSystemName,seed:activeSeed+index*9176};
+disposeWorld();currentMode='planet';currentCounty=null;currentCreature=null;
+const radius=3.15,globe=new THREE.Group();world.add(globe);
+const sphere=addTexturedSphere(globe,radius,data.color,5);
+const coords=[[-.2,.55],[.1,1.05],[.52,1.6],[-.48,2.2],[.78,2.55],[-.68,1.35],[.32,.12],[-.05,2.85]];
+const countyCount=6+Math.floor(rng()*3),counties=[];
+for(let i=0;i<countyCount;i++){
+const [lat,lon]=coords[i],normal=surfacePoint(1,lat,lon).normalize();
+const county={index:i,name:generateName(),planetName:data.name,systemName:currentSystemName,description:choose(['A settlement among mineral fields.','A forested place with farms and workshops.','A rocky region full of builders and miners.','A coastal place with tiny trading outposts.','A quiet valley with a busy population.']),normal,detail:null};
+const marker=new THREE.Group();marker.position.copy(normal.clone().multiplyScalar(radius+.025));
+marker.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),normal);globe.add(marker);
+const dot=addTexturedSphere(marker,.105,choose([0x00ffc8,0xffc45c,0x88aaff,0xff82be,0xa9ed72]),2);dot.position.y=.11;
+const preview=new THREE.Group();preview.position.y=.12;marker.add(preview);
+for(let k=0;k<4;k++){
+const mini=new THREE.Mesh(new THREE.IcosahedronGeometry(.075+between(0,.05),1),material(choose([0x9a8060,0x758f8a,0x8c8e9b,0x4d9c66])));
+mini.position.set(between(-.16,.16),between(.1,.28),between(-.16,.16));preview.add(mini);
+}
+county.marker=marker;counties.push(county);addPick(dot,()=>showCounty(county));
 }
 if(data.ring||rng()<.38){
 const ring=new THREE.Mesh(new THREE.TorusGeometry(radius*1.38,.09,5,96),material(0xc1b88c));
 ring.rotation.set(Math.PI/2+between(-.3,.3),between(-.2,.2),between(-.2,.2));globe.add(ring);
 }
-const countyNames=['Mossreach','Copper Flats','Glasswater','North Tangle','Amber County','Stonefield','Cloudbreak','Blue Hollow'];
-const coords=[[-.2,.55],[.1,1.05],[.52,1.6],[-.48,2.2],[.78,2.55],[-.68,1.35],[.32,.12],[-.05,2.85]];
-const countyCount=6+Math.floor(rng()*3);
-for(let i=0;i<countyCount;i++){
-const [lat,lon]=coords[i];
-const county={index:i,name:'County of '+countyNames[i],planetName:data.name,systemName:currentSystemName,description:choose(['A busy settlement surrounded by mineral fields.','A forested region with small farms and workshops.','A rocky stretch where builders and miners share a town.','A coastal county full of tiny trading outposts.','A quiet valley with a surprisingly busy population.'])};
-const marker=new THREE.Group();
-const normal=surfacePoint(1,lat,lon).normalize();
-marker.position.copy(normal.clone().multiplyScalar(radius+.035));
-marker.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),normal);
-globe.add(marker);
-const post=new THREE.Mesh(new THREE.CylinderGeometry(.035,.045,.2,6),material(0xe6eee9));
-post.position.y=.09;marker.add(post);
-const dot=addSphere(marker,.14,[0x00ffc8,0xffc45c,0x88aaff,0xff82be,0xa9ed72][i%5],14);
-dot.position.y=.22;
-addWorldLabel(countyNames[i],normal.clone().multiplyScalar(radius+.72),1.25,globe);
-addPick(dot,()=>showCounty(county));
-}
+currentPlanet.globe=globe;currentPlanet.counties=counties;currentPlanet.radius=radius;
 addPick(sphere,()=>{});
-setPanel('Planet explorer',data.name,'This planet is round, mapped into '+countyCount+' counties, and full of places to explore. Rotate the globe and select a county marker to visit its people.','Back to system');
+setPanel('Planet explorer',data.name,'A rounded polygon planet with '+countyCount+' named counties. Their tiny settlements are visible already. Zoom in for more detail or select a county.','Back to system');
 setCrumbs([{label:'MILKY WAY',action:buildGalaxy},{label:currentSystemName,action:()=>showSystem(currentSystemIndex)},{label:data.name,current:true}]);
 focusPlanetCamera();
 }
+
 function addBox(parent,size,position,color){
 const mesh=new THREE.Mesh(new THREE.BoxGeometry(size[0],size[1],size[2]),material(color));
 mesh.position.set(position[0],position[1],position[2]);parent.add(mesh);return mesh;
@@ -483,7 +479,7 @@ crystal.rotation.set(between(0,1),between(0,1),between(0,1));node.add(crystal);
 }
 const rock=new THREE.Mesh(new THREE.DodecahedronGeometry(.35,0),material(0x555f68));
 rock.position.y=.05;rock.scale.set(1,.55,1);node.add(rock);
-addWorldLabel(label,new THREE.Vector3(x,.9,z),1.05);
+node.userData.name=generateName();
 return {x,z,node,label};
 }
 function addTree(x,z){
@@ -491,98 +487,106 @@ const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.08,.11,.65,5),material(0x
 const crown=new THREE.Mesh(new THREE.ConeGeometry(.48,1.15,5),material(choose([0x4d9c66,0x7dbb55,0x398a77])));
 crown.position.set(x,.98,z);world.add(crown);
 }
-function makeCreature(index,record){
-const group=new THREE.Group();group.position.set(record.x,0,record.z);world.add(group);
+function makeCreature(index,record,parent=world){
+const group=new THREE.Group();group.position.set(record.x,record.surfaceY?record.surfaceY(record.x,record.z):0,record.z);parent.add(group);
 const bodyColor=record.color;
-const body=addBox(group,[.3,.43,.2],[0,.56,0],bodyColor);
+const body=new THREE.Mesh(new THREE.IcosahedronGeometry(.22,1),material(bodyColor));body.scale.set(.8,1.25,.7);body.position.set(0,.56,0);group.add(body);
 const head=addSphere(group,.18,record.head,16);head.position.set(0,.91,.015);
 const eyeColor=0x15232a;
 const eye1=addSphere(group,.027,eyeColor,8);eye1.position.set(-.065,.94,.16);
 const eye2=addSphere(group,.027,eyeColor,8);eye2.position.set(.065,.94,.16);
 const leftArm=new THREE.Group();leftArm.position.set(-.2,.72,0);group.add(leftArm);
-addBox(leftArm,[.1,.34,.11],[0,-.16,0],bodyColor);
+const arm1=new THREE.Mesh(new THREE.IcosahedronGeometry(.065,1),material(bodyColor));arm1.scale.y=2.4;arm1.position.y=-.16;leftArm.add(arm1);
 const rightArm=new THREE.Group();rightArm.position.set(.2,.72,0);group.add(rightArm);
-addBox(rightArm,[.1,.34,.11],[0,-.16,0],bodyColor);
+const arm2=new THREE.Mesh(new THREE.IcosahedronGeometry(.065,1),material(bodyColor));arm2.scale.y=2.4;arm2.position.y=-.16;rightArm.add(arm2);
 const leftLeg=new THREE.Group();leftLeg.position.set(-.085,.37,0);group.add(leftLeg);
-addBox(leftLeg,[.12,.34,.14],[0,-.16,0],0x354652);
+const leg1=new THREE.Mesh(new THREE.IcosahedronGeometry(.07,1),material(0x354652));leg1.scale.y=2.4;leg1.position.y=-.16;leftLeg.add(leg1);
 const rightLeg=new THREE.Group();rightLeg.position.set(.085,.37,0);group.add(rightLeg);
-addBox(rightLeg,[.12,.34,.14],[0,-.16,0],0x354652);
-const tool=addBox(group,[.08,.27,.08],[.31,.48,.02],record.toolColor||0xb8b9ae);
-tool.rotation.z=-.25;
-addWorldLabel(record.name,new THREE.Vector3(0,1.35,0),.82,group);
-group.userData={
-name:record.name,role:record.role,activity:record.activity,route:record.route,routeIndex:0,state:'walk',stateTime:0,
-speed:record.speed||between(.55,.95),phase:between(0,Math.PI*2),leftArm,rightArm,leftLeg,rightLeg,tool,home:record.home
-};
-addPick(body,()=>showCreature(group));
-addPick(head,()=>showCreature(group));
-agents.push(group);
-return group;
+const leg2=new THREE.Mesh(new THREE.IcosahedronGeometry(.07,1),material(0x354652));leg2.scale.y=2.4;leg2.position.y=-.16;rightLeg.add(leg2);
+const tool=new THREE.Mesh(new THREE.IcosahedronGeometry(.075,1),material(record.toolColor||0xb8b9ae));tool.position.set(.31,.48,.02);group.add(tool);
+group.userData={name:record.name,role:record.role,activity:record.activity,route:record.route,routeIndex:0,state:'walk',stateTime:0,speed:between(.25,.48),phase:between(0,Math.PI*2),leftArm,rightArm,leftLeg,rightLeg,tool};
+addPick(body,()=>showCreature(group));addPick(head,()=>showCreature(group));agents.push(group);return group;
 }
+
 function showCounty(county){
-currentCounty=county;currentCreature=null;
+currentCounty=county;currentCreature=null;currentMode='county';
 rng=seededRandom(activeSeed+county.index*73651+currentPlanet.index*919);
-disposeWorld();
-currentMode='county';
-const ground=new THREE.Mesh(new THREE.PlaneGeometry(16,12),material([0x315a49,0x4b674d,0x596749,0x3a625d][county.index%4]));
-ground.rotation.x=-Math.PI/2;ground.position.y=-.09;world.add(ground);
-// County edges and roads are solid blocks, not translucent overlays.
-for(let x=-7;x<=7;x+=1.4)addBox(world,[.025,.025,12],[x,0,-0],0x55745f);
-for(let z=-5;z<=5;z+=1.4)addBox(world,[16,.025,.025],[0,0,z],0x55745f);
-addBox(world,[1.1,.025,12],[0,.005,0],0xb8a57d);
-addBox(world,[16,.03,.8],[0,.012,-1.8],0xb8a57d);
-addBuilding(-4,-2,'workshop',0);
-addBuilding(3,-2.7,'build',1);
-addBuilding(3.8,2.3,'house',2);
-addBuilding(-3.2,2.6,'house',3);
-addBuilding(.1,3.3,'workshop',1);
-const resources=[
-addResource(-5,-3,0x57d5dc,'COPPER'),
-addResource(5,-.2,0x8e79ec,'CRYSTAL'),
-addResource(-2,4,0xe6b64e,'ORE'),
-addResource(1,-4,0x69c9a0,'GEMS'),
-addResource(5,3.6,0x9ba8b2,'STONE')
-];
-for(let i=0;i<18;i++)addTree(between(-7,7),between(-5,5));
-for(let i=0;i<6;i++){
-const x=between(-6,6),z=between(-4,4);
-const plot=new THREE.Mesh(new THREE.BoxGeometry(1.2,.035,.65),material(0x876b45));plot.position.set(x,.02,z);world.add(plot);
-for(let row=0;row<3;row++)for(let col=0;col<5;col++){
-const crop=new THREE.Mesh(new THREE.ConeGeometry(.055,.28,4),material(0x85bf58));
-crop.position.set(x-.45+col*.22,.18,z-.2+row*.19);world.add(crop);
+currentPlanet.counties.forEach(item=>{if(item.detail)item.detail.visible=item===county;item.marker.scale.setScalar(item===county?1.45:1);});
+if(!county.detail){
+const n=county.normal.clone();
+const east=new THREE.Vector3(-Math.sin(Math.atan2(n.z,n.x)),0,Math.cos(Math.atan2(n.z,n.x))).normalize();
+const north=new THREE.Vector3().crossVectors(n,east).normalize();
+const local=new THREE.Group();local.position.copy(n.clone().multiplyScalar(currentPlanet.radius+.012));
+local.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(east,n,north));currentPlanet.globe.add(local);county.detail=local;
+const radius=currentPlanet.radius,span=1.18,positions=[];
+const project=(x,z)=>{const v=n.clone().multiplyScalar(radius).add(east.clone().multiplyScalar(x)).add(north.clone().multiplyScalar(z));return v.normalize().multiplyScalar(radius+.014);};
+for(let iz=0;iz<10;iz++)for(let ix=0;ix<10;ix++){
+const x0=-span+ix*span/5,x1=x0+span/5,z0=-span+iz*span/5,z1=z0+span/5;
+const a=project(x0,z0),b=project(x1,z0),c=project(x1,z1),d=project(x0,z1);
+positions.push(a.x,a.y,a.z,b.x,b.y,b.z,c.x,c.y,c.z,a.x,a.y,a.z,c.x,c.y,c.z,d.x,d.y,d.z);
 }
+const terrain=new THREE.BufferGeometry();terrain.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));terrain.computeVertexNormals();
+local.add(new THREE.Mesh(terrain,material(choose([0x315a49,0x4b674d,0x596749,0x3a625d]),{side:THREE.DoubleSide})));
+const surfaceY=(x,z)=>Math.sqrt(Math.max(.01,radius*radius-x*x-z*z))-radius;
+for(let i=0;i<9;i++){
+const x=between(-.95,.95),z=between(-.95,.95);
+const trunk=new THREE.Mesh(new THREE.IcosahedronGeometry(.12,1),material(0x79533a));trunk.scale.set(.65,1.7,.65);trunk.position.set(x,surfaceY(x,z)+.18,z);local.add(trunk);
+const crown=new THREE.Mesh(new THREE.IcosahedronGeometry(.28,1),material(choose([0x4d9c66,0x7dbb55,0x398a77])));
+crown.position.set(x,surfaceY(x,z)+.55,z);local.add(crown);
+}
+for(let i=0;i<7;i++){
+const x=between(-1,1),z=between(-1,1),node=new THREE.Group();node.position.set(x,surfaceY(x,z),z);local.add(node);
+node.userData.name=generateName();
+for(let k=0;k<4;k++){const crystal=new THREE.Mesh(new THREE.OctahedronGeometry(between(.12,.24),0),material(choose([0x57d5dc,0x8e79ec,0xe6b64e,0x69c9a0,0x9ba8b2])));crystal.position.set(between(-.15,.15),between(.12,.28),between(-.15,.15));node.add(crystal);}
+}
+for(let i=0;i<5;i++){
+const x=between(-.9,.9),z=between(-.9,.9),building=new THREE.Group();building.position.set(x,surfaceY(x,z),z);local.add(building);building.userData.name=generateName();
+const body=new THREE.Mesh(new THREE.IcosahedronGeometry(.29,1),material(choose([0x9a8060,0x758f8a,0x8c8e9b,0xb09569])));body.scale.set(1,.8,1);body.position.y=.25;building.add(body);
+const roof=new THREE.Mesh(new THREE.IcosahedronGeometry(.23,1),material(choose([0x754d45,0x4d6c71,0x565875,0x8f6d43])));roof.position.y=.58;building.add(roof);
 }
 const records=[
-{name:createTextName(0),role:'Miner',activity:'harvesting copper crystals',x:-1,z:-3,head:0xe9ba91,color:0x00b99a,toolColor:0x9dc7c1,route:[[-4.6,-3],[-2.5,-1.4],[-1,-2.5]]},
-{name:createTextName(1),role:'Builder',activity:'working on a new workshop',x:1,z:1,head:0xc98c6e,color:0xd08c42,route:[[2.5,-2.3],[3,0],[1,1]]},
-{name:createTextName(2),role:'Harvester',activity:'collecting bright gems',x:4,z:1,head:0xb8d3e8,color:0x648bd1,route:[[1,-3.5],[3,-3],[4,-1]]},
-{name:createTextName(3),role:'Gardener',activity:'tending the crop fields',x:-2,z:1,head:0xe1c18e,color:0x75a85c,route:[[-1,3],[0,3],[1.2,2.2]]},
-{name:createTextName(4),role:'Courier',activity:'carrying supplies between homes',x:0,z:-1,head:0xd9a3bc,color:0x9b72bb,route:[[-3,2],[0,1],[3,2]]},
-{name:createTextName(5),role:'Miner',activity:'breaking down a stone deposit',x:5,z:3,head:0x8fc9a7,color:0xa4aab5,route:[[4.6,3.2],[2.8,2],[1.8,.7]]},
-{name:createTextName(6),role:'Engineer',activity:'building a small machine',x:-4,z:2,head:0xd7d4a2,color:0x4f9c9c,route:[[-3.2,2.6],[-2,1],[-.5,.5]]},
-{name:createTextName(7),role:'Scout',activity:'exploring the edge of the county',x:0,z:4,head:0xb8a2e6,color:0xd16d7c,route:[[5,4],[5,-1],[2,-4]]}
+{name:createTextName(),role:'Miner',activity:'harvesting crystals',x:-.65,z:-.55,head:0xe9ba91,color:0x00b99a,toolColor:0x9dc7c1,route:[[-.7,-.5],[-.3,-.25],[.1,-.55]]},
+{name:createTextName(),role:'Builder',activity:'working on a new structure',x:.4,z:.3,head:0xc98c6e,color:0xd08c42,route:[[.4,.3],[.65,.1],[.3,-.1]]},
+{name:createTextName(),role:'Harvester',activity:'collecting rare gems',x:.75,z:-.3,head:0xb8d3e8,color:0x648bd1,route:[[.75,-.3],[.3,-.65],[-.1,-.3]]},
+{name:createTextName(),role:'Gardener',activity:'tending the gardens',x:-.55,z:.5,head:0xe1c18e,color:0x75a85c,route:[[-.55,.5],[-.2,.65],[.2,.4]]},
+{name:createTextName(),role:'Courier',activity:'carrying supplies',x:0,z:-.1,head:0xd9a3bc,color:0x9b72bb,route:[[-.5,.1],[0,.2],[.5,.1]]},
+{name:createTextName(),role:'Miner',activity:'breaking down a stone deposit',x:.85,z:.65,head:0x8fc9a7,color:0xa4aab5,route:[[.85,.65],[.5,.4],[.1,.65]]},
+{name:createTextName(),role:'Engineer',activity:'building a machine',x:-.85,z:.1,head:0xd7d4a2,color:0x4f9c9c,route:[[-.85,.1],[-.5,-.1],[-.2,.1]]},
+{name:createTextName(),role:'Scout',activity:'exploring the county',x:0,z:.85,head:0xb8a2e6,color:0xd16d7c,route:[[0,.85],[.3,.6],[.6,.75]]}
 ];
-records.forEach((r,i)=>makeCreature(i,r));
-setPanel('County explorer',county.name,county.description+' '+agents.length+' locals are walking around, building, farming, and harvesting. Click one of them to follow what they are doing.','Back to planet');
+records.forEach(r=>{r.surfaceY=surfaceY;makeCreature(agents.length,r,local);});
+}
+setPanel('County explorer',county.name,county.description+' The county remains part of the same planet. Zoom out at any time to see the whole globe again. Select a resident to follow them.','Back to planet');
 setCrumbs([{label:'MILKY WAY',action:buildGalaxy},{label:currentSystemName,action:()=>showSystem(currentSystemIndex)},{label:currentPlanet.name,action:()=>showPlanet(currentPlanet,currentPlanet.index)},{label:county.name,current:true}]);
 focusCountyCamera();
 }
+
 function showCreature(group){
-currentCreature=group;
-currentMode='creature';
-const data=group.userData;
-const p=group.position.clone();
-setPanel(data.role+' · local resident',data.name,data.name+' is a '+data.role.toLowerCase()+' who is currently '+data.activity+'. Watch them move around the county and carry on their work.','Back to county');
+currentCreature=group;currentMode='creature';
+const data=group.userData,p=group.getWorldPosition(new THREE.Vector3());
+setPanel(data.role+' · local resident',data.name,data.name+' is a '+data.role.toLowerCase()+' currently '+data.activity+'. The camera follows their movements.', 'Back to county');
 setCrumbs([{label:'MILKY WAY',action:buildGalaxy},{label:currentSystemName,action:()=>showSystem(currentSystemIndex)},{label:currentPlanet.name,action:()=>showPlanet(currentPlanet,currentPlanet.index)},{label:currentCounty.name,action:()=>showCounty(currentCounty)},{label:data.name,current:true}]);
-moveCamera(new THREE.Vector3(p.x+3.1,2.6,p.z+4.8),new THREE.Vector3(p.x,.72,p.z),850,2.8,9);
+moveCamera(p.clone().add(new THREE.Vector3(1.5,1.3,2.2)),p.clone().add(new THREE.Vector3(0,.6,0)),850,.8,70);
 }
+
 function goBack(){
-if(currentMode==='creature'){currentMode='county';currentCreature=null;setPanel('County explorer',currentCounty.name,currentCounty.description+' Locals continue their daily routines. Select another little resident to follow.','Back to planet');setCrumbs([{label:'MILKY WAY',action:buildGalaxy},{label:currentSystemName,action:()=>showSystem(currentSystemIndex)},{label:currentPlanet.name,action:()=>showPlanet(currentPlanet,currentPlanet.index)},{label:currentCounty.name,current:true}]);focusCountyCamera();return;}
-if(currentMode==='county'){showPlanet(currentPlanet,currentPlanet.index);return;}
+if(currentMode==='creature'){
+currentMode='county';currentCreature=null;
+setPanel('County explorer',currentCounty.name,currentCounty.description+' Locals continue their routines. Zoom out to see the whole planet.', 'Back to planet');
+setCrumbs([{label:'MILKY WAY',action:buildGalaxy},{label:currentSystemName,action:()=>showSystem(currentSystemIndex)},{label:currentPlanet.name,action:()=>showPlanet(currentPlanet,currentPlanet.index)},{label:currentCounty.name,current:true}]);
+focusCountyCamera();return;
+}
+if(currentMode==='county'){
+currentMode='planet';currentCreature=null;currentPlanet.counties.forEach(item=>item.marker.scale.setScalar(1));
+setPanel('Planet explorer',currentPlanet.name,'All counties remain on this same globe. Scroll or pinch out to see the whole planet again.','Back to system');
+setCrumbs([{label:'MILKY WAY',action:buildGalaxy},{label:currentSystemName,action:()=>showSystem(currentSystemIndex)},{label:currentPlanet.name,current:true}]);
+focusPlanetCamera();return;
+}
 if(currentMode==='planet'){showSystem(currentSystemIndex);return;}
 if(currentMode==='system'){buildGalaxy();return;}
 if(currentMode==='galaxy'){showSystem(0);return;}
 }
+
 function primaryAction(){
 if(currentMode==='system'){buildGalaxy();return;}
 if(currentMode==='galaxy'){showSystem(0);return;}
@@ -646,21 +650,18 @@ data.rightArm.rotation.x=walking?swing*.72:Math.sin(data.phase*1.8)*.85;
 function updateCamera(){
 if(!cameraTween){
 if(currentMode==='creature'&&currentCreature){
-const p=currentCreature.position;
-const followPosition=new THREE.Vector3(p.x+3.1,2.6,p.z+4.8);
-const followTarget=new THREE.Vector3(p.x,.72,p.z);
-camera.position.lerp(followPosition,.055);
-controls.target.lerp(followTarget,.055);
+const p=currentCreature.getWorldPosition(new THREE.Vector3());
+camera.position.lerp(p.clone().add(new THREE.Vector3(1.5,1.3,2.2)),.055);
+controls.target.lerp(p.clone().add(new THREE.Vector3(0,.6,0)),.055);
 }
 return;
 }
-const elapsed=performance.now()-cameraTween.start;
-const t=Math.min(1,elapsed/cameraTween.duration);
-const eased=t*t*(3-2*t);
+const elapsed=performance.now()-cameraTween.start,t=Math.min(1,elapsed/cameraTween.duration),eased=t*t*(3-2*t);
 camera.position.lerpVectors(cameraTween.fromPosition,cameraTween.toPosition,eased);
 controls.target.lerpVectors(cameraTween.fromTarget,cameraTween.toTarget,eased);
 if(t>=1)cameraTween=null;
 }
+
 function animate(){
 requestAnimationFrame(animate);
 const delta=Math.min(clock.getDelta(),.05);
