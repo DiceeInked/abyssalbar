@@ -92,7 +92,10 @@ backgroundStarPositions[i*3]=v.x;backgroundStarPositions[i*3+1]=v.y;backgroundSt
 }
 const backgroundStarGeometry=new THREE.BufferGeometry();
 backgroundStarGeometry.setAttribute('position',new THREE.BufferAttribute(backgroundStarPositions,3));
-scene.add(new THREE.Points(backgroundStarGeometry,new THREE.PointsMaterial({color:0x9eb6c5,size:.11,sizeAttenuation:true})));
+const backgroundStarMesh=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(.055,0),new THREE.MeshBasicMaterial({color:0x9eb6c5}),1200);
+const backgroundDummy=new THREE.Object3D();
+for(let i=0;i<1200;i++){backgroundDummy.position.set(backgroundStarPositions[i*3],backgroundStarPositions[i*3+1],backgroundStarPositions[i*3+2]);backgroundDummy.scale.setScalar(betweenSafe(.45,1.5));backgroundDummy.updateMatrix();backgroundStarMesh.setMatrixAt(i,backgroundDummy.matrix);}
+scene.add(backgroundStarMesh);
 const controls=new OrbitControls(camera,renderer.domElement);
 controls.enableDamping=true;
 controls.dampingFactor=.07;
@@ -296,7 +299,14 @@ colors[i*3]=c.r;colors[i*3+1]=c.g;colors[i*3+2]=c.b;
 const geometry=new THREE.BufferGeometry();
 geometry.setAttribute('position',new THREE.BufferAttribute(positions,3));
 geometry.setAttribute('color',new THREE.BufferAttribute(colors,3));
-world.add(new THREE.Points(geometry,new THREE.PointsMaterial({size:.055,vertexColors:true,sizeAttenuation:true})));
+const galaxyStarMesh=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(.035,0),new THREE.MeshBasicMaterial({color:0xffffff}),pointCount);
+const galaxyDummy=new THREE.Object3D();
+for(let i=0;i<pointCount;i++){
+galaxyDummy.position.set(positions[i*3],positions[i*3+1],positions[i*3+2]);
+galaxyDummy.scale.setScalar(between(.45,1.7));galaxyDummy.updateMatrix();galaxyStarMesh.setMatrixAt(i,galaxyDummy.matrix);
+galaxyStarMesh.setColorAt(i,new THREE.Color(colors[i*3],colors[i*3+1],colors[i*3+2]));
+}
+world.add(galaxyStarMesh);
 const core=addSphere(world,.82,0xffd77b,20);
 core.position.set(0,0,0);
 const coreRing=new THREE.Mesh(new THREE.TorusGeometry(1.15,.025,4,96),material(0xf6c66b));
@@ -504,7 +514,7 @@ const leg1=new THREE.Mesh(new THREE.IcosahedronGeometry(.07,1),material(0x354652
 const rightLeg=new THREE.Group();rightLeg.position.set(.085,.37,0);group.add(rightLeg);
 const leg2=new THREE.Mesh(new THREE.IcosahedronGeometry(.07,1),material(0x354652));leg2.scale.y=2.4;leg2.position.y=-.16;rightLeg.add(leg2);
 const tool=new THREE.Mesh(new THREE.IcosahedronGeometry(.075,1),material(record.toolColor||0xb8b9ae));tool.position.set(.31,.48,.02);group.add(tool);
-group.userData={name:record.name,role:record.role,activity:record.activity,route:record.route,routeIndex:0,state:'walk',stateTime:0,speed:between(.25,.48),phase:between(0,Math.PI*2),leftArm,rightArm,leftLeg,rightLeg,tool};
+group.userData={name:record.name,role:record.role,activity:record.activity,route:record.route,routeIndex:0,state:'walk',stateTime:0,speed:between(.25,.48),phase:between(0,Math.PI*2),leftArm,rightArm,leftLeg,rightLeg,tool,surfaceY:record.surfaceY};
 addPick(body,()=>showCreature(group));addPick(head,()=>showCreature(group));agents.push(group);return group;
 }
 
@@ -634,6 +644,7 @@ if(distance<.22){data.state='work';data.stateTime=between(1.4,3.1);}
 else{
 const step=Math.min(distance,data.speed*delta);
 group.position.x+=dx/distance*step;group.position.z+=dz/distance*step;
+if(data.surfaceY)group.position.y=data.surfaceY(group.position.x,group.position.z);
 group.rotation.y=Math.atan2(dx,dz);
 }
 }else{
