@@ -154,7 +154,7 @@ const between=(a,b)=>a+rng()*(b-a);
 const choose=list=>list[Math.floor(rng()*list.length)];
 const colorHex=c=>new THREE.Color(c);
 function material(color,extra={}){
-const m=new THREE.MeshBasicMaterial({color,...extra});
+const m=new THREE.MeshBasicMaterial({map:polygonTexture(color),...extra});
 wireMaterials.push(m);
 if(wireEnabled)m.wireframe=true;
 return m;
@@ -262,21 +262,6 @@ Math.sin(latitude)*radius,
 Math.cos(latitude)*Math.sin(longitude)*radius
 );
 }
-function addLandPatch(parent,radius,lat,lon,wide,tall,color){
-const positions=[];
-const center=surfacePoint(radius+.025,lat,lon);
-const steps=9;
-for(let i=0;i<steps;i++){
-const a=i/steps*Math.PI*2,b=(i+1)/steps*Math.PI*2;
-const p1=surfacePoint(radius+.025,lat+Math.cos(a)*tall,lon+Math.sin(a)*wide);
-const p2=surfacePoint(radius+.025,lat+Math.cos(b)*tall,lon+Math.sin(b)*wide);
-positions.push(center.x,center.y,center.z,p1.x,p1.y,p1.z,p2.x,p2.y,p2.z);
-}
-const geometry=new THREE.BufferGeometry();
-geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
-geometry.computeVertexNormals();
-parent.add(new THREE.Mesh(geometry,material(color,{side:THREE.DoubleSide})));
-}
 function addSphere(parent,radius,color,segments=32){return addTexturedSphere(parent,radius,color,Math.min(4,Math.max(1,Math.floor(segments/16))));}
 
 function createTextName(){return generateName();}
@@ -380,7 +365,7 @@ ring.rotation.set(Math.PI/2+between(-.22,.22),between(-.15,.15),between(-.15,.15
 }
 
 if(rng()<.38){
-const moon=new THREE.Group();moon.userData.orbitSpeed=between(.18,.55)*(rng()<.5?-1:1);planetGroup.add(moon);
+const moon=new THREE.Group();moon.userData.name=generateName();moon.userData.orbitSpeed=between(.18,.55)*(rng()<.5?-1:1);planetGroup.add(moon);
 const moonDistance=data.radius*2.15;
 const moonRing=new THREE.Mesh(new THREE.TorusGeometry(moonDistance,.008,3,40),material(0x788b9b));moonRing.rotation.x=Math.PI/2;moon.add(moonRing);
 const moonMesh=addSphere(moon,.07,choose([0xc4cbd0,0x8fa1ad,0x8e806f]),12);
@@ -525,7 +510,7 @@ currentPlanet.counties.forEach(item=>{if(item.detail)item.detail.visible=item===
 if(!county.detail){
 const n=county.normal.clone();
 const east=new THREE.Vector3(-Math.sin(Math.atan2(n.z,n.x)),0,Math.cos(Math.atan2(n.z,n.x))).normalize();
-const north=new THREE.Vector3().crossVectors(n,east).normalize();
+const north=new THREE.Vector3().crossVectors(east,n).normalize();
 const local=new THREE.Group();local.position.copy(n.clone().multiplyScalar(currentPlanet.radius+.012));
 local.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(east,n,north));currentPlanet.globe.add(local);county.detail=local;
 const radius=currentPlanet.radius,span=1.18,positions=[];
@@ -542,7 +527,7 @@ for(let i=0;i<9;i++){
 const x=between(-.95,.95),z=between(-.95,.95);
 const trunk=new THREE.Mesh(new THREE.IcosahedronGeometry(.12,1),material(0x79533a));trunk.scale.set(.65,1.7,.65);trunk.position.set(x,surfaceY(x,z)+.18,z);local.add(trunk);
 const crown=new THREE.Mesh(new THREE.IcosahedronGeometry(.28,1),material(choose([0x4d9c66,0x7dbb55,0x398a77])));
-crown.position.set(x,surfaceY(x,z)+.55,z);local.add(crown);
+crown.userData.name=generateName();crown.position.set(x,surfaceY(x,z)+.55,z);local.add(crown);
 }
 for(let i=0;i<7;i++){
 const x=between(-1,1),z=between(-1,1),node=new THREE.Group();node.position.set(x,surfaceY(x,z),z);local.add(node);
