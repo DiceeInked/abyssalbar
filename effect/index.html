@@ -363,6 +363,7 @@ if(data.ring){
 const ring=new THREE.Mesh(new THREE.TorusGeometry(data.radius*1.55,data.radius*.14,5,64),material(choose([0xb9a77d,0xd5e1e6,0x9cc5c7,0xb58f74])));
 ring.rotation.set(Math.PI/2+between(-.22,.22),between(-.15,.15),between(-.15,.15));planetGroup.add(ring);
 }
+addWorldLabel(data.name,new THREE.Vector3(0,data.radius+.48,0),.95,planetGroup);
 if(rng()<.38){
 const moon=new THREE.Group();moon.userData.orbitSpeed=between(.18,.55)*(rng()<.5?-1:1);planetGroup.add(moon);
 const moonDistance=data.radius*2.15;
