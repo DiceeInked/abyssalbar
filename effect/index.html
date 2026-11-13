@@ -66,6 +66,28 @@ h1{font-size:18px}
 <div class="toggles"><button class="button" id="wire" type="button" aria-pressed="false">Wireframe: off</button><button class="button active" id="motion" type="button" aria-pressed="true">Motion: on</button></div>
 </section>
 <div class="hint">DRAG TO LOOK AROUND · PINCH / SCROLL TO ZOOM<br>CLICK STARS, PLANETS, COUNTIES, OR LITTLE GUYS</div>
+<script>
+window.__oddformStarted=false;
+window.addEventListener('error',event=>{
+ if(window.__oddformStarted)return;
+ const message=event.message||'A startup error occurred.';
+ document.querySelector('#seed').textContent='STARTUP ERROR';
+ document.querySelector('#eyebrow').textContent='Unable to start';
+ document.querySelector('#name').textContent='Oddform hit a startup error';
+ document.querySelector('#description').textContent=message+' Try reloading the page.';
+ document.querySelector('#primary').textContent='Reload page';
+ document.querySelector('#primary').onclick=()=>location.reload();
+});
+window.addEventListener('unhandledrejection',event=>{
+ if(window.__oddformStarted)return;
+ document.querySelector('#seed').textContent='STARTUP ERROR';
+ document.querySelector('#eyebrow').textContent='Unable to start';
+ document.querySelector('#name').textContent='Oddform could not finish loading';
+ document.querySelector('#description').textContent=String(event.reason||'A startup error occurred.')+' Try reloading the page.';
+ document.querySelector('#primary').textContent='Reload page';
+ document.querySelector('#primary').onclick=()=>location.reload();
+});
+</script>
 <script type="module">
 let THREE,OrbitControls,VRButton;
 try{
@@ -88,7 +110,18 @@ const scene=new THREE.Scene();
 scene.background=new THREE.Color(0x05080d);
 const camera=new THREE.PerspectiveCamera(48,innerWidth/innerHeight,.1,300);
 camera.position.set(0,18,35);
-const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
+let renderer;
+try{
+ renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
+}catch(error){
+ document.querySelector('#seed').textContent='NO WEBGL';
+ document.querySelector('#eyebrow').textContent='Graphics unavailable';
+ document.querySelector('#name').textContent='3D graphics could not start';
+ document.querySelector('#description').textContent='This browser or device could not create a WebGL graphics context. Try reloading or opening the page in a browser with WebGL enabled.';
+ document.querySelector('#primary').textContent='Reload page';
+ document.querySelector('#primary').onclick=()=>location.reload();
+ throw error;
+}
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 renderer.setSize(innerWidth,innerHeight);
 renderer.outputColorSpace=THREE.SRGBColorSpace;
@@ -405,7 +438,7 @@ currentMode='system';currentPlanet=null;currentCounty=null;currentCreature=null;
 const starColor=index===0?0xffd56b:choose([0xffdf86,0x9edfff,0xff9fca,0xafffd5,0xffffff]);
 const sun=addSphere(world,index===0?.78:between(.52,.9),starColor,32);
 sun.userData.spin=.04;
-const spikes=Math.floor(between(7,14));
+const spikes=Math.floor(between(5,8));
 for(let i=0;i<spikes;i++){
 const ray=new THREE.Mesh(new THREE.ConeGeometry(between(.035,.08),between(.35,.8),4),material(starColor));
 const angle=i/spikes*Math.PI*2;
@@ -415,8 +448,8 @@ world.add(ray);
 }
 const planets=buildSystemData(index);
 planets.forEach((p,i)=>makeSystemPlanet(p,i,world));
-if(planets.length>=4)buildAsteroidBelt(world,index===0?7.35:(planets[1].distance+planets[2].distance)/2,160,0x8b97a1);
-const debrisCount= index===0?55:Math.floor(between(35,95));
+if(planets.length>=4)buildAsteroidBelt(world,index===0?7.35:(planets[1].distance+planets[2].distance)/2,72,0x8b97a1);
+const debrisCount= index===0?18:Math.floor(between(12,28));
 for(let i=0;i<debrisCount;i++){
 const bit=new THREE.Mesh(new THREE.TetrahedronGeometry(between(.025,.07),0),material(choose([0x79929b,0x8c8a7f,0x556f7d])));
 const a=between(0,Math.PI*2),r=between(2,planets[planets.length-1].distance+2);
@@ -688,6 +721,7 @@ renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(deviceP
 const requestedSeed=new URLSearchParams(location.search).get('seed');
 showSystem(0,requestedSeed!==null&&/^\d+$/.test(requestedSeed)?Number(requestedSeed):undefined);
 animate();
+window.__oddformStarted=true;
 </script>
 </body>
 </html>
