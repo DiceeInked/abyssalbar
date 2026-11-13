@@ -278,7 +278,7 @@ if(motionEnabled){
 stars.rotation.y=animationTime*.004;
 sculpture.rotation.y=Math.sin(animationTime*.16)*.2+animationTime*.045;
 sculpture.rotation.x=Math.sin(animationTime*.2)*.055;
-sculpture.children.forEach(child=>{if(child.userData.orbitSpeed)child.rotation.y+=child.userData.orbitSpeed*delta;if(child.userData.spin){child.rotation.y+=child.userData.spin*delta;child.rotation.x+=child.userData.spin*.12*delta;}if(child.userData.float)child.position.y=child.userData.baseY+Math.sin(animationTime*child.userData.float+child.id)*.12;});
+sculpture.traverse(child=>{if(child.userData.orbitSpeed)child.rotation.y+=child.userData.orbitSpeed*delta;if(child.userData.spin){child.rotation.y+=child.userData.spin*delta;child.rotation.x+=child.userData.spin*.12*delta;}if(child.userData.float)child.position.y=child.userData.baseY+Math.sin(animationTime*child.userData.float+child.id)*.12;});
 }
 shaderMaterials.forEach(material=>{material.uniforms.uTime.value=animationTime;});
 controls.update();renderer.render(scene,camera);
