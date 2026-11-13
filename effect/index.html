@@ -185,7 +185,7 @@ const shard=new THREE.Mesh(new THREE.TetrahedronGeometry(between(.025,.11),0),ne
 const a=between(0,Math.PI*2),r=between(1.4,3.1);
 shard.position.set(Math.cos(a)*r,between(-2.2,2.2),Math.sin(a)*r);
 shard.rotation.set(between(0,Math.PI),between(0,Math.PI),between(0,Math.PI));
-shard.userData.spin=between(-.8,.8);shard.userData.float=between(.15,.8);sculpture.add(shard);
+shard.userData.spin=between(-.8,.8);shard.userData.float=between(.15,.8);shard.userData.baseY=shard.position.y;sculpture.add(shard);
 }
 const count=Math.floor(between(18,54)),fragmentGeometry=new THREE.TetrahedronGeometry(.045,0),fragmentMaterial=new THREE.MeshBasicMaterial({color:palette[2],transparent:true,opacity:.7});
 const fragments=new THREE.InstancedMesh(fragmentGeometry,fragmentMaterial,count),dummy=new THREE.Object3D();
@@ -209,7 +209,7 @@ if(motionEnabled){
 stars.rotation.y=animationTime*.004;
 sculpture.rotation.y=Math.sin(animationTime*.16)*.2+animationTime*.045;
 sculpture.rotation.x=Math.sin(animationTime*.2)*.055;
-sculpture.children.forEach(child=>{if(child.userData.spin){child.rotation.y+=child.userData.spin*delta;child.rotation.x+=child.userData.spin*.31*delta;}if(child.userData.float)child.position.y+=Math.sin(animationTime*child.userData.float+child.id)*.0009;});
+sculpture.children.forEach(child=>{if(child.userData.spin){child.rotation.y+=child.userData.spin*delta;child.rotation.x+=child.userData.spin*.31*delta;}if(child.userData.float)child.position.y=child.userData.baseY+Math.sin(animationTime*child.userData.float+child.id)*.12;});
 }
 shaderMaterials.forEach(material=>{material.uniforms.uTime.value=animationTime;});
 controls.update();renderer.render(scene,camera);
