@@ -25,7 +25,7 @@ h1{margin:0 0 4px;font-size:20px;line-height:1.15;letter-spacing:-.035em}
 .primary{flex:1;border-color:var(--accent);background:var(--accent);color:#001b14;font-weight:850}.primary:hover{background:#71ffe0}
 .toggles{display:flex;gap:7px;margin-top:8px}.toggles .button{flex:1;padding:8px 6px;color:#aab5bf;font-size:10px}.toggles .active{border-color:#00ffc866;background:#00ffc812;color:var(--accent)}
 .hint{position:fixed;right:18px;bottom:70px;color:#7e8b94;font-size:9px;line-height:1.7;text-align:right;pointer-events:none}
-#VRButton{position:fixed!important;z-index:3!important;right:18px!important;bottom:18px!important;left:auto!important;width:auto!important;height:auto!important;margin:0!important;padding:10px 13px!important;border:1px solid #ffffff30!important;border-radius:10px!important;background:rgba(12,15,19,.9)!important;color:#f5f7f8!important;font:700 10px system-ui,sans-serif!important;letter-spacing:.08em!important;opacity:1!important}
+#VRButton{position:fixed!important;z-index:3!important;right:18px!important;bottom:18px!important;left:auto!important;width:auto!important;height:auto!important;margin:0!important;padding:10px 13px!important;border:1px solid #ffffff30!important;border-radius:10px!important;background:#0c0f13!important;color:#f5f7f8!important;font:700 10px system-ui,sans-serif!important;letter-spacing:.08em!important;opacity:1!important}
 #VRButton:hover{border-color:#00ffc8!important}
 @media(max-width:600px){.top{top:12px;left:12px;right:12px}.panel{left:12px;bottom:12px;width:calc(100vw - 24px);padding:13px}.hint{display:none}#VRButton{right:12px!important;top:54px!important;bottom:auto!important;transform:none!important}.seed{font-size:9px}}
 @media(prefers-reduced-motion:reduce){.button{transition:none}}
@@ -121,7 +121,7 @@ let geometry=makeGeometry(type,detail);
 if(geometry.index)geometry=geometry.toNonIndexed();
 const formPalette=rng()<.4?choose(palettes):palette;
 group.add(new THREE.Mesh(geometry,makeShader(formPalette,geometry)));
-const wire=new THREE.Mesh(geometry,new THREE.MeshBasicMaterial({color:formPalette[2],wireframe:true,transparent:true,opacity:.22,depthWrite:false}));
+const wire=new THREE.Mesh(geometry,new THREE.MeshBasicMaterial({color:formPalette[2],wireframe:true}));
 wire.scale.setScalar(1.008);wire.visible=wireEnabled;wire.userData.wire=true;group.add(wire);wireMeshes.push(wire);
 parent.add(group);return group;
 }
@@ -135,11 +135,11 @@ wireMeshes=[];shaderMaterials=[];
 const first=['Velvet','Quantum','Prism','Orbit','Melted','Electric','Lunar','Fractal','Glacier','Static','Blooming','Chrome','Aether','Soft'];
 const last=['Reliquary','Anomaly','Spindle','Bloom','Engine','Shard','Organism','Helix','Totem','Echo','Artifact','Nest','Machine','Memory'];
 const labels={crystal:'faceted crystal',ring:'open ring structure',spike:'angular spiked form',orb:'rounded organic form',gear:'interwoven mechanical knot',column:'geometric column',knot:'twisted knot structure',polyhedron:'polyhedral sculpture'};
-function createOrbitPath(parent,radiusX,radiusZ,color,opacity){
+function createOrbitPath(parent,radiusX,radiusZ,color){
 const points=[];
 for(let i=0;i<160;i++){const a=i/160*Math.PI*2;points.push(new THREE.Vector3(Math.cos(a)*radiusX,0,Math.sin(a)*radiusZ));}
 const geometry=new THREE.BufferGeometry().setFromPoints(points);
-const line=new THREE.LineLoop(geometry,new THREE.LineBasicMaterial({color,transparent:true,opacity,depthWrite:false}));
+const line=new THREE.LineLoop(geometry,new THREE.LineBasicMaterial({color}));
 parent.add(line);return line;
 }
 function generate(seedValue){
@@ -178,7 +178,7 @@ const orbitalPlane=new THREE.Group();
 orbitalPlane.rotation.set(between(-1.05,1.05),between(0,Math.PI*2),between(-.8,.8));
 orbitalPlane.userData.orbitSpeed=between(.07,.19)*(rng()<.5?-1:1);
 system.add(orbitalPlane);
-createOrbitPath(orbitalPlane,orbitRadius,depthRadius,choose(palette),1);
+createOrbitPath(orbitalPlane,orbitRadius,depthRadius,choose(palette));
 
 const angle=between(0,Math.PI*2);
 const anchor=new THREE.Group();
