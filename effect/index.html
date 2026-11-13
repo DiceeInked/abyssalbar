@@ -84,6 +84,15 @@ renderer.toneMapping=THREE.NoToneMapping;
 renderer.xr.enabled=true;
 mount.appendChild(renderer.domElement);
 document.body.appendChild(VRButton.createButton(renderer));
+const backgroundStarPositions=new Float32Array(1200*3);
+function betweenSafe(a,b){return a+Math.random()*(b-a);}
+for(let i=0;i<1200;i++){
+const v=new THREE.Vector3(betweenSafe(-1,1),betweenSafe(-1,1),betweenSafe(-1,1)).normalize().multiplyScalar(115);
+backgroundStarPositions[i*3]=v.x;backgroundStarPositions[i*3+1]=v.y;backgroundStarPositions[i*3+2]=v.z;
+}
+const backgroundStarGeometry=new THREE.BufferGeometry();
+backgroundStarGeometry.setAttribute('position',new THREE.BufferAttribute(backgroundStarPositions,3));
+scene.add(new THREE.Points(backgroundStarGeometry,new THREE.PointsMaterial({color:0x9eb6c5,size:.11,sizeAttenuation:true})));
 const controls=new OrbitControls(camera,renderer.domElement);
 controls.enableDamping=true;
 controls.dampingFactor=.07;
@@ -153,7 +162,7 @@ function addPick(mesh,handler){
 mesh.userData.onPick=handler;
 pickTargets.push(mesh);
 }
-function addWorldLabel(text,position,width=1.4){
+function addWorldLabel(text,position,width=1.4,parent=world){
 const canvas=document.createElement('canvas');
 canvas.width=512;canvas.height=112;
 const ctx=canvas.getContext('2d');
@@ -166,7 +175,7 @@ texture.colorSpace=THREE.SRGBColorSpace;
 const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:texture,transparent:false,depthTest:false}));
 sprite.scale.set(width,.25,1);
 sprite.position.copy(position);
-world.add(sprite);
+parent.add(sprite);
 return sprite;
 }
 function disposeWorld(){
@@ -429,7 +438,7 @@ const post=new THREE.Mesh(new THREE.CylinderGeometry(.035,.045,.2,6),material(0x
 post.position.y=.09;marker.add(post);
 const dot=addSphere(marker,.14,[0x00ffc8,0xffc45c,0x88aaff,0xff82be,0xa9ed72][i%5],14);
 dot.position.y=.22;
-addWorldLabel(countyNames[i],normal.clone().multiplyScalar(radius+.72),1.25);
+addWorldLabel(countyNames[i],normal.clone().multiplyScalar(radius+.72),1.25,globe);
 addPick(dot,()=>showCounty(county));
 }
 addPick(sphere,()=>{});
@@ -633,7 +642,16 @@ data.rightArm.rotation.x=walking?swing*.72:Math.sin(data.phase*1.8)*.85;
 }
 }
 function updateCamera(){
-if(!cameraTween)return;
+if(!cameraTween){
+if(currentMode==='creature'&&currentCreature){
+const p=currentCreature.position;
+const followPosition=new THREE.Vector3(p.x+3.1,2.6,p.z+4.8);
+const followTarget=new THREE.Vector3(p.x,.72,p.z);
+camera.position.lerp(followPosition,.055);
+controls.target.lerp(followTarget,.055);
+}
+return;
+}
 const elapsed=performance.now()-cameraTween.start;
 const t=Math.min(1,elapsed/cameraTween.duration);
 const eased=t*t*(3-2*t);
