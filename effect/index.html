@@ -3,49 +3,69 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#050505">
-<meta name="description" content="Abyssal's procedural 3D object generator.">
+<meta name="theme-color" content="#05080d">
+<meta name="description" content="Explore a living procedural universe, from the Milky Way to its tiny inhabitants.">
 <title>Oddform | Abyssal</title>
 <style>
-:root{color-scheme:dark;--bg:#050505;--panel:rgba(12,15,19,.88);--text:#f5f7f8;--muted:#929da5;--line:#ffffff20;--accent:#00ffc8}
-*{box-sizing:border-box}html,body{width:100%;height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
-button{font:inherit;-webkit-tap-highlight-color:transparent}button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
-#scene{position:fixed;inset:0;touch-action:none}#scene canvas{display:block;width:100%;height:100%}
-.top{position:fixed;z-index:2;top:16px;left:18px;right:18px;display:flex;align-items:center;justify-content:space-between;gap:12px;pointer-events:none}
-.brand{display:flex;align-items:center;gap:9px;color:#eee;text-decoration:none;font-size:11px;letter-spacing:.16em;text-transform:uppercase;pointer-events:auto}
-.brand-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:none}
-.seed{max-width:58vw;padding:8px 11px;border:1px solid var(--line);border-radius:999px;background:#080b10d9;color:#b8c6cf;font:10px ui-monospace,monospace;cursor:pointer;pointer-events:auto}
-.panel{position:fixed;z-index:2;left:18px;bottom:18px;width:min(340px,calc(100vw - 36px));padding:15px;border:1px solid var(--line);border-radius:16px;background:var(--panel);box-shadow:none}
-.eyebrow{margin:0 0 5px;color:var(--accent);font-size:9px;font-weight:800;letter-spacing:.18em;text-transform:uppercase}
-h1{margin:0 0 4px;font-size:20px;line-height:1.15;letter-spacing:-.035em}
-#description{min-height:32px;margin:0;color:var(--muted);font-size:11px;line-height:1.45}
-.actions{display:flex;gap:8px;margin-top:13px}
-.button{min-height:42px;padding:9px 13px;border:1px solid var(--line);border-radius:10px;background:#ffffff09;color:var(--text);font-size:11px;font-weight:700;cursor:pointer;transition:background .15s,border-color .15s,transform .15s}
-.button:active{transform:scale(.97)}.button:hover{border-color:#00ffc880;background:#00ffc812}
-.primary{flex:1;border-color:var(--accent);background:var(--accent);color:#001b14;font-weight:850}.primary:hover{background:#71ffe0}
-.toggles{display:flex;gap:7px;margin-top:8px}.toggles .button{flex:1;padding:8px 6px;color:#aab5bf;font-size:10px}.toggles .active{border-color:#00ffc866;background:#00ffc812;color:var(--accent)}
-.hint{position:fixed;right:18px;bottom:70px;color:#7e8b94;font-size:9px;line-height:1.7;text-align:right;pointer-events:none}
-#VRButton{position:fixed!important;z-index:3!important;right:18px!important;bottom:18px!important;left:auto!important;width:auto!important;height:auto!important;margin:0!important;padding:10px 13px!important;border:1px solid #ffffff30!important;border-radius:10px!important;background:#0c0f13!important;color:#f5f7f8!important;font:700 10px system-ui,sans-serif!important;letter-spacing:.08em!important;opacity:1!important}
-#VRButton:hover{border-color:#00ffc8!important}
-@media(max-width:600px){.top{top:12px;left:12px;right:12px}.panel{left:12px;bottom:12px;width:calc(100vw - 24px);padding:13px}.hint{display:none}#VRButton{right:12px!important;top:54px!important;bottom:auto!important;transform:none!important}.seed{font-size:9px}}
-@media(prefers-reduced-motion:reduce){.button{transition:none}}
+:root{color-scheme:dark;--bg:#05080d;--panel:#0c1118;--text:#f4f7f8;--muted:#99aab3;--line:#263640;--accent:#00ffc8}
+*{box-sizing:border-box}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+button{font:inherit;-webkit-tap-highlight-color:transparent}
+button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+#scene{position:fixed;inset:0;touch-action:none}
+#scene canvas{display:block;width:100%;height:100%}
+.top{position:fixed;z-index:3;top:14px;left:16px;right:16px;display:flex;align-items:center;gap:12px;min-height:38px}
+.brand{display:flex;align-items:center;gap:9px;color:#f4f7f8;text-decoration:none;font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;white-space:nowrap}
+.brand-dot{width:8px;height:8px;background:var(--accent);border:1px solid #001e18}
+#crumbs{display:flex;align-items:center;gap:6px;min-width:0;flex:1;overflow-x:auto;scrollbar-width:none}
+#crumbs::-webkit-scrollbar{display:none}
+.crumb{flex:0 0 auto;border:1px solid var(--line);border-radius:7px;background:#101820;color:#a8bbc4;padding:7px 9px;font-size:9px;font-weight:800;letter-spacing:.08em;cursor:pointer}
+.crumb.current{background:#12352f;border-color:#00a887;color:#00ffc8;cursor:default}
+.seed{flex:0 0 auto;max-width:150px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#101820;color:#b8c6cf;font:10px ui-monospace,monospace;cursor:pointer}
+.panel{position:fixed;z-index:3;left:16px;bottom:16px;width:min(365px,calc(100vw - 32px));padding:14px;border:1px solid var(--line);border-radius:13px;background:var(--panel)}
+.eyebrow{margin:0 0 5px;color:var(--accent);font-size:9px;font-weight:850;letter-spacing:.18em;text-transform:uppercase}
+h1{margin:0 0 5px;font-size:20px;line-height:1.15;letter-spacing:-.035em}
+#description{min-height:34px;margin:0;color:var(--muted);font-size:11px;line-height:1.5}
+.actions{display:flex;gap:8px;margin-top:12px}
+.button{min-height:40px;padding:9px 12px;border:1px solid var(--line);border-radius:8px;background:#131d25;color:var(--text);font-size:10px;font-weight:800;cursor:pointer}
+.button:active{border-color:var(--accent)}
+.primary{flex:1;border-color:var(--accent);background:var(--accent);color:#001b14}
+.primary:active{background:#00cba2}
+.toggles{display:flex;gap:7px;margin-top:7px}
+.toggles .button{flex:1;padding:8px 6px;color:#aab8bf}
+.toggles .active{border-color:#008f78;background:#12352f;color:var(--accent)}
+.hint{position:fixed;z-index:2;right:17px;bottom:18px;color:#9badb6;font-size:9px;font-weight:700;line-height:1.7;text-align:right;pointer-events:none}
+#VRButton{position:fixed!important;z-index:4!important;right:16px!important;top:62px!important;bottom:auto!important;left:auto!important;width:auto!important;height:auto!important;margin:0!important;padding:9px 11px!important;border:1px solid var(--line)!important;border-radius:8px!important;background:#101820!important;color:#f5f7f8!important;font:800 10px system-ui,sans-serif!important;letter-spacing:.08em!important;opacity:1!important}
+#VRButton:hover{border-color:var(--accent)!important}
+@media(max-width:650px){
+.top{top:10px;left:10px;right:10px;gap:7px;flex-wrap:wrap}
+.brand{font-size:9px}
+#crumbs{order:3;flex-basis:100%;max-width:100%;height:30px}
+.crumb{padding:6px 8px}
+.seed{margin-left:auto;font-size:9px;max-width:125px}
+.panel{left:10px;bottom:10px;width:calc(100vw - 20px);padding:12px}
+h1{font-size:18px}
+.hint{display:none}
+#VRButton{right:10px!important;top:48px!important}
+}
 </style>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.166.1/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.166.1/examples/jsm/"}}</script>
 </head>
 <body>
-<div id="scene" aria-label="Interactive procedural 3D sculpture"></div>
+<div id="scene" aria-label="Interactive universe explorer. Drag to look around and click stars, planets, regions, and inhabitants."></div>
 <header class="top">
 <a class="brand" href="../../" aria-label="Abyssal home"><span class="brand-dot"></span><span>Abyssal / Effect</span></a>
-<button class="seed" id="seed" type="button" title="Copy a link to recreate this object">SEED · loading</button>
+<nav id="crumbs" aria-label="Universe navigation"></nav>
+<button class="seed" id="seed" type="button" title="Copy a link to this solar system">SEED · loading</button>
 </header>
 <section class="panel" aria-live="polite">
-<p class="eyebrow">Procedural object laboratory</p>
-<h1 id="name">Building a specimen…</h1>
-<p id="description">Mixing geometry, color, and shader effects.</p>
-<div class="actions"><button class="button primary" id="generate" type="button">✦ &nbsp; Generate new</button><button class="button" id="reset" type="button" aria-label="Reset camera view">↺</button></div>
+<p class="eyebrow" id="eyebrow">A living universe</p>
+<h1 id="name">Sol System</h1>
+<p id="description">A complete solar system. Look around, select a planet, or visit the Milky Way.</p>
+<div class="actions"><button class="button" id="back" type="button">← Back</button><button class="button primary" id="primary" type="button">Explore Milky Way</button></div>
 <div class="toggles"><button class="button" id="wire" type="button" aria-pressed="false">Wireframe: off</button><button class="button active" id="motion" type="button" aria-pressed="true">Motion: on</button></div>
 </section>
-<div class="hint">DRAG TO ORBIT · PINCH / SCROLL TO ZOOM<br>CLICK THE SEED TO COPY A REPLAY LINK</div>
+<div class="hint">DRAG TO LOOK AROUND · PINCH / SCROLL TO ZOOM<br>CLICK STARS, PLANETS, COUNTIES, OR LITTLE GUYS</div>
 <script type="module">
 import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
@@ -54,205 +74,596 @@ import {VRButton} from 'three/addons/webxr/VRButton.js';
 const mount=document.querySelector('#scene');
 const scene=new THREE.Scene();
 scene.background=new THREE.Color(0x05080d);
-// No atmospheric fog: the scene stays crisp at every distance.
-const camera=new THREE.PerspectiveCamera(47,innerWidth/innerHeight,.1,100);
-camera.position.set(0,1.8,8.2);
+const camera=new THREE.PerspectiveCamera(48,innerWidth/innerHeight,.1,300);
+camera.position.set(0,18,35);
 const renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 renderer.setSize(innerWidth,innerHeight);
 renderer.outputColorSpace=THREE.SRGBColorSpace;
-renderer.toneMapping=THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure=1.12;
+renderer.toneMapping=THREE.NoToneMapping;
 renderer.xr.enabled=true;
 mount.appendChild(renderer.domElement);
 document.body.appendChild(VRButton.createButton(renderer));
 const controls=new OrbitControls(camera,renderer.domElement);
-controls.enableDamping=true;controls.minDistance=3;controls.maxDistance=15;controls.target.set(0,.1,0);
+controls.enableDamping=true;
+controls.dampingFactor=.07;
+controls.minDistance=.5;
+controls.maxDistance=130;
+controls.target.set(0,0,0);
 
-// Flat-color materials keep every shape sharply defined.
-const floor=new THREE.GridHelper(28,56,0x24434b,0x17232d);floor.position.y=-2.25;scene.add(floor);
+let world=new THREE.Group();
+scene.add(world);
+let pickTargets=[];
+let wireMaterials=[];
+let agents=[];
+let movingObjects=[];
+let currentMode='system';
+let currentSystemIndex=0;
+let currentSystemName='Sol System';
+let currentPlanet=null;
+let currentCounty=null;
+let currentCreature=null;
+let activeSeed=31415926;
+let rng=Math.random;
+let motionEnabled=true;
+let wireEnabled=false;
+let cameraTween=null;
+let animationClock=0;
+const raycaster=new THREE.Raycaster();
+const pointer=new THREE.Vector2();
+let pointerDown=null;
 
-const starsGeometry=new THREE.BufferGeometry();
-const starPositions=new Float32Array(900*3);
-for(let i=0;i<900;i++){const radius=9+Math.random()*15,a=Math.random()*Math.PI*2;starPositions[i*3]=Math.cos(a)*radius;starPositions[i*3+1]=(Math.random()-.5)*18;starPositions[i*3+2]=Math.sin(a)*radius;}
-starsGeometry.setAttribute('position',new THREE.BufferAttribute(starPositions,3));
-const stars=new THREE.Points(starsGeometry,new THREE.PointsMaterial({color:0x9bbfc4,size:.025,sizeAttenuation:true}));
-scene.add(stars);
-const sculpture=new THREE.Group();scene.add(sculpture);
-let wireMeshes=[],shaderMaterials=[],wireEnabled=false,motionEnabled=true,activeSeed=0,rng=Math.random,animationTime=0;
-function seededRandom(seed){let state=seed>>>0;return function(){state=(state+0x6D2B79F5)>>>0;let t=state;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296;};}
+const palettes=[
+[0x00ffc8,0x087cff,0xd9fff8,0x5bcbad],
+[0xff83c8,0x805cff,0xffdfef,0xb89cff],
+[0xffc45c,0xff596e,0xffe4a6,0xc47b42],
+[0xa5ff70,0x21cdb5,0xe5ffb8,0x628e54],
+[0x9a8cff,0x55d6ff,0xffffff,0x5553a2],
+[0xffed70,0xff7838,0xffd7a0,0x9f5630],
+[0xd4e1f0,0x687caa,0xffffff,0x50627f],
+[0xff795d,0xe7dc68,0xf5f0d5,0x8b5947]
+];
+const systemNames=['Sol System','Cobalt Drift','Morrow System','Thistle Reach','Vela System','Sable Orbit','Rook System','Lumen Verge','Aster System','Prax Cluster','Nacre System','Eidolon Reach','Tern System','Glasswind','Hollowstar'];
+const systemSeeds=[31415926,7812301,9182736,19283746,7263519,8392017,4928173,6351928,12847365,9817263,5728194,3619284,8273619,4192837,6382719];
+
+function seededRandom(seed){
+let state=seed>>>0;
+return function(){
+state=(state+0x6D2B79F5)>>>0;
+let t=state;
+t=Math.imul(t^(t>>>15),t|1);
+t^=t+Math.imul(t^(t>>>7),t|61);
+return((t^(t>>>14))>>>0)/4294967296;
+};
+}
 const between=(a,b)=>a+rng()*(b-a);
-const choose=a=>a[Math.floor(rng()*a.length)];
-const palettes=[[0x00ffc8,0x087cff,0xd9fff8],[0xff5ebc,0x805cff,0xffd9f1],[0xffb347,0xff4d6d,0xffe9a8],[0x9dff6e,0x21cdb5,0xe5ffb8],[0x9a8cff,0x55d6ff,0xffffff],[0xffef70,0xff7838,0xffd7a0],[0xd4e1f0,0x687caa,0xffffff]];
-function makeShader(palette,geometry){
-const position=geometry.attributes.position;
-const colors=new Float32Array(position.count*3);
-for(let i=0;i<position.count;i+=3){
-const color=new THREE.Color(rng()<.22?choose(palette):palette[Math.floor(rng()*palette.length)]);
-for(let j=0;j<3;j++){colors[(i+j)*3]=color.r;colors[(i+j)*3+1]=color.g;colors[(i+j)*3+2]=color.b;}
+const choose=list=>list[Math.floor(rng()*list.length)];
+const colorHex=c=>new THREE.Color(c);
+function material(color,extra={}){
+const m=new THREE.MeshBasicMaterial({color,...extra});
+wireMaterials.push(m);
+if(wireEnabled)m.wireframe=true;
+return m;
 }
-geometry.setAttribute('color',new THREE.BufferAttribute(colors,3));
-return new THREE.MeshBasicMaterial({vertexColors:true,flatShading:true});
+function lineMaterial(color){
+const m=new THREE.LineBasicMaterial({color});
+return m;
 }
-const types=['crystal','ring','spike','orb','gear','column','knot','polyhedron','cone','torus','star'];
-function makeGeometry(type,detail){
-const r=between(.72,1.16);let g;
-switch(type){
-case'crystal':g=new THREE.IcosahedronGeometry(r,detail);break;
-case'ring':g=new THREE.TorusGeometry(r*.72,between(.13,.28),8+detail*3,18+detail*12);break;
-case'spike':g=new THREE.OctahedronGeometry(r,detail);break;
-case'orb':g=new THREE.SphereGeometry(r,18+detail*12,14+detail*8);break;
-case'gear':g=new THREE.TorusKnotGeometry(r*.68,.16+detail*.025,80+detail*35,8+detail*2,2+Math.floor(rng()*4),3+Math.floor(rng()*4));break;
-case'column':g=new THREE.CylinderGeometry(between(.35,.65),between(.55,.9),between(1.1,2),5+detail*3,2+detail,false);break;
-case'cone':g=new THREE.ConeGeometry(between(.35,.8),between(1,2.2),5+detail*4,2+detail);break;
-case'torus':g=new THREE.TorusGeometry(between(.45,.9),between(.06,.2),8+detail*3,32+detail*16);break;
-case'star':g=new THREE.DodecahedronGeometry(r,0);break;
-case'knot':g=new THREE.TorusKnotGeometry(r*.65,.2,100+detail*30,9,3,5);break;
-default:g=new THREE.DodecahedronGeometry(r,detail);
+function addPick(mesh,handler){
+mesh.userData.onPick=handler;
+pickTargets.push(mesh);
 }
-const p=g.attributes.position,amount=between(.04,.32),seed=between(0,20);
-for(let i=0;i<p.count;i++){const x=p.getX(i),y=p.getY(i),z=p.getZ(i);const wave=Math.sin(x*between(3,8)+y*2.7+seed)*Math.cos(z*between(3,8)-y*2.1-seed);const scale=1+wave*amount+between(-.045,.045);p.setXYZ(i,x*scale,y*scale,z*scale);}
-p.needsUpdate=true;g.computeVertexNormals();return g;
+function addWorldLabel(text,position,width=1.4){
+const canvas=document.createElement('canvas');
+canvas.width=512;canvas.height=112;
+const ctx=canvas.getContext('2d');
+ctx.fillStyle='#101820';ctx.fillRect(2,2,508,108);
+ctx.strokeStyle='#00a98b';ctx.lineWidth=5;ctx.strokeRect(3,3,506,106);
+ctx.fillStyle='#f1fbf9';ctx.font='bold 38px Arial';ctx.textAlign='center';ctx.textBaseline='middle';
+ctx.fillText(text,256,57,480);
+const texture=new THREE.CanvasTexture(canvas);
+texture.colorSpace=THREE.SRGBColorSpace;
+const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:texture,transparent:false,depthTest:false}));
+sprite.scale.set(width,.25,1);
+sprite.position.copy(position);
+world.add(sprite);
+return sprite;
 }
-function addForm(type,position,scale,palette,detail,spin,parent=sculpture){
-const group=new THREE.Group();group.position.copy(position);group.scale.setScalar(scale);
-group.rotation.set(between(0,Math.PI),between(0,Math.PI),between(0,Math.PI));group.userData.spin=spin;
-let geometry=makeGeometry(type,detail);
-if(geometry.index)geometry=geometry.toNonIndexed();
-const formPalette=rng()<.4?choose(palettes):palette;
-group.add(new THREE.Mesh(geometry,makeShader(formPalette,geometry)));
-const wire=new THREE.Mesh(geometry,new THREE.MeshBasicMaterial({color:formPalette[2],wireframe:true}));
-wire.scale.setScalar(1.008);wire.visible=wireEnabled;wire.userData.wire=true;group.add(wire);wireMeshes.push(wire);
-parent.add(group);return group;
+function disposeWorld(){
+world.traverse(obj=>{
+if(obj.geometry)obj.geometry.dispose();
+if(obj.material){
+const list=Array.isArray(obj.material)?obj.material:[obj.material];
+list.forEach(m=>{if(m.map)m.map.dispose();m.dispose();});
 }
-function clearSculpture(){
-const geometries=new Set(),materials=new Set();
-sculpture.traverse(o=>{if(o.geometry)geometries.add(o.geometry);if(o.material){if(Array.isArray(o.material))o.material.forEach(m=>materials.add(m));else materials.add(o.material);}});
-while(sculpture.children.length)sculpture.remove(sculpture.children[0]);
-geometries.forEach(g=>g.dispose());materials.forEach(m=>m.dispose());
-wireMeshes=[];shaderMaterials=[];
+});
+scene.remove(world);
+world=new THREE.Group();scene.add(world);
+pickTargets=[];wireMaterials=[];agents=[];movingObjects=[];
 }
-const first=['Velvet','Quantum','Prism','Orbit','Melted','Electric','Lunar','Fractal','Glacier','Static','Blooming','Chrome','Aether','Soft'];
-const last=['Reliquary','Anomaly','Spindle','Bloom','Engine','Shard','Organism','Helix','Totem','Echo','Artifact','Nest','Machine','Memory'];
-const labels={crystal:'faceted crystal',ring:'open ring structure',spike:'angular spiked form',orb:'rounded organic form',gear:'interwoven mechanical knot',column:'geometric column',knot:'twisted knot structure',polyhedron:'polyhedral sculpture'};
-function createOrbitPath(parent,radiusX,radiusZ,color){
-const points=[];
-for(let i=0;i<160;i++){const a=i/160*Math.PI*2;points.push(new THREE.Vector3(Math.cos(a)*radiusX,0,Math.sin(a)*radiusZ));}
-const geometry=new THREE.BufferGeometry().setFromPoints(points);
-const line=new THREE.LineLoop(geometry,new THREE.LineBasicMaterial({color}));
-parent.add(line);return line;
+function clearCameraTween(){cameraTween=null;}
+function moveCamera(position,target,duration=850,minDistance=.5,maxDistance=130){
+controls.minDistance=minDistance;controls.maxDistance=maxDistance;
+cameraTween={fromPosition:camera.position.clone(),toPosition:position.clone(),fromTarget:controls.target.clone(),toTarget:target.clone(),start:performance.now(),duration};
 }
-function generate(seedValue){
-clearSculpture();
-const n=Number(seedValue);
-activeSeed=Number.isSafeInteger(n)&&n>=0&&n<=4294967295?n:Math.floor(Math.random()*900000000+100000000);
-rng=seededRandom(activeSeed);animationTime=0;
+function setWire(value){
+wireEnabled=value;
+wireMaterials.forEach(m=>{if('wireframe' in m)m.wireframe=value;});
+const button=document.querySelector('#wire');
+button.textContent='Wireframe: '+(value?'on':'off');
+button.classList.toggle('active',value);
+button.setAttribute('aria-pressed',String(value));
+}
+function setPanel(eyebrow,name,description,primaryText,backVisible=true){
+document.querySelector('#eyebrow').textContent=eyebrow;
+document.querySelector('#name').textContent=name;
+document.querySelector('#description').textContent=description;
+document.querySelector('#primary').textContent=primaryText;
+document.querySelector('#back').style.display=backVisible?'block':'none';
+}
+function setCrumbs(items){
+const nav=document.querySelector('#crumbs');nav.replaceChildren();
+items.forEach((item,index)=>{
+const button=document.createElement('button');
+button.className='crumb'+(item.current?' current':'');
+button.textContent=item.label;
+button.disabled=!!item.current;
+if(item.action)button.addEventListener('click',item.action);
+nav.appendChild(button);
+});
+}
+function updateSeedButton(){
 document.querySelector('#seed').textContent='SEED · '+activeSeed;
 const url=new URL(location.href);url.searchParams.set('seed',String(activeSeed));history.replaceState(null,'',url);
-const palette=choose(palettes),detail=Math.floor(between(0,3));
-const planetCount=choose([3,4,5,6,7,8,9]);
-const system=new THREE.Group();sculpture.add(system);
-
-// A bright, irregular star gives every system a clear center.
-const starGroup=new THREE.Group();system.add(starGroup);starGroup.userData.spin=between(.025,.07);
-const starColor=choose(palette);
-const starGeometry=choose([new THREE.IcosahedronGeometry(between(.38,.58),0),new THREE.OctahedronGeometry(between(.4,.62),0),new THREE.DodecahedronGeometry(between(.4,.57),0)]);
-const star=new THREE.Mesh(starGeometry,new THREE.MeshBasicMaterial({color:starColor,flatShading:true}));
-starGroup.add(star);
-// A few hard-edged rays make the star silhouette different each time.
-const rayCount=Math.floor(between(5,13));
-for(let i=0;i<rayCount;i++){
-const ray=new THREE.Mesh(new THREE.ConeGeometry(between(.035,.12),between(.22,.7),3),new THREE.MeshBasicMaterial({color:choose(palette)}));
-const angle=i/rayCount*Math.PI*2+between(-.2,.2),tilt=between(-.7,.7),distance=between(.43,.63);
-ray.position.set(Math.cos(angle)*distance,Math.sin(tilt)*distance,Math.sin(angle)*distance);
-ray.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),ray.position.clone().normalize());starGroup.add(ray);
+}
+function focusSystemCamera(){moveCamera(new THREE.Vector3(0,18,35),new THREE.Vector3(0,0,0),850,12,90);}
+function focusGalaxyCamera(){moveCamera(new THREE.Vector3(0,21,31),new THREE.Vector3(0,0,0),900,10,90);}
+function focusPlanetCamera(){moveCamera(new THREE.Vector3(0,1.5,9.1),new THREE.Vector3(0,0,0),900,5.2,18);}
+function focusCountyCamera(){moveCamera(new THREE.Vector3(0,12,15),new THREE.Vector3(0,0,0),900,7,32);}
+function surfacePoint(radius,latitude,longitude){
+return new THREE.Vector3(
+Math.cos(latitude)*Math.cos(longitude)*radius,
+Math.sin(latitude)*radius,
+Math.cos(latitude)*Math.sin(longitude)*radius
+);
+}
+function addLandPatch(parent,radius,lat,lon,wide,tall,color){
+const positions=[];
+const center=surfacePoint(radius+.025,lat,lon);
+const steps=9;
+for(let i=0;i<steps;i++){
+const a=i/steps*Math.PI*2,b=(i+1)/steps*Math.PI*2;
+const p1=surfacePoint(radius+.025,lat+Math.cos(a)*tall,lon+Math.sin(a)*wide);
+const p2=surfacePoint(radius+.025,lat+Math.cos(b)*tall,lon+Math.sin(b)*wide);
+positions.push(center.x,center.y,center.z,p1.x,p1.y,p1.z,p2.x,p2.y,p2.z);
+}
+const geometry=new THREE.BufferGeometry();
+geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));
+geometry.computeVertexNormals();
+parent.add(new THREE.Mesh(geometry,material(color,{side:THREE.DoubleSide})));
+}
+function addSphere(parent,radius,color,segments=32){
+const mesh=new THREE.Mesh(new THREE.SphereGeometry(radius,segments,Math.max(12,Math.floor(segments*.66))),material(color));
+parent.add(mesh);return mesh;
+}
+function createTextName(index){
+return ['Ari','Bex','Cato','Demi','Elo','Fenn','Gio','Hali','Ivo','Juno','Kip','Lumi','Mika','Nori','Orrin','Pax','Quin','Rumi','Soli','Tavi'][index%20];
 }
 
-// Each planet gets its own inclined elliptical orbit.
-const orbitRadii=[];
-for(let i=0;i<planetCount;i++){
-const orbitRadius=1.05+i*between(.39,.72)+between(-.2,.2);
-const depthRadius=orbitRadius*between(.55,1.28);
-orbitRadii.push({x:orbitRadius,z:depthRadius});
-const orbitalPlane=new THREE.Group();
-orbitalPlane.rotation.set(between(-1.05,1.05),between(0,Math.PI*2),between(-.8,.8));
-orbitalPlane.userData.orbitSpeed=between(.07,.19)*(rng()<.5?-1:1);
-system.add(orbitalPlane);
-createOrbitPath(orbitalPlane,orbitRadius,depthRadius,choose(palette));
-
+function buildGalaxy(){
+disposeWorld();
+currentMode='galaxy';
+const pointCount=5600,positions=new Float32Array(pointCount*3),colors=new Float32Array(pointCount*3);
+const galacticColors=[0x93d9ff,0xf4e2a7,0xc7b9ff,0xffffff,0x77ffd9,0xffb5c8].map(colorHex);
+for(let i=0;i<pointCount;i++){
+const arm=Math.floor(rng()*5);
+const radius=Math.pow(rng(),.64)*13.2+.25;
+const angle=arm*Math.PI*2/5+radius*.47+between(-.48,.48);
+positions[i*3]=Math.cos(angle)*radius+between(-.25,.25);
+positions[i*3+1]=between(-.22,.22);
+positions[i*3+2]=Math.sin(angle)*radius*.67+between(-.25,.25);
+const c=choose(galacticColors);
+colors[i*3]=c.r;colors[i*3+1]=c.g;colors[i*3+2]=c.b;
+}
+const geometry=new THREE.BufferGeometry();
+geometry.setAttribute('position',new THREE.BufferAttribute(positions,3));
+geometry.setAttribute('color',new THREE.BufferAttribute(colors,3));
+world.add(new THREE.Points(geometry,new THREE.PointsMaterial({size:.055,vertexColors:true,sizeAttenuation:true})));
+const core=addSphere(world,.82,0xffd77b,20);
+core.position.set(0,0,0);
+const coreRing=new THREE.Mesh(new THREE.TorusGeometry(1.15,.025,4,96),material(0xf6c66b));
+coreRing.rotation.x=Math.PI/2;world.add(coreRing);
+const galaxySystems=[];
+for(let i=0;i<systemNames.length;i++){
+const arm=i%5,radius=2.1+(i%3)*3.25+Math.floor(i/5)*.5;
+const angle=arm*Math.PI*2/5+radius*.47+(i%2?-.18:.2);
+const pos=new THREE.Vector3(Math.cos(angle)*radius,between(-.08,.08),Math.sin(angle)*radius*.67);
+const node=new THREE.Group();node.position.copy(pos);world.add(node);
+const star=addSphere(node,.18+(i%3)*.035,[0xfff0b2,0x9feaff,0xffb6d7,0x9dffcf][i%4],16);
+const rays= new THREE.Mesh(new THREE.TetrahedronGeometry(.34,0),material([0xffdf80,0x84e7ff,0xff93c8,0x8effd0][i%4]));
+node.add(rays);
+const ring=new THREE.Mesh(new THREE.TorusGeometry(.3,.012,4,24),material(0xd7e6ef));
+ring.rotation.x=Math.PI/2;node.add(ring);
+addWorldLabel(systemNames[i],new THREE.Vector3(pos.x,pos.y+.48,pos.z),1.45);
+addPick(star,()=>showSystem(i));
+galaxySystems.push(node);
+}
+setPanel('The Milky Way','Choose a solar system','You are looking at a map of the Milky Way. Select one of the marked star systems to travel there. Each system has its own planets and inhabitants.','Return to Sol',false);
+setCrumbs([{label:'MILKY WAY',current:true}]);
+focusGalaxyCamera();
+}
+function orbitLine(parent,radius,color){
+const points=[];
+for(let i=0;i<160;i++){const a=i/160*Math.PI*2;points.push(new THREE.Vector3(Math.cos(a)*radius,0,Math.sin(a)*radius));}
+const line=new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(points),lineMaterial(color));
+parent.add(line);
+}
+function buildAsteroidBelt(parent,radius,count,seedColor){
+const geometry=new THREE.IcosahedronGeometry(.055,0);
+const mesh=new THREE.InstancedMesh(geometry,material(seedColor),count);
+const dummy=new THREE.Object3D();
+for(let i=0;i<count;i++){
+const a=between(0,Math.PI*2),r=radius+between(-.28,.28);
+dummy.position.set(Math.cos(a)*r,between(-.12,.12),Math.sin(a)*r);
+dummy.rotation.set(between(0,Math.PI),between(0,Math.PI),between(0,Math.PI));
+dummy.scale.setScalar(between(.35,1.8));dummy.updateMatrix();mesh.setMatrixAt(i,dummy.matrix);
+}
+mesh.instanceMatrix.needsUpdate=true;parent.add(mesh);
+}
+function buildSystemData(index){
+if(index===0){
+return [
+{name:'Mercury',radius:.19,distance:2.25,color:0x9c8c7b},
+{name:'Venus',radius:.29,distance:3.45,color:0xd7ad70},
+{name:'Earth',radius:.32,distance:4.8,color:0x378bd6},
+{name:'Mars',radius:.25,distance:6.15,color:0xb85f43},
+{name:'Jupiter',radius:.77,distance:8.65,color:0xd5a77f},
+{name:'Saturn',radius:.67,distance:11.3,color:0xd8c28d,ring:true},
+{name:'Uranus',radius:.49,distance:13.8,color:0x71cbd1,ring:true},
+{name:'Neptune',radius:.47,distance:16.1,color:0x456dd5}
+];
+}
+const palette=choose(palettes);
+const count=Math.floor(between(4,10));
+const planets=[];
+for(let i=0;i<count;i++){
+planets.push({
+name:choose(['Astra','Numa','Kairo','Vesper','Oryn','Luma','Tethys','Calyx','Mira','Rill'])+' '+(i+1),
+radius:between(.17,.66),
+distance:2.4+i*between(1.45,2.05),
+color:choose(palette),
+ring:rng()<.32
+});
+}
+return planets;
+}
+function makeSystemPlanet(data,index,parent){
+const plane=new THREE.Group();
+plane.rotation.set(between(-.11,.11),between(0,Math.PI*2),between(-.08,.08));
+plane.userData.orbitSpeed=between(.018,.075)*(rng()<.5?-1:1);
+parent.add(plane);
+orbitLine(plane,data.distance,choose([0x36555a,0x394a65,0x655347,0x4d526a]));
 const angle=between(0,Math.PI*2);
 const anchor=new THREE.Group();
-anchor.position.set(Math.cos(angle)*orbitRadius,0,Math.sin(angle)*depthRadius);
-anchor.userData.spin=between(.18,.52);
-orbitalPlane.add(anchor);
-
-const planetSize=between(.09,.43)*(rng()<.18?1.55:1);
-const planetType=choose(types);
-const planetPalette=rng()<.32?choose(palettes):palette;
-addForm(planetType,new THREE.Vector3(0,0,0),planetSize,planetPalette,Math.floor(between(0,3)),between(-.16,.16),anchor);
-
-// Some planets have their own thin rings.
-if(rng()<.58){
-const ring=new THREE.Mesh(
-new THREE.TorusGeometry(planetSize*1.65,planetSize*.105,6,64),
-new THREE.MeshBasicMaterial({color:choose(planetPalette)})
-);
-ring.rotation.set(Math.PI/2+between(-.35,.35),between(-.3,.3),between(-.3,.3));
-anchor.add(ring);
+anchor.position.set(Math.cos(angle)*data.distance,0,Math.sin(angle)*data.distance);
+plane.add(anchor);
+const planetGroup=new THREE.Group();anchor.add(planetGroup);
+const sphere=addSphere(planetGroup,data.radius,data.color,48);
+planetGroup.userData.spin=between(.05,.22);
+if(data.ring){
+const ring=new THREE.Mesh(new THREE.TorusGeometry(data.radius*1.55,data.radius*.14,5,64),material(choose([0xb9a77d,0xd5e1e6,0x9cc5c7,0xb58f74])));
+ring.rotation.set(Math.PI/2+between(-.22,.22),between(-.15,.15),between(-.15,.15));planetGroup.add(ring);
+}
+if(rng()<.38){
+const moon=new THREE.Group();moon.userData.orbitSpeed=between(.18,.55)*(rng()<.5?-1:1);planetGroup.add(moon);
+const moonDistance=data.radius*2.15;
+const moonRing=new THREE.Mesh(new THREE.TorusGeometry(moonDistance,.008,3,40),material(0x788b9b));moonRing.rotation.x=Math.PI/2;moon.add(moonRing);
+const moonMesh=addSphere(moon,.07,choose([0xc4cbd0,0x8fa1ad,0x8e806f]),12);
+moonMesh.position.set(moonDistance,0,0);
+}
+addPick(sphere,()=>showPlanet(data,index));
+return plane;
+}
+function showSystem(index,seedOverride){
+currentSystemIndex=index;
+currentSystemName=systemNames[index]||'Unknown System';
+activeSeed=seedOverride!==undefined?seedOverride:(systemSeeds[index]||Math.floor(Math.random()*900000000));
+rng=seededRandom(activeSeed);
+disposeWorld();
+currentMode='system';currentPlanet=null;currentCounty=null;currentCreature=null;
+const starColor=index===0?0xffd56b:choose([0xffdf86,0x9edfff,0xff9fca,0xafffd5,0xffffff]);
+const sun=addSphere(world,index===0?.78:between(.52,.9),starColor,32);
+sun.userData.spin=.04;
+const spikes=Math.floor(between(7,14));
+for(let i=0;i<spikes;i++){
+const ray=new THREE.Mesh(new THREE.ConeGeometry(between(.035,.08),between(.35,.8),4),material(starColor));
+const angle=i/spikes*Math.PI*2;
+ray.position.set(Math.cos(angle)*.65,between(-.2,.2),Math.sin(angle)*.65);
+ray.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),ray.position.clone().normalize());
+world.add(ray);
+}
+const planets=buildSystemData(index);
+planets.forEach((p,i)=>makeSystemPlanet(p,i,world));
+if(planets.length>=4)buildAsteroidBelt(world,index===0?7.35:(planets[1].distance+planets[2].distance)/2,160,0x8b97a1);
+const debrisCount= index===0?55:Math.floor(between(35,95));
+for(let i=0;i<debrisCount;i++){
+const bit=new THREE.Mesh(new THREE.TetrahedronGeometry(between(.025,.07),0),material(choose([0x79929b,0x8c8a7f,0x556f7d])));
+const a=between(0,Math.PI*2),r=between(2,planets[planets.length-1].distance+2);
+bit.position.set(Math.cos(a)*r,between(-.4,.4),Math.sin(a)*r);
+world.add(bit);
+}
+updateSeedButton();
+setPanel('Solar system',currentSystemName,planets.length+' planets are circling this star. Choose a planet to zoom in, inspect its counties, and meet the inhabitants living there.','Explore Milky Way',false);
+setCrumbs([{label:'MILKY WAY',action:buildGalaxy},{label:currentSystemName,current:true}]);
+focusSystemCamera();
+}
+function showPlanet(data,index){
+currentPlanet={...data,index:index,systemIndex:currentSystemIndex,systemName:currentSystemName,seed:activeSeed+index*9176};
+disposeWorld();
+currentMode='planet';currentCounty=null;currentCreature=null;
+const radius=3.15;
+const globe=new THREE.Group();world.add(globe);
+const sphere=addSphere(globe,radius,data.color,64);
+const landColors=[0x6b9b68,0x9dbb65,0xb8a16a,0x3d8c86,0xc39b63,0x77a7a1];
+const patchCount=12;
+for(let i=0;i<patchCount;i++){
+const lat=between(-1.15,1.15),lon=between(-Math.PI,Math.PI);
+addLandPatch(globe,radius,lat,lon,between(.09,.24),between(.07,.19),choose(landColors));
+}
+if(data.ring||rng()<.38){
+const ring=new THREE.Mesh(new THREE.TorusGeometry(radius*1.38,.09,5,96),material(0xc1b88c));
+ring.rotation.set(Math.PI/2+between(-.3,.3),between(-.2,.2),between(-.2,.2));globe.add(ring);
+}
+const countyNames=['Mossreach','Copper Flats','Glasswater','North Tangle','Amber County','Stonefield','Cloudbreak','Blue Hollow'];
+const coords=[[-.2,.55],[.1,1.05],[.52,1.6],[-.48,2.2],[.78,2.55],[-.68,1.35],[.32,.12],[-.05,2.85]];
+const countyCount=6+Math.floor(rng()*3);
+for(let i=0;i<countyCount;i++){
+const [lat,lon]=coords[i];
+const county={index:i,name:'County of '+countyNames[i],planetName:data.name,systemName:currentSystemName,description:choose(['A busy settlement surrounded by mineral fields.','A forested region with small farms and workshops.','A rocky stretch where builders and miners share a town.','A coastal county full of tiny trading outposts.','A quiet valley with a surprisingly busy population.'])};
+const marker=new THREE.Group();
+const normal=surfacePoint(1,lat,lon).normalize();
+marker.position.copy(normal.clone().multiplyScalar(radius+.035));
+marker.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),normal);
+globe.add(marker);
+const post=new THREE.Mesh(new THREE.CylinderGeometry(.035,.045,.2,6),material(0xe6eee9));
+post.position.y=.09;marker.add(post);
+const dot=addSphere(marker,.14,[0x00ffc8,0xffc45c,0x88aaff,0xff82be,0xa9ed72][i%5],14);
+dot.position.y=.22;
+addWorldLabel(countyNames[i],normal.clone().multiplyScalar(radius+.72),1.25);
+addPick(dot,()=>showCounty(county));
+}
+addPick(sphere,()=>{});
+setPanel('Planet explorer',data.name,'This planet is round, mapped into '+countyCount+' counties, and full of places to explore. Rotate the globe and select a county marker to visit its people.','Back to system');
+setCrumbs([{label:'MILKY WAY',action:buildGalaxy},{label:currentSystemName,action:()=>showSystem(currentSystemIndex)},{label:data.name,current:true}]);
+focusPlanetCamera();
+}
+function addBox(parent,size,position,color){
+const mesh=new THREE.Mesh(new THREE.BoxGeometry(size[0],size[1],size[2]),material(color));
+mesh.position.set(position[0],position[1],position[2]);parent.add(mesh);return mesh;
+}
+function addBuilding(x,z,kind,index){
+const group=new THREE.Group();group.position.set(x,0,z);world.add(group);
+const baseColor=[0x9a8060,0x758f8a,0x8c8e9b,0xb09569][index%4];
+addBox(group,[1.15,.82,.95],[0,.42,0],baseColor);
+const roof=new THREE.Mesh(new THREE.ConeGeometry(.88,.62,4),material([0x754d45,0x4d6c71,0x565875,0x8f6d43][index%4]));
+roof.position.y=1.12;roof.rotation.y=Math.PI/4;group.add(roof);
+addBox(group,[.22,.4,.04],[0,.25,.49],0x273b43);
+addBox(group,[.22,.2,.04],[-.37,.48,.49],0x9fd9d0);
+addBox(group,[.22,.2,.04],[.37,.48,.49],0x9fd9d0);
+if(kind==='workshop'){
+addBox(group,[.22,.55,.22],[.55,1.05,-.2],0x6d7379);
+for(let i=0;i<4;i++){
+const beam=addBox(group,[.055,1.45,.055],[(i%2?1:-1)*.72,.72,(i<2?1:-1)*.58],0xd2a75f);
+}
+}
+if(kind==='build'){
+for(let i=0;i<4;i++){
+addBox(group,[.06,1.65,.06],[(i%2?1:-1)*.72,.82,(i<2?1:-1)*.58],0xe6b85e);
+}
+for(let i=0;i<2;i++)addBox(group,[1.5,.055,.055],[0,.65+i*.45,-.58],0xe6b85e);
+}
+return group;
+}
+function addResource(x,z,color,label){
+const node=new THREE.Group();node.position.set(x,0,z);world.add(node);
+for(let i=0;i<4;i++){
+const crystal=new THREE.Mesh(new THREE.OctahedronGeometry(between(.18,.34),0),material(color));
+crystal.position.set(between(-.32,.32),between(.15,.38),between(-.28,.28));
+crystal.rotation.set(between(0,1),between(0,1),between(0,1));node.add(crystal);
+}
+const rock=new THREE.Mesh(new THREE.DodecahedronGeometry(.35,0),material(0x555f68));
+rock.position.y=.05;rock.scale.set(1,.55,1);node.add(rock);
+addWorldLabel(label,new THREE.Vector3(x,.9,z),1.05);
+return {x,z,node,label};
+}
+function addTree(x,z){
+const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.08,.11,.65,5),material(0x79533a));trunk.position.set(x,.32,z);world.add(trunk);
+const crown=new THREE.Mesh(new THREE.ConeGeometry(.48,1.15,5),material(choose([0x4d9c66,0x7dbb55,0x398a77])));
+crown.position.set(x,.98,z);world.add(crown);
+}
+function makeCreature(index,record){
+const group=new THREE.Group();group.position.set(record.x,0,record.z);world.add(group);
+const bodyColor=record.color;
+const body=addBox(group,[.3,.43,.2],[0,.56,0],bodyColor);
+const head=addSphere(group,.18,record.head,16);head.position.set(0,.91,.015);
+const eyeColor=0x15232a;
+const eye1=addSphere(group,.027,eyeColor,8);eye1.position.set(-.065,.94,.16);
+const eye2=addSphere(group,.027,eyeColor,8);eye2.position.set(.065,.94,.16);
+const leftArm=new THREE.Group();leftArm.position.set(-.2,.72,0);group.add(leftArm);
+addBox(leftArm,[.1,.34,.11],[0,-.16,0],bodyColor);
+const rightArm=new THREE.Group();rightArm.position.set(.2,.72,0);group.add(rightArm);
+addBox(rightArm,[.1,.34,.11],[0,-.16,0],bodyColor);
+const leftLeg=new THREE.Group();leftLeg.position.set(-.085,.37,0);group.add(leftLeg);
+addBox(leftLeg,[.12,.34,.14],[0,-.16,0],0x354652);
+const rightLeg=new THREE.Group();rightLeg.position.set(.085,.37,0);group.add(rightLeg);
+addBox(rightLeg,[.12,.34,.14],[0,-.16,0],0x354652);
+const tool=addBox(group,[.08,.27,.08],[.31,.48,.02],record.toolColor||0xb8b9ae);
+tool.rotation.z=-.25;
+group.userData={
+name:record.name,role:record.role,activity:record.activity,route:record.route,routeIndex:0,state:'walk',stateTime:0,
+speed:record.speed||between(.55,.95),phase:between(0,Math.PI*2),leftArm,rightArm,leftLeg,rightLeg,tool,home:record.home
+};
+addPick(body,()=>showCreature(group));
+addPick(head,()=>showCreature(group));
+agents.push(group);
+return group;
+}
+function showCounty(county){
+currentCounty=county;currentCreature=null;
+rng=seededRandom(activeSeed+county.index*73651+currentPlanet.index*919);
+disposeWorld();
+currentMode='county';
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(16,12),material([0x315a49,0x4b674d,0x596749,0x3a625d][county.index%4]));
+ground.rotation.x=-Math.PI/2;ground.position.y=-.09;world.add(ground);
+// County edges and roads are solid blocks, not translucent overlays.
+for(let x=-7;x<=7;x+=1.4)addBox(world,[.025,.025,12],[x,0,-0],0x55745f);
+for(let z=-5;z<=5;z+=1.4)addBox(world,[16,.025,.025],[0,0,z],0x55745f);
+addBox(world,[1.1,.025,12],[0,.005,0],0xb8a57d);
+addBox(world,[16,.03,.8],[0,.012,-1.8],0xb8a57d);
+addBuilding(-4,-2,'workshop',0);
+addBuilding(3,-2.7,'build',1);
+addBuilding(3.8,2.3,'house',2);
+addBuilding(-3.2,2.6,'house',3);
+addBuilding(.1,3.3,'workshop',1);
+const resources=[
+addResource(-5,-3,0x57d5dc,'COPPER'),
+addResource(5,-.2,0x8e79ec,'CRYSTAL'),
+addResource(-2,4,0xe6b64e,'ORE'),
+addResource(1,-4,0x69c9a0,'GEMS'),
+addResource(5,3.6,0x9ba8b2,'STONE')
+];
+for(let i=0;i<18;i++)addTree(between(-7,7),between(-5,5));
+for(let i=0;i<6;i++){
+const x=between(-6,6),z=between(-4,4);
+const plot=new THREE.Mesh(new THREE.BoxGeometry(1.2,.035,.65),material(0x876b45));plot.position.set(x,.02,z);world.add(plot);
+for(let row=0;row<3;row++)for(let col=0;col<5;col++){
+const crop=new THREE.Mesh(new THREE.ConeGeometry(.055,.28,4),material(0x85bf58));
+crop.position.set(x-.45+col*.22,.18,z-.2+row*.19);world.add(crop);
+}
+}
+const records=[
+{name:createTextName(0),role:'Miner',activity:'harvesting copper crystals',x:-1,z:-3,head:0xe9ba91,color:0x00b99a,toolColor:0x9dc7c1,route:[[-4.6,-3],[-2.5,-1.4],[-1,-2.5]]},
+{name:createTextName(1),role:'Builder',activity:'working on a new workshop',x:1,z:1,head:0xc98c6e,color:0xd08c42,route:[[2.5,-2.3],[3,0],[1,1]]},
+{name:createTextName(2),role:'Harvester',activity:'collecting bright gems',x:4,z:1,head:0xb8d3e8,color:0x648bd1,route:[[1,-3.5],[3,-3],[4,-1]]},
+{name:createTextName(3),role:'Gardener',activity:'tending the crop fields',x:-2,z:1,head:0xe1c18e,color:0x75a85c,route:[[-1,3],[0,3],[1.2,2.2]]},
+{name:createTextName(4),role:'Courier',activity:'carrying supplies between homes',x:0,z:-1,head:0xd9a3bc,color:0x9b72bb,route:[[-3,2],[0,1],[3,2]]},
+{name:createTextName(5),role:'Miner',activity:'breaking down a stone deposit',x:5,z:3,head:0x8fc9a7,color:0xa4aab5,route:[[4.6,3.2],[2.8,2],[1.8,.7]]},
+{name:createTextName(6),role:'Engineer',activity:'building a small machine',x:-4,z:2,head:0xd7d4a2,color:0x4f9c9c,route:[[-3.2,2.6],[-2,1],[-.5,.5]]},
+{name:createTextName(7),role:'Scout',activity:'exploring the edge of the county',x:0,z:4,head:0xb8a2e6,color:0xd16d7c,route:[[5,4],[5,-1],[2,-4]]}
+];
+records.forEach((r,i)=>makeCreature(i,r));
+setPanel('County explorer',county.name,county.description+' '+agents.length+' locals are walking around, building, farming, and harvesting. Click one of them to follow what they are doing.','Back to planet');
+setCrumbs([{label:'MILKY WAY',action:buildGalaxy},{label:currentSystemName,action:()=>showSystem(currentSystemIndex)},{label:currentPlanet.name,action:()=>showPlanet(currentPlanet,currentPlanet.index)},{label:county.name,current:true}]);
+focusCountyCamera();
+}
+function showCreature(group){
+currentCreature=group;
+currentMode='creature';
+const data=group.userData;
+const p=group.position.clone();
+setPanel(data.role+' · local resident',data.name,data.name+' is a '+data.role.toLowerCase()+' who is currently '+data.activity+'. Watch them move around the county and carry on their work.','Back to county');
+setCrumbs([{label:'MILKY WAY',action:buildGalaxy},{label:currentSystemName,action:()=>showSystem(currentSystemIndex)},{label:currentPlanet.name,action:()=>showPlanet(currentPlanet,currentPlanet.index)},{label:currentCounty.name,action:()=>showCounty(currentCounty)},{label:data.name,current:true}]);
+moveCamera(new THREE.Vector3(p.x+3.1,2.6,p.z+4.8),new THREE.Vector3(p.x,.72,p.z),850,2.8,9);
+}
+function goBack(){
+if(currentMode==='creature'){currentMode='county';currentCreature=null;setPanel('County explorer',currentCounty.name,currentCounty.description+' Locals continue their daily routines. Select another little resident to follow.','Back to planet');setCrumbs([{label:'MILKY WAY',action:buildGalaxy},{label:currentSystemName,action:()=>showSystem(currentSystemIndex)},{label:currentPlanet.name,action:()=>showPlanet(currentPlanet,currentPlanet.index)},{label:currentCounty.name,current:true}]);focusCountyCamera();return;}
+if(currentMode==='county'){showPlanet(currentPlanet,currentPlanet.index);return;}
+if(currentMode==='planet'){showSystem(currentSystemIndex);return;}
+if(currentMode==='system'){buildGalaxy();return;}
+if(currentMode==='galaxy'){showSystem(0);return;}
+}
+function primaryAction(){
+if(currentMode==='system'){buildGalaxy();return;}
+if(currentMode==='galaxy'){showSystem(0);return;}
+goBack();
 }
 
-// A few planets have a tiny moon travelling around them.
-const moonCount=Math.floor(between(0,rng()<.35?4:2));
-for(let m=0;m<moonCount;m++){
-const moonDistance=planetSize*between(1.8,4.2),moonAngle=between(0,Math.PI*2);
-const moonOrbit=new THREE.Group();moonOrbit.rotation.set(between(-.8,.8),between(0,Math.PI*2),between(-.5,.5));moonOrbit.userData.orbitSpeed=between(.3,1.2)*(rng()<.5?-1:1);anchor.add(moonOrbit);
-const moonPath=new THREE.Mesh(new THREE.TorusGeometry(moonDistance,.003,3,48),new THREE.MeshBasicMaterial({color:choose(planetPalette)}));moonPath.rotation.x=Math.PI/2;moonOrbit.add(moonPath);
-addForm(choose(['orb','crystal','polyhedron','star','cone']),new THREE.Vector3(Math.cos(moonAngle)*moonDistance,0,Math.sin(moonAngle)*moonDistance),planetSize*between(.12,.34),planetPalette,0,between(-.25,.25),moonOrbit);
-}
-}
-
-// A loose asteroid belt sits between two planetary lanes.
-if(planetCount>=3){
-const beltRadius=(orbitRadii[1].x+orbitRadii[2].x)/2;
-const belt=new THREE.Group();belt.rotation.set(between(-.3,.3),between(0,Math.PI*2),between(-.15,.15));
-belt.userData.orbitSpeed=between(.018,.045)*(rng()<.5?-1:1);system.add(belt);
-const asteroidCount=Math.floor(between(90,190));
-const asteroidGeometry=new THREE.IcosahedronGeometry(.035,0);
-const asteroidMaterial=new THREE.MeshBasicMaterial({color:choose(palette)});
-const asteroids=new THREE.InstancedMesh(asteroidGeometry,asteroidMaterial,asteroidCount);
-const dummy=new THREE.Object3D();
-for(let i=0;i<asteroidCount;i++){
-const angle=between(0,Math.PI*2),radius=beltRadius+between(-.26,.26);
-dummy.position.set(Math.cos(angle)*radius,between(-.16,.16),Math.sin(angle)*radius);
-dummy.rotation.set(between(0,Math.PI),between(0,Math.PI),between(0,Math.PI));
-dummy.scale.setScalar(between(.35,1.8));dummy.updateMatrix();asteroids.setMatrixAt(i,dummy.matrix);
-}
-asteroids.instanceMatrix.needsUpdate=true;belt.add(asteroids);
-}
-
-document.querySelector('#name').textContent=choose(['Little','Hidden','Distant','Quiet','Strange','Prismatic','Forgotten','Electric'])+' '+choose(['Solar System','Starfield','Planetary System','Orbit Garden','Celestial Engine']);
-document.querySelector('#description').textContent=planetCount+' orbiting planets · tilted elliptical paths · '+(planetCount>=4?'asteroid belt':'scattered moons')+' · '+(['coarse','medium','fine'][detail])+' surface geometry';
-sculpture.rotation.set(0,0,0);
-}
-document.querySelector('#generate').addEventListener('click',()=>generate());
-document.querySelector('#reset').addEventListener('click',()=>{camera.position.set(0,1.8,8.2);controls.target.set(0,.1,0);controls.update();});
-document.querySelector('#wire').addEventListener('click',e=>{wireEnabled=!wireEnabled;wireMeshes.forEach(m=>m.visible=wireEnabled);e.currentTarget.classList.toggle('active',wireEnabled);e.currentTarget.textContent='Wireframe: '+(wireEnabled?'on':'off');e.currentTarget.setAttribute('aria-pressed',String(wireEnabled));});
-document.querySelector('#motion').addEventListener('click',e=>{motionEnabled=!motionEnabled;e.currentTarget.classList.toggle('active',motionEnabled);e.currentTarget.textContent='Motion: '+(motionEnabled?'on':'off');e.currentTarget.setAttribute('aria-pressed',String(motionEnabled));});
-document.querySelector('#seed').addEventListener('click',async e=>{const url=new URL(location.href);url.searchParams.set('seed',String(activeSeed));try{await navigator.clipboard.writeText(url.toString());e.currentTarget.textContent='COPIED · '+activeSeed;window.setTimeout(()=>{e.currentTarget.textContent='SEED · '+activeSeed;},1300);}catch{e.currentTarget.textContent='SEED · '+activeSeed;}});
-const requested=new URLSearchParams(location.search).get('seed');generate(requested!==null&&/^\d+$/.test(requested)?requested:undefined);
-const clock=new THREE.Clock();
-renderer.setAnimationLoop(()=>{
-const delta=Math.min(clock.getDelta(),.05);
-if(motionEnabled)animationTime+=delta;
-if(motionEnabled){
-stars.rotation.y=animationTime*.004;
-sculpture.rotation.y=animationTime*.018;
-sculpture.traverse(child=>{if(child.userData.orbitSpeed)child.rotation.y+=child.userData.orbitSpeed*delta;if(child.userData.spin){child.rotation.y+=child.userData.spin*delta;child.rotation.x+=child.userData.spin*.12*delta;}if(child.userData.float)child.position.y=child.userData.baseY+Math.sin(animationTime*child.userData.float+child.id)*.12;});
-}
-// Geometry uses solid flat colors; there are no animated color gradients.
-controls.update();renderer.render(scene,camera);
+document.querySelector('#back').addEventListener('click',goBack);
+document.querySelector('#primary').addEventListener('click',primaryAction);
+document.querySelector('#motion').addEventListener('click',e=>{
+motionEnabled=!motionEnabled;
+e.currentTarget.classList.toggle('active',motionEnabled);
+e.currentTarget.textContent='Motion: '+(motionEnabled?'on':'off');
+e.currentTarget.setAttribute('aria-pressed',String(motionEnabled));
 });
-window.addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,2));});
+document.querySelector('#wire').addEventListener('click',()=>setWire(!wireEnabled));
+document.querySelector('#seed').addEventListener('click',async e=>{
+const url=new URL(location.href);url.searchParams.set('seed',String(activeSeed));
+try{await navigator.clipboard.writeText(url.toString());e.currentTarget.textContent='COPIED · '+activeSeed;window.setTimeout(()=>{e.currentTarget.textContent='SEED · '+activeSeed;},1200);}
+catch{e.currentTarget.textContent='SEED · '+activeSeed;}
+});
+renderer.domElement.addEventListener('pointerdown',e=>{pointerDown={x:e.clientX,y:e.clientY};});
+renderer.domElement.addEventListener('pointerup',e=>{
+if(!pointerDown)return;
+const moved=Math.hypot(e.clientX-pointerDown.x,e.clientY-pointerDown.y);
+pointerDown=null;
+if(moved>7)return;
+const rect=renderer.domElement.getBoundingClientRect();
+pointer.x=((e.clientX-rect.left)/rect.width)*2-1;
+pointer.y=-((e.clientY-rect.top)/rect.height)*2+1;
+raycaster.setFromCamera(pointer,camera);
+const hits=raycaster.intersectObjects(pickTargets,false);
+if(hits.length&&hits[0].object.userData.onPick)hits[0].object.userData.onPick();
+});
+
+function updateAgents(delta){
+if(!motionEnabled)return;
+for(const group of agents){
+const data=group.userData;
+data.phase+=delta*8;
+if(data.state==='walk'){
+const target=data.route[data.routeIndex%data.route.length];
+const dx=target[0]-group.position.x,dz=target[1]-group.position.z;
+const distance=Math.hypot(dx,dz);
+if(distance<.22){data.state='work';data.stateTime=between(1.4,3.1);}
+else{
+const step=Math.min(distance,data.speed*delta);
+group.position.x+=dx/distance*step;group.position.z+=dz/distance*step;
+group.rotation.y=Math.atan2(dx,dz);
+}
+}else{
+data.stateTime-=delta;
+if(data.stateTime<=0){data.state='walk';data.routeIndex=(data.routeIndex+1)%data.route.length;}
+}
+const walking=data.state==='walk';
+const swing=walking?Math.sin(data.phase)*.58:Math.sin(data.phase*1.8)*.18;
+data.leftLeg.rotation.x=swing;data.rightLeg.rotation.x=-swing;
+data.leftArm.rotation.x=-swing*.72;
+data.rightArm.rotation.x=walking?swing*.72:Math.sin(data.phase*1.8)*.85;
+}
+}
+function updateCamera(){
+if(!cameraTween)return;
+const elapsed=performance.now()-cameraTween.start;
+const t=Math.min(1,elapsed/cameraTween.duration);
+const eased=t*t*(3-2*t);
+camera.position.lerpVectors(cameraTween.fromPosition,cameraTween.toPosition,eased);
+controls.target.lerpVectors(cameraTween.fromTarget,cameraTween.toTarget,eased);
+if(t>=1)cameraTween=null;
+}
+function animate(){
+requestAnimationFrame(animate);
+const delta=Math.min(clock.getDelta(),.05);
+if(motionEnabled){
+animationClock+=delta;
+world.traverse(obj=>{
+if(obj.userData.orbitSpeed)obj.rotation.y+=obj.userData.orbitSpeed*delta;
+if(obj.userData.spin)obj.rotation.y+=obj.userData.spin*delta;
+});
+updateAgents(delta);
+}
+updateCamera();
+controls.update();
+renderer.render(scene,camera);
+}
+const clock=new THREE.Clock();
+window.addEventListener('resize',()=>{
+camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();
+renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+});
+const requestedSeed=new URLSearchParams(location.search).get('seed');
+showSystem(0,requestedSeed!==null&&/^\d+$/.test(requestedSeed)?Number(requestedSeed):undefined);
+animate();
 </script>
 </body>
 </html>
