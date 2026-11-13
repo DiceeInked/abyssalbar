@@ -19,7 +19,7 @@ button{font:inherit;-webkit-tap-highlight-color:transparent}button:focus-visible
 .eyebrow{margin:0 0 5px;color:var(--accent);font-size:9px;font-weight:800;letter-spacing:.18em;text-transform:uppercase}
 h1{margin:0 0 4px;font-size:20px;line-height:1.15;letter-spacing:-.035em}
 #description{min-height:32px;margin:0;color:var(--muted);font-size:11px;line-height:1.45}
-.actions{display:flex;gap:8px;margin-top:13px}.tools{display:flex;gap:7px;margin-top:8px}.tools .button{flex:1;padding:8px 6px;color:#aab5bf;font-size:10px}
+.actions{display:flex;gap:8px;margin-top:13px}
 .button{min-height:42px;padding:9px 13px;border:1px solid var(--line);border-radius:10px;background:#ffffff09;color:var(--text);font-size:11px;font-weight:700;cursor:pointer;transition:background .15s,border-color .15s,transform .15s}
 .button:active{transform:scale(.97)}.button:hover{border-color:#00ffc880;background:#00ffc812}
 .primary{flex:1;border-color:var(--accent);background:var(--accent);color:#001b14;font-weight:850}.primary:hover{background:#71ffe0}
@@ -43,7 +43,6 @@ h1{margin:0 0 4px;font-size:20px;line-height:1.15;letter-spacing:-.035em}
 <h1 id="name">Building a specimen…</h1>
 <p id="description">Mixing geometry, color, and shader effects.</p>
 <div class="actions"><button class="button primary" id="generate" type="button">✦ &nbsp; Generate new</button><button class="button" id="reset" type="button" aria-label="Reset camera view">↺</button></div>
-<div class="tools"><button class="button" id="palette" type="button">Palette: random</button><button class="button" id="save" type="button">Save image</button></div>
 <div class="toggles"><button class="button" id="wire" type="button" aria-pressed="false">Wireframe: off</button><button class="button active" id="motion" type="button" aria-pressed="true">Motion: on</button></div>
 </section>
 <div class="hint">DRAG TO ORBIT · PINCH / SCROLL TO ZOOM<br>CLICK THE SEED TO COPY A REPLAY LINK</div>
@@ -85,7 +84,7 @@ starsGeometry.setAttribute('position',new THREE.BufferAttribute(starPositions,3)
 const stars=new THREE.Points(starsGeometry,new THREE.PointsMaterial({color:0x9bbfc4,size:.025,transparent:true,opacity:.72,sizeAttenuation:true}));
 scene.add(stars);
 const sculpture=new THREE.Group();scene.add(sculpture);
-let wireMeshes=[],shaderMaterials=[],wireEnabled=false,motionEnabled=true,activeSeed=0,rng=Math.random,animationTime=0,paletteIndex=-1;
+let wireMeshes=[],shaderMaterials=[],wireEnabled=false,motionEnabled=true,activeSeed=0,rng=Math.random,animationTime=0;
 function seededRandom(seed){let state=seed>>>0;return function(){state=(state+0x6D2B79F5)>>>0;let t=state;t=Math.imul(t^(t>>>15),t|1);t^=t+Math.imul(t^(t>>>7),t|61);return((t^(t>>>14))>>>0)/4294967296;};}
 const between=(a,b)=>a+rng()*(b-a);
 const choose=a=>a[Math.floor(rng()*a.length)];
@@ -116,7 +115,7 @@ fragmentShader:[
 });
 shaderMaterials.push(material);return material;
 }
-const types=['crystal','ring','spike','orb','gear','column','knot','polyhedron'];
+const types=['crystal','ring','spike','orb','gear','column','knot','polyhedron','cone','torus','star'];
 function makeGeometry(type,detail){
 const r=between(.72,1.16);let g;
 switch(type){
@@ -126,19 +125,23 @@ case'spike':g=new THREE.OctahedronGeometry(r,detail);break;
 case'orb':g=new THREE.SphereGeometry(r,18+detail*12,14+detail*8);break;
 case'gear':g=new THREE.TorusKnotGeometry(r*.68,.16+detail*.025,80+detail*35,8+detail*2,2+Math.floor(rng()*4),3+Math.floor(rng()*4));break;
 case'column':g=new THREE.CylinderGeometry(between(.35,.65),between(.55,.9),between(1.1,2),5+detail*3,2+detail,false);break;
+case'cone':g=new THREE.ConeGeometry(between(.35,.8),between(1,2.2),5+detail*4,2+detail);break;
+case'torus':g=new THREE.TorusGeometry(between(.45,.9),between(.06,.2),8+detail*3,32+detail*16);break;
+case'star':g=new THREE.DodecahedronGeometry(r,0);break;
 case'knot':g=new THREE.TorusKnotGeometry(r*.65,.2,100+detail*30,9,3,5);break;
 default:g=new THREE.DodecahedronGeometry(r,detail);
 }
-const p=g.attributes.position,amount=between(.025,.2);
-for(let i=0;i<p.count;i++){const x=p.getX(i),y=p.getY(i),z=p.getZ(i);const wave=Math.sin(x*4.1+y*3.2)*Math.cos(z*4.7-y*2.1);const scale=1+wave*amount+between(-.018,.018);p.setXYZ(i,x*scale,y*scale,z*scale);}
+const p=g.attributes.position,amount=between(.04,.32),seed=between(0,20);
+for(let i=0;i<p.count;i++){const x=p.getX(i),y=p.getY(i),z=p.getZ(i);const wave=Math.sin(x*between(3,8)+y*2.7+seed)*Math.cos(z*between(3,8)-y*2.1-seed);const scale=1+wave*amount+between(-.045,.045);p.setXYZ(i,x*scale,y*scale,z*scale);}
 p.needsUpdate=true;g.computeVertexNormals();return g;
 }
 function addForm(type,position,scale,palette,detail,spin){
 const group=new THREE.Group();group.position.copy(position);group.scale.setScalar(scale);
 group.rotation.set(between(0,Math.PI),between(0,Math.PI),between(0,Math.PI));group.userData.spin=spin;
 const geometry=makeGeometry(type,detail);
-group.add(new THREE.Mesh(geometry,makeShader(palette)));
-const wire=new THREE.Mesh(geometry,new THREE.MeshBasicMaterial({color:palette[2],wireframe:true,transparent:true,opacity:.28,depthWrite:false}));
+const formPalette=rng()<.28?choose(palettes):palette;
+group.add(new THREE.Mesh(geometry,makeShader(formPalette)));
+const wire=new THREE.Mesh(geometry,new THREE.MeshBasicMaterial({color:formPalette[2],wireframe:true,transparent:true,opacity:.22,depthWrite:false}));
 wire.scale.setScalar(1.008);wire.visible=wireEnabled;wire.userData.wire=true;group.add(wire);wireMeshes.push(wire);
 sculpture.add(group);return group;
 }
@@ -152,26 +155,37 @@ wireMeshes=[];shaderMaterials=[];
 const first=['Velvet','Quantum','Prism','Orbit','Melted','Electric','Lunar','Fractal','Glacier','Static','Blooming','Chrome','Aether','Soft'];
 const last=['Reliquary','Anomaly','Spindle','Bloom','Engine','Shard','Organism','Helix','Totem','Echo','Artifact','Nest','Machine','Memory'];
 const labels={crystal:'faceted crystal',ring:'open ring structure',spike:'angular spiked form',orb:'rounded organic form',gear:'interwoven mechanical knot',column:'geometric column',knot:'twisted knot structure',polyhedron:'polyhedral sculpture'};
-function generate(seedValue,keepPalette=false,nextPaletteIndex=-1){
+function generate(seedValue){
 clearSculpture();
 const n=Number(seedValue);
 activeSeed=Number.isSafeInteger(n)&&n>=0&&n<=4294967295?n:Math.floor(Math.random()*900000000+100000000);
-rng=seededRandom(activeSeed);animationTime=0;if(!keepPalette)paletteIndex=-1;else paletteIndex=nextPaletteIndex;
+rng=seededRandom(activeSeed);animationTime=0;
 document.querySelector('#seed').textContent='SEED · '+activeSeed;
 const url=new URL(location.href);url.searchParams.set('seed',String(activeSeed));history.replaceState(null,'',url);
-const randomPalette=choose(palettes),palette=paletteIndex>=0?palettes[paletteIndex]:randomPalette,mainType=choose(types),detail=Math.floor(between(0,3));
-const complexity=choose([0,2,4,6,8,11,15,19]);
-const main=addForm(mainType,new THREE.Vector3(0,0,0),between(1,1.38),palette,detail,between(-.18,.18));
-main.rotation.x+=between(-.12,.12);
+const palette=choose(palettes),mainType=choose(types),detail=Math.floor(between(0,3));
+const complexity=choose([5,8,12,16,21,27,34]);
+const main=addForm(mainType,new THREE.Vector3(0,0,0),between(1.05,1.48),palette,detail,between(-.18,.18));
+main.rotation.x+=between(-.22,.22);
 for(let i=0;i<complexity;i++){
-const angle=i/Math.max(complexity,1)*Math.PI*2+between(-.24,.24),radius=between(.82,1.9);
-const pos=new THREE.Vector3(Math.cos(angle)*radius,between(-1.35,1.35),Math.sin(angle)*radius);
-addForm(choose(types),pos,between(.14,.48)*(complexity>10?.82:1),palette,Math.floor(between(0,3)),between(-.42,.42));
+const angle=between(0,Math.PI*2),elevation=between(-1,1),radius=between(.65,2.05);
+const ringRadius=Math.sqrt(1-elevation*elevation);
+const pos=new THREE.Vector3(Math.cos(angle)*ringRadius*radius,elevation*radius,Math.sin(angle)*ringRadius*radius);
+const size=between(.12,.53)*(i<5?1.15:.82);
+const form=addForm(choose(types),pos,size,palette,Math.floor(between(0,3)),between(-.7,.7));
+form.rotation.z+=between(-.7,.7);
 }
-const bands=Math.floor(between(0,4));
+const bands=Math.floor(between(2,7));
 for(let i=0;i<bands;i++){
-const band=new THREE.Mesh(new THREE.TorusGeometry(between(1.25,2.05),between(.012,.035),5,96),new THREE.MeshBasicMaterial({color:choose(palette),transparent:true,opacity:.7}));
-band.rotation.set(between(0,Math.PI),between(0,Math.PI),between(0,Math.PI));band.userData.spin=between(-.12,.12);sculpture.add(band);
+const band=new THREE.Mesh(new THREE.TorusGeometry(between(1.35,2.55),between(.009,.045),5,128),new THREE.MeshBasicMaterial({color:choose(choose([palette,...palettes])),transparent:true,opacity:between(.28,.72),blending:THREE.AdditiveBlending,depthWrite:false}));
+band.rotation.set(between(0,Math.PI),between(0,Math.PI),between(0,Math.PI));band.userData.spin=between(-.24,.24);sculpture.add(band);
+}
+const shardCount=Math.floor(between(35,85));
+for(let i=0;i<shardCount;i++){
+const shard=new THREE.Mesh(new THREE.TetrahedronGeometry(between(.025,.11),0),new THREE.MeshBasicMaterial({color:choose(choose([palette,...palettes])),transparent:true,opacity:between(.35,.9),wireframe:rng()<.35}));
+const a=between(0,Math.PI*2),r=between(1.4,3.1);
+shard.position.set(Math.cos(a)*r,between(-2.2,2.2),Math.sin(a)*r);
+shard.rotation.set(between(0,Math.PI),between(0,Math.PI),between(0,Math.PI));
+shard.userData.spin=between(-.8,.8);shard.userData.float=between(.15,.8);sculpture.add(shard);
 }
 const count=Math.floor(between(18,54)),fragmentGeometry=new THREE.TetrahedronGeometry(.045,0),fragmentMaterial=new THREE.MeshBasicMaterial({color:palette[2],transparent:true,opacity:.7});
 const fragments=new THREE.InstancedMesh(fragmentGeometry,fragmentMaterial,count),dummy=new THREE.Object3D();
@@ -179,11 +193,9 @@ for(let i=0;i<count;i++){const a=between(0,Math.PI*2),r=between(1.35,2.8);dummy.
 fragments.instanceMatrix.needsUpdate=true;sculpture.add(fragments);
 document.querySelector('#name').textContent=choose(first)+' '+choose(last);
 document.querySelector('#description').textContent=labels[mainType]+' · '+(complexity+1)+' forms · '+(['coarse','medium','fine'][detail])+' geometry · animated shader finish';
-sculpture.rotation.set(0,0,0);document.querySelector('#palette').textContent=paletteIndex<0?'Palette: random':'Palette: '+(paletteIndex+1)+' / '+palettes.length;
+sculpture.rotation.set(0,0,0);
 }
 document.querySelector('#generate').addEventListener('click',()=>generate());
-document.querySelector('#palette').addEventListener('click',()=>{const next=(paletteIndex<0?0:paletteIndex+1)%palettes.length;generate(activeSeed,true,next);});
-document.querySelector('#save').addEventListener('click',()=>{renderer.render(scene,camera);const link=document.createElement('a');link.download='oddform-'+activeSeed+'.png';link.href=renderer.domElement.toDataURL('image/png');link.click();const button=document.querySelector('#save');button.textContent='Saved image';window.setTimeout(()=>button.textContent='Save image',1400);});
 document.querySelector('#reset').addEventListener('click',()=>{camera.position.set(0,1.8,8.2);controls.target.set(0,.1,0);controls.update();});
 document.querySelector('#wire').addEventListener('click',e=>{wireEnabled=!wireEnabled;wireMeshes.forEach(m=>m.visible=wireEnabled);e.currentTarget.classList.toggle('active',wireEnabled);e.currentTarget.textContent='Wireframe: '+(wireEnabled?'on':'off');e.currentTarget.setAttribute('aria-pressed',String(wireEnabled));});
 document.querySelector('#motion').addEventListener('click',e=>{motionEnabled=!motionEnabled;e.currentTarget.classList.toggle('active',motionEnabled);e.currentTarget.textContent='Motion: '+(motionEnabled?'on':'off');e.currentTarget.setAttribute('aria-pressed',String(motionEnabled));});
@@ -197,7 +209,7 @@ if(motionEnabled){
 stars.rotation.y=animationTime*.004;
 sculpture.rotation.y=Math.sin(animationTime*.16)*.2+animationTime*.045;
 sculpture.rotation.x=Math.sin(animationTime*.2)*.055;
-sculpture.children.forEach(child=>{if(child.userData.spin)child.rotation.y+=child.userData.spin*delta;});
+sculpture.children.forEach(child=>{if(child.userData.spin){child.rotation.y+=child.userData.spin*delta;child.rotation.x+=child.userData.spin*.31*delta;}if(child.userData.float)child.position.y+=Math.sin(animationTime*child.userData.float+child.id)*.0009;});
 }
 shaderMaterials.forEach(material=>{material.uniforms.uTime.value=animationTime;});
 controls.update();renderer.render(scene,camera);
