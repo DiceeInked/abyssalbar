@@ -557,6 +557,7 @@ const records=[
 {name:createTextName(),role:'Harvester',activity:'collecting rare gems',x:.75,z:-.3,head:0xb8d3e8,color:0x648bd1,route:[[.75,-.3],[.3,-.65],[-.1,-.3]]},
 {name:createTextName(),role:'Gardener',activity:'tending the gardens',x:-.55,z:.5,head:0xe1c18e,color:0x75a85c,route:[[-.55,.5],[-.2,.65],[.2,.4]]},
 {name:createTextName(),role:'Courier',activity:'carrying supplies',x:0,z:-.1,head:0xd9a3bc,color:0x9b72bb,route:[[-.5,.1],[0,.2],[.5,.1]]}
+];
 records.forEach(r=>{r.surfaceY=surfaceY;makeCreature(agents.length,r,local);});
 }
 setPanel('County explorer',county.name,county.description+' Tiny triangle-shaped residents walk around this part of the same planet. Zoom out at any time to see the whole globe again.','Back to planet');
