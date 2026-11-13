@@ -307,7 +307,16 @@ const rays= new THREE.Mesh(new THREE.TetrahedronGeometry(.34,0),material([0xffdf
 node.add(rays);
 const ring=new THREE.Mesh(new THREE.TorusGeometry(.3,.012,4,24),material(0xd7e6ef));
 ring.rotation.x=Math.PI/2;node.add(ring);
-
+node.userData.name=systemNames[i];
+for(let p=0;p<4;p++){
+const orbitRadius=.48+p*.19;
+const orbit=new THREE.Mesh(new THREE.TorusGeometry(orbitRadius,.004,3,24),lineMaterial(0x40515c));
+orbit.rotation.x=Math.PI/2;node.add(orbit);
+const previewPlanet=addTexturedSphere(node,.035+p*.008,choose([0x8b9fbd,0x73c7b8,0xc59b75,0x9c86c8]),1);
+const a=between(0,Math.PI*2);
+previewPlanet.position.set(Math.cos(a)*orbitRadius,between(-.025,.025),Math.sin(a)*orbitRadius);
+previewPlanet.userData.name=generateName();
+}
 addPick(star,()=>showSystem(i));
 galaxySystems.push(node);
 }
