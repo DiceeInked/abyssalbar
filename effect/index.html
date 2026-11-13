@@ -67,9 +67,21 @@ h1{font-size:18px}
 </section>
 <div class="hint">DRAG TO LOOK AROUND · PINCH / SCROLL TO ZOOM<br>CLICK STARS, PLANETS, COUNTIES, OR LITTLE GUYS</div>
 <script type="module">
-import * as THREE from 'three';
-import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
-import {VRButton} from 'three/addons/webxr/VRButton.js';
+let THREE,OrbitControls,VRButton;
+try{
+ THREE=await import('three');
+ ({OrbitControls}=await import('three/addons/controls/OrbitControls.js'));
+ ({VRButton}=await import('three/addons/webxr/VRButton.js'));
+}catch(error){
+ console.error('Oddform could not load its 3D engine:',error);
+ document.querySelector('#seed').textContent='ENGINE LOAD FAILED';
+ document.querySelector('#eyebrow').textContent='Unable to start';
+ document.querySelector('#name').textContent='3D engine did not load';
+ document.querySelector('#description').textContent='The page could not download its 3D engine. Check your connection, then reload this page.';
+ document.querySelector('#primary').textContent='Reload page';
+ document.querySelector('#primary').onclick=()=>location.reload();
+ throw error;
+}
 
 const mount=document.querySelector('#scene');
 const scene=new THREE.Scene();
@@ -179,7 +191,7 @@ gradient.addColorStop(.5,'#'+base.getHexString());
 gradient.addColorStop(1,'#'+base.clone().multiplyScalar(.48).getHexString());
 ctx.fillStyle=gradient;ctx.fillRect(0,0,512,256);
 let state=(baseColor>>>0)||1;const rand=()=>{state=(Math.imul(state,1664525)+1013904223)>>>0;return state/4294967296;};
-for(let i=0;i<220;i++){
+for(let i=0;i<72;i++){
 const x=rand()*512,y=rand()*256,r=8+rand()*44;
 const shade=base.clone().multiplyScalar(.55+rand()*.95);
 ctx.globalAlpha=.12+rand()*.28;ctx.fillStyle='#'+shade.getHexString();
@@ -203,7 +215,7 @@ world.traverse(obj=>{
 if(obj.geometry)obj.geometry.dispose();
 if(obj.material){
 const list=Array.isArray(obj.material)?obj.material:[obj.material];
-list.forEach(m=>{if(m.map)m.map.dispose();m.dispose();});
+list.forEach(m=>{m.dispose();});
 }
 });
 scene.remove(world);
@@ -492,24 +504,15 @@ const crown=new THREE.Mesh(new THREE.ConeGeometry(.48,1.15,5),material(choose([0
 crown.position.set(x,.98,z);world.add(crown);
 }
 function makeCreature(index,record,parent=world){
-const group=new THREE.Group();group.position.set(record.x,record.surfaceY?record.surfaceY(record.x,record.z):0,record.z);parent.add(group);
-const bodyColor=record.color;
-const body=new THREE.Mesh(new THREE.IcosahedronGeometry(.22,1),material(bodyColor));body.scale.set(.8,1.25,.7);body.position.set(0,.56,0);group.add(body);
-const head=addSphere(group,.18,record.head,16);head.position.set(0,.91,.015);
-const eyeColor=0x15232a;
-const eye1=addSphere(group,.027,eyeColor,8);eye1.position.set(-.065,.94,.16);
-const eye2=addSphere(group,.027,eyeColor,8);eye2.position.set(.065,.94,.16);
-const leftArm=new THREE.Group();leftArm.position.set(-.2,.72,0);group.add(leftArm);
-const arm1=new THREE.Mesh(new THREE.IcosahedronGeometry(.065,1),material(bodyColor));arm1.scale.y=2.4;arm1.position.y=-.16;leftArm.add(arm1);
-const rightArm=new THREE.Group();rightArm.position.set(.2,.72,0);group.add(rightArm);
-const arm2=new THREE.Mesh(new THREE.IcosahedronGeometry(.065,1),material(bodyColor));arm2.scale.y=2.4;arm2.position.y=-.16;rightArm.add(arm2);
-const leftLeg=new THREE.Group();leftLeg.position.set(-.085,.37,0);group.add(leftLeg);
-const leg1=new THREE.Mesh(new THREE.IcosahedronGeometry(.07,1),material(0x354652));leg1.scale.y=2.4;leg1.position.y=-.16;leftLeg.add(leg1);
-const rightLeg=new THREE.Group();rightLeg.position.set(.085,.37,0);group.add(rightLeg);
-const leg2=new THREE.Mesh(new THREE.IcosahedronGeometry(.07,1),material(0x354652));leg2.scale.y=2.4;leg2.position.y=-.16;rightLeg.add(leg2);
-const tool=new THREE.Mesh(new THREE.IcosahedronGeometry(.075,1),material(record.toolColor||0xb8b9ae));tool.position.set(.31,.48,.02);group.add(tool);
-group.userData={name:record.name,role:record.role,activity:record.activity,route:record.route,routeIndex:0,state:'walk',stateTime:0,speed:between(.25,.48),phase:between(0,Math.PI*2),leftArm,rightArm,leftLeg,rightLeg,tool,surfaceY:record.surfaceY};
-addPick(body,()=>showCreature(group));addPick(head,()=>showCreature(group));agents.push(group);return group;
+ const group=new THREE.Group();
+ group.position.set(record.x,record.surfaceY?record.surfaceY(record.x,record.z):0,record.z);
+ parent.add(group);
+ const body=new THREE.Mesh(new THREE.ConeGeometry(.2,.48,3),material(record.color));
+ body.position.y=.25;body.rotation.y=Math.PI;group.add(body);
+ const head=new THREE.Mesh(new THREE.TetrahedronGeometry(.12,0),material(record.head));
+ head.position.set(0,.53,.015);group.add(head);
+ group.userData={name:record.name,role:record.role,activity:record.activity,route:record.route,routeIndex:0,state:'walk',stateTime:0,speed:between(.25,.48),phase:between(0,Math.PI*2),surfaceY:record.surfaceY};
+ addPick(body,()=>showCreature(group));addPick(head,()=>showCreature(group));agents.push(group);return group;
 }
 
 function showCounty(county){
@@ -532,35 +535,31 @@ positions.push(a.x,a.y,a.z,b.x,b.y,b.z,c.x,c.y,c.z,a.x,a.y,a.z,c.x,c.y,c.z,d.x,d
 const terrain=new THREE.BufferGeometry();terrain.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));terrain.computeVertexNormals();
 local.add(new THREE.Mesh(terrain,material(choose([0x315a49,0x4b674d,0x596749,0x3a625d]),{side:THREE.DoubleSide})));
 const surfaceY=(x,z)=>Math.sqrt(Math.max(.01,radius*radius-x*x-z*z))-radius;
-for(let i=0;i<9;i++){
+for(let i=0;i<4;i++){
 const x=between(-.95,.95),z=between(-.95,.95);
 const trunk=new THREE.Mesh(new THREE.IcosahedronGeometry(.12,1),material(0x79533a));trunk.scale.set(.65,1.7,.65);trunk.position.set(x,surfaceY(x,z)+.18,z);local.add(trunk);
 const crown=new THREE.Mesh(new THREE.IcosahedronGeometry(.28,1),material(choose([0x4d9c66,0x7dbb55,0x398a77])));
 crown.userData.name=generateName();crown.position.set(x,surfaceY(x,z)+.55,z);local.add(crown);
 }
-for(let i=0;i<7;i++){
+for(let i=0;i<3;i++){
 const x=between(-1,1),z=between(-1,1),node=new THREE.Group();node.position.set(x,surfaceY(x,z),z);local.add(node);
 node.userData.name=generateName();
-for(let k=0;k<4;k++){const crystal=new THREE.Mesh(new THREE.OctahedronGeometry(between(.12,.24),0),material(choose([0x57d5dc,0x8e79ec,0xe6b64e,0x69c9a0,0x9ba8b2])));crystal.position.set(between(-.15,.15),between(.12,.28),between(-.15,.15));node.add(crystal);}
+for(let k=0;k<2;k++){const crystal=new THREE.Mesh(new THREE.TetrahedronGeometry(between(.12,.2),0),material(choose([0x57d5dc,0x8e79ec,0xe6b64e,0x69c9a0,0x9ba8b2])));crystal.position.set(between(-.1,.1),between(.12,.22),between(-.1,.1));node.add(crystal);}
 }
-for(let i=0;i<5;i++){
-const x=between(-.9,.9),z=between(-.9,.9),building=new THREE.Group();building.position.set(x,surfaceY(x,z),z);local.add(building);building.userData.name=generateName();
-const body=new THREE.Mesh(new THREE.IcosahedronGeometry(.29,1),material(choose([0x9a8060,0x758f8a,0x8c8e9b,0xb09569])));body.scale.set(1,.8,1);body.position.y=.25;building.add(body);
-const roof=new THREE.Mesh(new THREE.IcosahedronGeometry(.23,1),material(choose([0x754d45,0x4d6c71,0x565875,0x8f6d43])));roof.position.y=.58;building.add(roof);
+for(let i=0;i<3;i++){
+ const x=between(-.9,.9),z=between(-.9,.9),building=new THREE.Group();building.position.set(x,surfaceY(x,z),z);local.add(building);building.userData.name=generateName();
+ const base=new THREE.Mesh(new THREE.TetrahedronGeometry(.34,0),material(choose([0x9a8060,0x758f8a,0x8c8e9b,0xb09569])));base.scale.set(1,.8,1);base.position.y=.22;building.add(base);
+ const roof=new THREE.Mesh(new THREE.TetrahedronGeometry(.24,0),material(choose([0x754d45,0x4d6c71,0x565875,0x8f6d43])));roof.position.y=.48;building.add(roof);
 }
 const records=[
 {name:createTextName(),role:'Miner',activity:'harvesting crystals',x:-.65,z:-.55,head:0xe9ba91,color:0x00b99a,toolColor:0x9dc7c1,route:[[-.7,-.5],[-.3,-.25],[.1,-.55]]},
 {name:createTextName(),role:'Builder',activity:'working on a new structure',x:.4,z:.3,head:0xc98c6e,color:0xd08c42,route:[[.4,.3],[.65,.1],[.3,-.1]]},
 {name:createTextName(),role:'Harvester',activity:'collecting rare gems',x:.75,z:-.3,head:0xb8d3e8,color:0x648bd1,route:[[.75,-.3],[.3,-.65],[-.1,-.3]]},
 {name:createTextName(),role:'Gardener',activity:'tending the gardens',x:-.55,z:.5,head:0xe1c18e,color:0x75a85c,route:[[-.55,.5],[-.2,.65],[.2,.4]]},
-{name:createTextName(),role:'Courier',activity:'carrying supplies',x:0,z:-.1,head:0xd9a3bc,color:0x9b72bb,route:[[-.5,.1],[0,.2],[.5,.1]]},
-{name:createTextName(),role:'Miner',activity:'breaking down a stone deposit',x:.85,z:.65,head:0x8fc9a7,color:0xa4aab5,route:[[.85,.65],[.5,.4],[.1,.65]]},
-{name:createTextName(),role:'Engineer',activity:'building a machine',x:-.85,z:.1,head:0xd7d4a2,color:0x4f9c9c,route:[[-.85,.1],[-.5,-.1],[-.2,.1]]},
-{name:createTextName(),role:'Scout',activity:'exploring the county',x:0,z:.85,head:0xb8a2e6,color:0xd16d7c,route:[[0,.85],[.3,.6],[.6,.75]]}
-];
+{name:createTextName(),role:'Courier',activity:'carrying supplies',x:0,z:-.1,head:0xd9a3bc,color:0x9b72bb,route:[[-.5,.1],[0,.2],[.5,.1]]}
 records.forEach(r=>{r.surfaceY=surfaceY;makeCreature(agents.length,r,local);});
 }
-setPanel('County explorer',county.name,county.description+' The county remains part of the same planet. Zoom out at any time to see the whole globe again. Select a resident to follow them.','Back to planet');
+setPanel('County explorer',county.name,county.description+' Tiny triangle-shaped residents walk around this part of the same planet. Zoom out at any time to see the whole globe again.','Back to planet');
 setCrumbs([{label:'MILKY WAY',action:buildGalaxy},{label:currentSystemName,action:()=>showSystem(currentSystemIndex)},{label:currentPlanet.name,action:()=>showPlanet(currentPlanet,currentPlanet.index)},{label:county.name,current:true}]);
 focusCountyCamera();
 }
@@ -646,10 +645,8 @@ data.stateTime-=delta;
 if(data.stateTime<=0){data.state='walk';data.routeIndex=(data.routeIndex+1)%data.route.length;}
 }
 const walking=data.state==='walk';
-const swing=walking?Math.sin(data.phase)*.58:Math.sin(data.phase*1.8)*.18;
-data.leftLeg.rotation.x=swing;data.rightLeg.rotation.x=-swing;
-data.leftArm.rotation.x=-swing*.72;
-data.rightArm.rotation.x=walking?swing*.72:Math.sin(data.phase*1.8)*.85;
+group.rotation.z=walking?Math.sin(data.phase)*.12:Math.sin(data.phase*.6)*.025;
+group.position.y=(data.surfaceY?data.surfaceY(group.position.x,group.position.z):0)+(walking?Math.abs(Math.sin(data.phase))*.035:0);
 }
 }
 function updateCamera(){
