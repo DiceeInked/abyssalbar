@@ -135,7 +135,7 @@ const p=g.attributes.position,amount=between(.04,.32),seed=between(0,20);
 for(let i=0;i<p.count;i++){const x=p.getX(i),y=p.getY(i),z=p.getZ(i);const wave=Math.sin(x*between(3,8)+y*2.7+seed)*Math.cos(z*between(3,8)-y*2.1-seed);const scale=1+wave*amount+between(-.045,.045);p.setXYZ(i,x*scale,y*scale,z*scale);}
 p.needsUpdate=true;g.computeVertexNormals();return g;
 }
-function addForm(type,position,scale,palette,detail,spin){
+function addForm(type,position,scale,palette,detail,spin,parent=sculpture){
 const group=new THREE.Group();group.position.copy(position);group.scale.setScalar(scale);
 group.rotation.set(between(0,Math.PI),between(0,Math.PI),between(0,Math.PI));group.userData.spin=spin;
 const geometry=makeGeometry(type,detail);
@@ -143,7 +143,7 @@ const formPalette=rng()<.28?choose(palettes):palette;
 group.add(new THREE.Mesh(geometry,makeShader(formPalette)));
 const wire=new THREE.Mesh(geometry,new THREE.MeshBasicMaterial({color:formPalette[2],wireframe:true,transparent:true,opacity:.22,depthWrite:false}));
 wire.scale.setScalar(1.008);wire.visible=wireEnabled;wire.userData.wire=true;group.add(wire);wireMeshes.push(wire);
-sculpture.add(group);return group;
+parent.add(group);return group;
 }
 function clearSculpture(){
 const geometries=new Set(),materials=new Set();
@@ -155,6 +155,13 @@ wireMeshes=[];shaderMaterials=[];
 const first=['Velvet','Quantum','Prism','Orbit','Melted','Electric','Lunar','Fractal','Glacier','Static','Blooming','Chrome','Aether','Soft'];
 const last=['Reliquary','Anomaly','Spindle','Bloom','Engine','Shard','Organism','Helix','Totem','Echo','Artifact','Nest','Machine','Memory'];
 const labels={crystal:'faceted crystal',ring:'open ring structure',spike:'angular spiked form',orb:'rounded organic form',gear:'interwoven mechanical knot',column:'geometric column',knot:'twisted knot structure',polyhedron:'polyhedral sculpture'};
+function createOrbitPath(parent,radiusX,radiusZ,color,opacity){
+const points=[];
+for(let i=0;i<160;i++){const a=i/160*Math.PI*2;points.push(new THREE.Vector3(Math.cos(a)*radiusX,0,Math.sin(a)*radiusZ));}
+const geometry=new THREE.BufferGeometry().setFromPoints(points);
+const line=new THREE.LineLoop(geometry,new THREE.LineBasicMaterial({color,transparent:true,opacity,depthWrite:false}));
+parent.add(line);return line;
+}
 function generate(seedValue){
 clearSculpture();
 const n=Number(seedValue);
@@ -162,37 +169,99 @@ activeSeed=Number.isSafeInteger(n)&&n>=0&&n<=4294967295?n:Math.floor(Math.random
 rng=seededRandom(activeSeed);animationTime=0;
 document.querySelector('#seed').textContent='SEED · '+activeSeed;
 const url=new URL(location.href);url.searchParams.set('seed',String(activeSeed));history.replaceState(null,'',url);
-const palette=choose(palettes),mainType=choose(types),detail=Math.floor(between(0,3));
-const complexity=choose([5,8,12,16,21,27,34]);
-const main=addForm(mainType,new THREE.Vector3(0,0,0),between(1.05,1.48),palette,detail,between(-.18,.18));
-main.rotation.x+=between(-.22,.22);
-for(let i=0;i<complexity;i++){
-const angle=between(0,Math.PI*2),elevation=between(-1,1),radius=between(.65,2.05);
-const ringRadius=Math.sqrt(1-elevation*elevation);
-const pos=new THREE.Vector3(Math.cos(angle)*ringRadius*radius,elevation*radius,Math.sin(angle)*ringRadius*radius);
-const size=between(.12,.53)*(i<5?1.15:.82);
-const form=addForm(choose(types),pos,size,palette,Math.floor(between(0,3)),between(-.7,.7));
-form.rotation.z+=between(-.7,.7);
+const palette=choose(palettes),detail=Math.floor(between(0,3));
+const planetCount=choose([4,5,6,7]);
+const system=new THREE.Group();sculpture.add(system);
+
+// A bright, irregular star gives every system a clear center.
+const starGroup=new THREE.Group();system.add(starGroup);starGroup.userData.spin=between(.025,.07);
+const starColor=choose(palette);
+const star=new THREE.Mesh(
+new THREE.IcosahedronGeometry(between(.39,.49),2),
+new THREE.MeshStandardMaterial({color:starColor,emissive:starColor,emissiveIntensity:2.1,metalness:.08,roughness:.3})
+);
+starGroup.add(star);
+const corona=new THREE.Mesh(
+new THREE.SphereGeometry(.68,32,24),
+new THREE.MeshBasicMaterial({color:palette[1],transparent:true,opacity:.095,blending:THREE.AdditiveBlending,depthWrite:false})
+);
+starGroup.add(corona);
+for(let i=0;i<2;i++){
+const flare=new THREE.Mesh(
+new THREE.TorusGeometry(.62+i*.13,.012+i*.006,6,96),
+new THREE.MeshBasicMaterial({color:palette[(i+1)%palette.length],transparent:true,opacity:.52,blending:THREE.AdditiveBlending,depthWrite:false})
+);
+flare.rotation.set(between(-.7,.7),between(-.7,.7),between(-.7,.7));starGroup.add(flare);
 }
-const bands=Math.floor(between(2,7));
-for(let i=0;i<bands;i++){
-const band=new THREE.Mesh(new THREE.TorusGeometry(between(1.35,2.55),between(.009,.045),5,128),new THREE.MeshBasicMaterial({color:choose(choose([palette,...palettes])),transparent:true,opacity:between(.28,.72),blending:THREE.AdditiveBlending,depthWrite:false}));
-band.rotation.set(between(0,Math.PI),between(0,Math.PI),between(0,Math.PI));band.userData.spin=between(-.24,.24);sculpture.add(band);
+const starLight=new THREE.PointLight(starColor,between(18,28),13);
+starGroup.add(starLight);
+
+// Each planet gets its own inclined elliptical orbit.
+const orbitRadii=[];
+for(let i=0;i<planetCount;i++){
+const orbitRadius=1.25+i*.54+between(-.1,.1);
+const depthRadius=orbitRadius*between(.78,1.08);
+orbitRadii.push({x:orbitRadius,z:depthRadius});
+const orbitalPlane=new THREE.Group();
+orbitalPlane.rotation.set(between(-.52,.52),between(0,Math.PI*2),between(-.28,.28));
+orbitalPlane.userData.orbitSpeed=between(.07,.19)*(rng()<.5?-1:1);
+system.add(orbitalPlane);
+createOrbitPath(orbitalPlane,orbitRadius,depthRadius,choose(palette),between(.17,.34));
+
+const angle=between(0,Math.PI*2);
+const anchor=new THREE.Group();
+anchor.position.set(Math.cos(angle)*orbitRadius,0,Math.sin(angle)*depthRadius);
+anchor.userData.spin=between(.18,.52);
+orbitalPlane.add(anchor);
+
+const planetSize=between(.14,.34)*(i===0?1.12:1);
+const planetType=choose(types);
+const planetPalette=rng()<.32?choose(palettes):palette;
+addForm(planetType,new THREE.Vector3(0,0,0),planetSize,planetPalette,Math.floor(between(0,3)),between(-.16,.16),anchor);
+
+// Some planets have their own thin rings.
+if(rng()<.38){
+const ring=new THREE.Mesh(
+new THREE.TorusGeometry(planetSize*1.65,planetSize*.105,6,64),
+new THREE.MeshBasicMaterial({color:choose(planetPalette),transparent:true,opacity:.7,blending:THREE.AdditiveBlending,depthWrite:false})
+);
+ring.rotation.set(Math.PI/2+between(-.35,.35),between(-.3,.3),between(-.3,.3));
+anchor.add(ring);
 }
-const shardCount=Math.floor(between(35,85));
-for(let i=0;i<shardCount;i++){
-const shard=new THREE.Mesh(new THREE.TetrahedronGeometry(between(.025,.11),0),new THREE.MeshBasicMaterial({color:choose(choose([palette,...palettes])),transparent:true,opacity:between(.35,.9),wireframe:rng()<.35}));
-const a=between(0,Math.PI*2),r=between(1.4,3.1);
-shard.position.set(Math.cos(a)*r,between(-2.2,2.2),Math.sin(a)*r);
-shard.rotation.set(between(0,Math.PI),between(0,Math.PI),between(0,Math.PI));
-shard.userData.spin=between(-.8,.8);shard.userData.float=between(.15,.8);shard.userData.baseY=shard.position.y;sculpture.add(shard);
+
+// A few planets have a tiny moon travelling around them.
+if(rng()<.48){
+const moonPath=new THREE.Mesh(
+new THREE.TorusGeometry(planetSize*2.25,.004,4,48),
+new THREE.MeshBasicMaterial({color:planetPalette[2],transparent:true,opacity:.38,depthWrite:false})
+);
+moonPath.rotation.x=Math.PI/2;anchor.add(moonPath);
+const moonAngle=between(0,Math.PI*2),moonDistance=planetSize*2.25;
+addForm(choose(['orb','crystal','polyhedron','star']),new THREE.Vector3(Math.cos(moonAngle)*moonDistance,0,Math.sin(moonAngle)*moonDistance),planetSize*between(.18,.29),planetPalette,0,between(-.25,.25),anchor);
 }
-const count=Math.floor(between(18,54)),fragmentGeometry=new THREE.TetrahedronGeometry(.045,0),fragmentMaterial=new THREE.MeshBasicMaterial({color:palette[2],transparent:true,opacity:.7});
-const fragments=new THREE.InstancedMesh(fragmentGeometry,fragmentMaterial,count),dummy=new THREE.Object3D();
-for(let i=0;i<count;i++){const a=between(0,Math.PI*2),r=between(1.35,2.8);dummy.position.set(Math.cos(a)*r,between(-1.9,1.9),Math.sin(a)*r);dummy.rotation.set(between(0,Math.PI),between(0,Math.PI),between(0,Math.PI));dummy.scale.setScalar(between(.35,1.35));dummy.updateMatrix();fragments.setMatrixAt(i,dummy.matrix);}
-fragments.instanceMatrix.needsUpdate=true;sculpture.add(fragments);
-document.querySelector('#name').textContent=choose(first)+' '+choose(last);
-document.querySelector('#description').textContent=labels[mainType]+' · '+(complexity+1)+' forms · '+(['coarse','medium','fine'][detail])+' geometry · animated shader finish';
+}
+
+// A loose asteroid belt sits between two planetary lanes.
+if(planetCount>=4){
+const beltRadius=(orbitRadii[1].x+orbitRadii[2].x)/2;
+const belt=new THREE.Group();belt.rotation.set(between(-.3,.3),between(0,Math.PI*2),between(-.15,.15));
+belt.userData.orbitSpeed=between(.018,.045)*(rng()<.5?-1:1);system.add(belt);
+const asteroidCount=Math.floor(between(65,105));
+const asteroidGeometry=new THREE.IcosahedronGeometry(.035,0);
+const asteroidMaterial=new THREE.MeshBasicMaterial({color:choose(palette),transparent:true,opacity:.74});
+const asteroids=new THREE.InstancedMesh(asteroidGeometry,asteroidMaterial,asteroidCount);
+const dummy=new THREE.Object3D();
+for(let i=0;i<asteroidCount;i++){
+const angle=between(0,Math.PI*2),radius=beltRadius+between(-.17,.17);
+dummy.position.set(Math.cos(angle)*radius,between(-.075,.075),Math.sin(angle)*radius);
+dummy.rotation.set(between(0,Math.PI),between(0,Math.PI),between(0,Math.PI));
+dummy.scale.setScalar(between(.35,1.8));dummy.updateMatrix();asteroids.setMatrixAt(i,dummy.matrix);
+}
+asteroids.instanceMatrix.needsUpdate=true;belt.add(asteroids);
+}
+
+document.querySelector('#name').textContent=choose(['Little','Hidden','Distant','Quiet','Strange','Prismatic','Forgotten','Electric'])+' '+choose(['Solar System','Starfield','Planetary System','Orbit Garden','Celestial Engine']);
+document.querySelector('#description').textContent=planetCount+' orbiting planets · tilted elliptical paths · '+(planetCount>=4?'asteroid belt':'scattered moons')+' · '+(['coarse','medium','fine'][detail])+' surface geometry';
 sculpture.rotation.set(0,0,0);
 }
 document.querySelector('#generate').addEventListener('click',()=>generate());
@@ -209,7 +278,7 @@ if(motionEnabled){
 stars.rotation.y=animationTime*.004;
 sculpture.rotation.y=Math.sin(animationTime*.16)*.2+animationTime*.045;
 sculpture.rotation.x=Math.sin(animationTime*.2)*.055;
-sculpture.children.forEach(child=>{if(child.userData.spin){child.rotation.y+=child.userData.spin*delta;child.rotation.x+=child.userData.spin*.31*delta;}if(child.userData.float)child.position.y=child.userData.baseY+Math.sin(animationTime*child.userData.float+child.id)*.12;});
+sculpture.children.forEach(child=>{if(child.userData.orbitSpeed)child.rotation.y+=child.userData.orbitSpeed*delta;if(child.userData.spin){child.rotation.y+=child.userData.spin*delta;child.rotation.x+=child.userData.spin*.12*delta;}if(child.userData.float)child.position.y=child.userData.baseY+Math.sin(animationTime*child.userData.float+child.id)*.12;});
 }
 shaderMaterials.forEach(material=>{material.uniforms.uTime.value=animationTime;});
 controls.update();renderer.render(scene,camera);
