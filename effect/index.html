@@ -1,0 +1,733 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#05080d">
+<meta name="description" content="Explore a living procedural universe, from the Milky Way to its tiny inhabitants.">
+<title>Oddform | Abyssal</title>
+<style>
+:root{color-scheme:dark;--bg:#05080d;--panel:#0c1118;--text:#f4f7f8;--muted:#99aab3;--line:#263640;--accent:#00ffc8}
+*{box-sizing:border-box}
+html,body{width:100%;height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+button{font:inherit;-webkit-tap-highlight-color:transparent}
+button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+#scene{position:fixed;inset:0;touch-action:none}
+#scene canvas{display:block;width:100%;height:100%}
+.top{position:fixed;z-index:3;top:14px;left:16px;right:16px;display:flex;align-items:center;gap:12px;min-height:38px}
+.brand{display:flex;align-items:center;gap:9px;color:#f4f7f8;text-decoration:none;font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;white-space:nowrap}
+.brand-dot{width:8px;height:8px;background:var(--accent);border:1px solid #001e18}
+#crumbs{display:flex;align-items:center;gap:6px;min-width:0;flex:1;overflow-x:auto;scrollbar-width:none}
+#crumbs::-webkit-scrollbar{display:none}
+.crumb{flex:0 0 auto;border:1px solid var(--line);border-radius:7px;background:#101820;color:#a8bbc4;padding:7px 9px;font-size:9px;font-weight:800;letter-spacing:.08em;cursor:pointer}
+.crumb.current{background:#12352f;border-color:#00a887;color:#00ffc8;cursor:default}
+.seed{flex:0 0 auto;max-width:150px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#101820;color:#b8c6cf;font:10px ui-monospace,monospace;cursor:pointer}
+.panel{position:fixed;z-index:3;left:16px;bottom:16px;width:min(365px,calc(100vw - 32px));padding:14px;border:1px solid var(--line);border-radius:13px;background:var(--panel)}
+.eyebrow{margin:0 0 5px;color:var(--accent);font-size:9px;font-weight:850;letter-spacing:.18em;text-transform:uppercase}
+h1{margin:0 0 5px;font-size:20px;line-height:1.15;letter-spacing:-.035em}
+#description{min-height:34px;margin:0;color:var(--muted);font-size:11px;line-height:1.5}
+.actions{display:flex;gap:8px;margin-top:12px}
+.button{min-height:40px;padding:9px 12px;border:1px solid var(--line);border-radius:8px;background:#131d25;color:var(--text);font-size:10px;font-weight:800;cursor:pointer}
+.button:active{border-color:var(--accent)}
+.primary{flex:1;border-color:var(--accent);background:var(--accent);color:#001b14}
+.primary:active{background:#00cba2}
+.toggles{display:flex;gap:7px;margin-top:7px}
+.toggles .button{flex:1;padding:8px 6px;color:#aab8bf}
+.toggles .active{border-color:#008f78;background:#12352f;color:var(--accent)}
+.hint{position:fixed;z-index:2;right:17px;bottom:18px;color:#9badb6;font-size:9px;font-weight:700;line-height:1.7;text-align:right;pointer-events:none}
+#VRButton{position:fixed!important;z-index:4!important;right:16px!important;top:62px!important;bottom:auto!important;left:auto!important;width:auto!important;height:auto!important;margin:0!important;padding:9px 11px!important;border:1px solid var(--line)!important;border-radius:8px!important;background:#101820!important;color:#f5f7f8!important;font:800 10px system-ui,sans-serif!important;letter-spacing:.08em!important;opacity:1!important}
+#VRButton:hover{border-color:var(--accent)!important}
+@media(max-width:650px){
+.top{top:10px;left:10px;right:10px;gap:7px;flex-wrap:wrap}
+.brand{font-size:9px}
+#crumbs{order:3;flex-basis:100%;max-width:100%;height:30px}
+.crumb{padding:6px 8px}
+.seed{margin-left:auto;font-size:9px;max-width:125px}
+.panel{left:10px;bottom:10px;width:calc(100vw - 20px);padding:12px}
+h1{font-size:18px}
+.hint{display:none}
+#VRButton{right:10px!important;top:48px!important}
+}
+</style>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.166.1/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.166.1/examples/jsm/"}}</script>
+</head>
+<body>
+<div id="scene" aria-label="Interactive universe explorer. Drag to look around and click stars, planets, regions, and inhabitants."></div>
+<header class="top">
+<a class="brand" href="../../" aria-label="Abyssal home"><span class="brand-dot"></span><span>Abyssal / Effect</span></a>
+<nav id="crumbs" aria-label="Universe navigation"></nav>
+<button class="seed" id="seed" type="button" title="Copy a link to this solar system">SEED · loading</button>
+</header>
+<section class="panel" aria-live="polite">
+<p class="eyebrow" id="eyebrow">A living universe</p>
+<h1 id="name">Sol System</h1>
+<p id="description">A complete solar system. Look around, select a planet, or visit the Milky Way.</p>
+<div class="actions"><button class="button" id="back" type="button">← Back</button><button class="button primary" id="primary" type="button">Explore Milky Way</button></div>
+<div class="toggles"><button class="button" id="wire" type="button" aria-pressed="false">Wireframe: off</button><button class="button active" id="motion" type="button" aria-pressed="true">Motion: on</button></div>
+</section>
+<div class="hint">DRAG TO LOOK AROUND · PINCH / SCROLL TO ZOOM<br>CLICK STARS, PLANETS, COUNTIES, OR LITTLE GUYS</div>
+<script>
+window.__oddformStarted=false;
+window.addEventListener('error',event=>{
+ if(window.__oddformStarted)return;
+ const message=event.message||'A startup error occurred.';
+ document.querySelector('#seed').textContent='STARTUP ERROR';
+ document.querySelector('#eyebrow').textContent='Unable to start';
+ document.querySelector('#name').textContent='Oddform hit a startup error';
+ document.querySelector('#description').textContent=message+' Try reloading the page.';
+ document.querySelector('#primary').textContent='Reload page';
+ document.querySelector('#primary').onclick=()=>location.reload();
+});
+window.addEventListener('unhandledrejection',event=>{
+ if(window.__oddformStarted)return;
+ document.querySelector('#seed').textContent='STARTUP ERROR';
+ document.querySelector('#eyebrow').textContent='Unable to start';
+ document.querySelector('#name').textContent='Oddform could not finish loading';
+ document.querySelector('#description').textContent=String(event.reason||'A startup error occurred.')+' Try reloading the page.';
+ document.querySelector('#primary').textContent='Reload page';
+ document.querySelector('#primary').onclick=()=>location.reload();
+});
+</script>
+<script type="module">
+let THREE,OrbitControls,VRButton;
+try{
+ THREE=await import('three');
+ ({OrbitControls}=await import('three/addons/controls/OrbitControls.js'));
+ ({VRButton}=await import('three/addons/webxr/VRButton.js'));
+}catch(error){
+ console.error('Oddform could not load its 3D engine:',error);
+ document.querySelector('#seed').textContent='ENGINE LOAD FAILED';
+ document.querySelector('#eyebrow').textContent='Unable to start';
+ document.querySelector('#name').textContent='3D engine did not load';
+ document.querySelector('#description').textContent='The page could not download its 3D engine. Check your connection, then reload this page.';
+ document.querySelector('#primary').textContent='Reload page';
+ document.querySelector('#primary').onclick=()=>location.reload();
+ throw error;
+}
+
+const mount=document.querySelector('#scene');
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x05080d);
+const camera=new THREE.PerspectiveCamera(48,innerWidth/innerHeight,.1,300);
+camera.position.set(0,18,35);
+let renderer;
+try{
+ renderer=new THREE.WebGLRenderer({antialias:true,powerPreference:'high-performance'});
+}catch(error){
+ document.querySelector('#seed').textContent='NO WEBGL';
+ document.querySelector('#eyebrow').textContent='Graphics unavailable';
+ document.querySelector('#name').textContent='3D graphics could not start';
+ document.querySelector('#description').textContent='This browser or device could not create a WebGL graphics context. Try reloading or opening the page in a browser with WebGL enabled.';
+ document.querySelector('#primary').textContent='Reload page';
+ document.querySelector('#primary').onclick=()=>location.reload();
+ throw error;
+}
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.setSize(innerWidth,innerHeight);
+renderer.outputColorSpace=THREE.SRGBColorSpace;
+renderer.toneMapping=THREE.NoToneMapping;
+renderer.xr.enabled=true;
+mount.appendChild(renderer.domElement);
+document.body.appendChild(VRButton.createButton(renderer));
+const backgroundStarPositions=new Float32Array(1200*3);
+function betweenSafe(a,b){return a+Math.random()*(b-a);}
+for(let i=0;i<1200;i++){
+const v=new THREE.Vector3(betweenSafe(-1,1),betweenSafe(-1,1),betweenSafe(-1,1)).normalize().multiplyScalar(115);
+backgroundStarPositions[i*3]=v.x;backgroundStarPositions[i*3+1]=v.y;backgroundStarPositions[i*3+2]=v.z;
+}
+const backgroundStarGeometry=new THREE.BufferGeometry();
+backgroundStarGeometry.setAttribute('position',new THREE.BufferAttribute(backgroundStarPositions,3));
+const backgroundStarMesh=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(.055,0),new THREE.MeshBasicMaterial({color:0x9eb6c5}),1200);
+const backgroundDummy=new THREE.Object3D();
+for(let i=0;i<1200;i++){backgroundDummy.position.set(backgroundStarPositions[i*3],backgroundStarPositions[i*3+1],backgroundStarPositions[i*3+2]);backgroundDummy.scale.setScalar(betweenSafe(.45,1.5));backgroundDummy.updateMatrix();backgroundStarMesh.setMatrixAt(i,backgroundDummy.matrix);}
+scene.add(backgroundStarMesh);
+const controls=new OrbitControls(camera,renderer.domElement);
+controls.enableDamping=true;
+controls.dampingFactor=.07;
+controls.minDistance=.5;
+controls.maxDistance=160;
+controls.target.set(0,0,0);
+
+let world=new THREE.Group();
+scene.add(world);
+let pickTargets=[];
+let wireMaterials=[];
+let agents=[];
+let movingObjects=[];
+let currentMode='system';
+let currentSystemIndex=0;
+let currentSystemName='Sol System';
+let currentPlanet=null;
+let currentCounty=null;
+let currentCreature=null;
+let activeSeed=31415926;
+let rng=Math.random;
+let motionEnabled=true;
+let wireEnabled=false;
+let cameraTween=null;
+let animationClock=0;
+const raycaster=new THREE.Raycaster();
+const pointer=new THREE.Vector2();
+let pointerDown=null;
+
+const palettes=[
+[0x00ffc8,0x087cff,0xd9fff8,0x5bcbad],
+[0xff83c8,0x805cff,0xffdfef,0xb89cff],
+[0xffc45c,0xff596e,0xffe4a6,0xc47b42],
+[0xa5ff70,0x21cdb5,0xe5ffb8,0x628e54],
+[0x9a8cff,0x55d6ff,0xffffff,0x5553a2],
+[0xffed70,0xff7838,0xffd7a0,0x9f5630],
+[0xd4e1f0,0x687caa,0xffffff,0x50627f],
+[0xff795d,0xe7dc68,0xf5f0d5,0x8b5947]
+];
+const systemSeeds=[31415926,7812301,9182736,19283746,7263519,8392017,4928173,6351928,12847365,9817263,5728194,3619284,8273619,4192837,6382719];
+const nouns=['Amber','Anchor','Anvil','Apple','Ash','Badger','Bamboo','Beacon','Berry','Birch','Bison','Blossom','Boulder','Breeze','Bronze','Canyon','Cedar','Cinder','Cloud','Comet','Copper','Coral','Cricket','Crown','Crystal','Dawn','Delta','Dew','Dolphin','Drift','Dune','Eagle','Echo','Ember','Falcon','Feather','Fern','Finch','Flame','Flint','Forest','Fox','Frost','Galaxy','Garden','Glacier','Glimmer','Grove','Harbor','Hawk','Hazel','Hearth','Heron','Hollow','Honey','Horizon','Island','Ivory','Jade','Juniper','Kestrel','Lagoon','Lantern','Laurel','Lemon','Lichen','Lotus','Maple','Marble','Meadow','Meteor','Midnight','Mirage','Moss','Mountain','Mushroom','Nebula','Nickel','Nimbus','Nova','Ocean','Olive','Onyx','Orchid','Otter','Owl','Pebble','Peach','Pearl','Pine','Pollen','Quartz','Quill','Rain','Raven','Reef','River','Robin','Rocket','Rose','Saffron','Sapphire','Shadow','Shell','Silver','Sky','Sparrow','Spruce','Star','Stone','Storm','Thistle','Thunder','Tiger','Topaz','Tulip','Valley','Velvet','Violet','Willow','Winter','Wolf','Wren'];
+function generateName(){
+ const pick=()=>nouns[Math.floor(rng()*nouns.length)];
+ const first=pick();
+ let second=pick();
+ while(second===first)second=pick();
+ return first+' '+second;
+}
+function nameFromSeed(seed){const previous=rng;rng=seededRandom(seed);const result=generateName();rng=previous;return result;}
+const systemNames=systemSeeds.map((seed,i)=>nameFromSeed(seed+i*73));
+function seededRandom(seed){
+let state=seed>>>0;
+return function(){
+state=(state+0x6D2B79F5)>>>0;
+let t=state;
+t=Math.imul(t^(t>>>15),t|1);
+t^=t+Math.imul(t^(t>>>7),t|61);
+return((t^(t>>>14))>>>0)/4294967296;
+};
+}
+const between=(a,b)=>a+rng()*(b-a);
+const choose=list=>list[Math.floor(rng()*list.length)];
+const colorHex=c=>new THREE.Color(c);
+function material(color,extra={}){
+const m=new THREE.MeshBasicMaterial({map:polygonTexture(color),...extra});
+wireMaterials.push(m);
+if(wireEnabled)m.wireframe=true;
+return m;
+}
+function lineMaterial(color){
+const m=new THREE.LineBasicMaterial({color});
+return m;
+}
+function addPick(mesh,handler){
+mesh.userData.onPick=handler;
+pickTargets.push(mesh);
+}
+function addWorldLabel(){return null;}
+const polygonTextures=new Map();
+function polygonTexture(baseColor){
+const key=String(baseColor);if(polygonTextures.has(key))return polygonTextures.get(key);
+const canvas=document.createElement('canvas');canvas.width=512;canvas.height=256;
+const ctx=canvas.getContext('2d');const base=new THREE.Color(baseColor);
+const gradient=ctx.createLinearGradient(0,0,512,256);
+gradient.addColorStop(0,'#'+base.clone().multiplyScalar(1.3).getHexString());
+gradient.addColorStop(.5,'#'+base.getHexString());
+gradient.addColorStop(1,'#'+base.clone().multiplyScalar(.48).getHexString());
+ctx.fillStyle=gradient;ctx.fillRect(0,0,512,256);
+let state=(baseColor>>>0)||1;const rand=()=>{state=(Math.imul(state,1664525)+1013904223)>>>0;return state/4294967296;};
+for(let i=0;i<72;i++){
+const x=rand()*512,y=rand()*256,r=8+rand()*44;
+const shade=base.clone().multiplyScalar(.55+rand()*.95);
+ctx.globalAlpha=.12+rand()*.28;ctx.fillStyle='#'+shade.getHexString();
+ctx.beginPath();ctx.moveTo(x-r,y-r*.45);ctx.lineTo(x+r*(.4+rand()),y-r*.3);ctx.lineTo(x+r*.8,y+r*.7);ctx.lineTo(x-r*.7,y+r*.6);ctx.closePath();ctx.fill();
+}
+ctx.globalAlpha=1;
+const fade=ctx.createRadialGradient(155,75,5,155,75,250);
+fade.addColorStop(0,'rgba(255,255,255,.2)');fade.addColorStop(.55,'rgba(255,255,255,.025)');fade.addColorStop(1,'rgba(0,0,0,.24)');
+ctx.fillStyle=fade;ctx.fillRect(0,0,512,256);
+const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;
+polygonTextures.set(key,texture);return texture;
+}
+function addTexturedSphere(parent,radius,color,detail=3){
+const mesh=new THREE.Mesh(new THREE.IcosahedronGeometry(radius,detail),new THREE.MeshBasicMaterial({map:polygonTexture(color)}));
+wireMaterials.push(mesh.material);if(wireEnabled)mesh.material.wireframe=true;
+parent.add(mesh);return mesh;
+}
+
+function disposeWorld(){
+world.traverse(obj=>{
+if(obj.geometry)obj.geometry.dispose();
+if(obj.material){
+const list=Array.isArray(obj.material)?obj.material:[obj.material];
+list.forEach(m=>{m.dispose();});
+}
+});
+scene.remove(world);
+world=new THREE.Group();scene.add(world);
+pickTargets=[];wireMaterials=[];agents=[];movingObjects=[];
+}
+function clearCameraTween(){cameraTween=null;}
+function moveCamera(position,target,duration=850,minDistance=.5,maxDistance=130){
+controls.minDistance=minDistance;controls.maxDistance=maxDistance;
+cameraTween={fromPosition:camera.position.clone(),toPosition:position.clone(),fromTarget:controls.target.clone(),toTarget:target.clone(),start:performance.now(),duration};
+}
+function setWire(value){
+wireEnabled=value;
+wireMaterials.forEach(m=>{if('wireframe' in m)m.wireframe=value;});
+const button=document.querySelector('#wire');
+button.textContent='Wireframe: '+(value?'on':'off');
+button.classList.toggle('active',value);
+button.setAttribute('aria-pressed',String(value));
+}
+function setPanel(eyebrow,name,description,primaryText,backVisible=true){
+document.querySelector('#eyebrow').textContent=eyebrow;
+document.querySelector('#name').textContent=name;
+document.querySelector('#description').textContent=description;
+document.querySelector('#primary').textContent=primaryText;
+document.querySelector('#back').style.display=backVisible?'block':'none';
+}
+function setCrumbs(items){
+const nav=document.querySelector('#crumbs');nav.replaceChildren();
+items.forEach((item,index)=>{
+const button=document.createElement('button');
+button.className='crumb'+(item.current?' current':'');
+button.textContent=item.label;
+button.disabled=!!item.current;
+if(item.action)button.addEventListener('click',item.action);
+nav.appendChild(button);
+});
+}
+function updateSeedButton(){
+document.querySelector('#seed').textContent='SEED · '+activeSeed;
+const url=new URL(location.href);url.searchParams.set('seed',String(activeSeed));history.replaceState(null,'',url);
+}
+function focusSystemCamera(){moveCamera(new THREE.Vector3(0,18,35),new THREE.Vector3(0,0,0),850,12,90);}
+function focusGalaxyCamera(){moveCamera(new THREE.Vector3(0,21,31),new THREE.Vector3(0,0,0),900,10,90);}
+function focusPlanetCamera(){moveCamera(new THREE.Vector3(0,1.5,9.1),new THREE.Vector3(0,0,0),900,4.2,70);}
+function focusCountyCamera(){
+if(!currentCounty)return;
+const target=currentCounty.marker.getWorldPosition(new THREE.Vector3());
+const normal=currentCounty.normal.clone().transformDirection(currentPlanet.globe.matrixWorld);
+moveCamera(target.clone().add(normal.multiplyScalar(5.3)),target,900,1.1,70);
+}
+
+function surfacePoint(radius,latitude,longitude){
+return new THREE.Vector3(
+Math.cos(latitude)*Math.cos(longitude)*radius,
+Math.sin(latitude)*radius,
+Math.cos(latitude)*Math.sin(longitude)*radius
+);
+}
+function addSphere(parent,radius,color,segments=32){return addTexturedSphere(parent,radius,color,Math.min(4,Math.max(1,Math.floor(segments/16))));}
+
+function createTextName(){return generateName();}
+
+function buildGalaxy(){
+disposeWorld();
+currentMode='galaxy';
+const pointCount=5600,positions=new Float32Array(pointCount*3),colors=new Float32Array(pointCount*3);
+const galacticColors=[0x93d9ff,0xf4e2a7,0xc7b9ff,0xffffff,0x77ffd9,0xffb5c8].map(colorHex);
+for(let i=0;i<pointCount;i++){
+const arm=Math.floor(rng()*5);
+const radius=Math.pow(rng(),.64)*13.2+.25;
+const angle=arm*Math.PI*2/5+radius*.47+between(-.48,.48);
+positions[i*3]=Math.cos(angle)*radius+between(-.25,.25);
+positions[i*3+1]=between(-.22,.22);
+positions[i*3+2]=Math.sin(angle)*radius*.67+between(-.25,.25);
+const c=choose(galacticColors);
+colors[i*3]=c.r;colors[i*3+1]=c.g;colors[i*3+2]=c.b;
+}
+const geometry=new THREE.BufferGeometry();
+geometry.setAttribute('position',new THREE.BufferAttribute(positions,3));
+geometry.setAttribute('color',new THREE.BufferAttribute(colors,3));
+const galaxyStarMesh=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(.035,0),new THREE.MeshBasicMaterial({color:0xffffff}),pointCount);
+const galaxyDummy=new THREE.Object3D();
+for(let i=0;i<pointCount;i++){
+galaxyDummy.position.set(positions[i*3],positions[i*3+1],positions[i*3+2]);
+galaxyDummy.scale.setScalar(between(.45,1.7));galaxyDummy.updateMatrix();galaxyStarMesh.setMatrixAt(i,galaxyDummy.matrix);
+galaxyStarMesh.setColorAt(i,new THREE.Color(colors[i*3],colors[i*3+1],colors[i*3+2]));
+}
+world.add(galaxyStarMesh);
+const core=addSphere(world,.82,0xffd77b,20);
+core.position.set(0,0,0);
+const coreRing=new THREE.Mesh(new THREE.TorusGeometry(1.15,.025,4,96),material(0xf6c66b));
+coreRing.rotation.x=Math.PI/2;world.add(coreRing);
+const galaxySystems=[];
+for(let i=0;i<systemNames.length;i++){
+const arm=i%5,radius=2.1+(i%3)*3.25+Math.floor(i/5)*.5;
+const angle=arm*Math.PI*2/5+radius*.47+(i%2?-.18:.2);
+const pos=new THREE.Vector3(Math.cos(angle)*radius,between(-.08,.08),Math.sin(angle)*radius*.67);
+const node=new THREE.Group();node.position.copy(pos);world.add(node);
+const star=addSphere(node,.18+(i%3)*.035,[0xfff0b2,0x9feaff,0xffb6d7,0x9dffcf][i%4],16);
+const rays= new THREE.Mesh(new THREE.TetrahedronGeometry(.34,0),material([0xffdf80,0x84e7ff,0xff93c8,0x8effd0][i%4]));
+node.add(rays);
+const ring=new THREE.Mesh(new THREE.TorusGeometry(.3,.012,4,24),material(0xd7e6ef));
+ring.rotation.x=Math.PI/2;node.add(ring);
+node.userData.name=systemNames[i];
+for(let p=0;p<4;p++){
+const orbitRadius=.48+p*.19;
+const orbit=new THREE.Mesh(new THREE.TorusGeometry(orbitRadius,.004,3,24),lineMaterial(0x40515c));
+orbit.rotation.x=Math.PI/2;node.add(orbit);
+const previewPlanet=addTexturedSphere(node,.035+p*.008,choose([0x8b9fbd,0x73c7b8,0xc59b75,0x9c86c8]),1);
+const a=between(0,Math.PI*2);
+previewPlanet.position.set(Math.cos(a)*orbitRadius,between(-.025,.025),Math.sin(a)*orbitRadius);
+previewPlanet.userData.name=generateName();
+}
+addPick(star,()=>showSystem(i));
+galaxySystems.push(node);
+}
+setPanel('The Milky Way','Choose a solar system','You are looking at a map of the Milky Way. Select one of the marked star systems to travel there. Each system has its own planets and inhabitants.','Return to Sol',false);
+setCrumbs([{label:'MILKY WAY',current:true}]);
+focusGalaxyCamera();
+}
+function orbitLine(parent,radius,color){
+const points=[];
+for(let i=0;i<160;i++){const a=i/160*Math.PI*2;points.push(new THREE.Vector3(Math.cos(a)*radius,0,Math.sin(a)*radius));}
+const line=new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(points),lineMaterial(color));
+parent.add(line);
+}
+function buildAsteroidBelt(parent,radius,count,seedColor){
+const geometry=new THREE.IcosahedronGeometry(.055,0);
+const mesh=new THREE.InstancedMesh(geometry,material(seedColor),count);
+const dummy=new THREE.Object3D();
+for(let i=0;i<count;i++){
+const a=between(0,Math.PI*2),r=radius+between(-.28,.28);
+dummy.position.set(Math.cos(a)*r,between(-.12,.12),Math.sin(a)*r);
+dummy.rotation.set(between(0,Math.PI),between(0,Math.PI),between(0,Math.PI));
+dummy.scale.setScalar(between(.35,1.8));dummy.updateMatrix();mesh.setMatrixAt(i,dummy.matrix);
+}
+mesh.instanceMatrix.needsUpdate=true;parent.add(mesh);
+}
+function buildSystemData(index){
+const defaults=[
+{radius:.19,distance:2.25,color:0x9c8c7b},{radius:.29,distance:3.45,color:0xd7ad70},
+{radius:.32,distance:4.8,color:0x378bd6},{radius:.25,distance:6.15,color:0xb85f43},
+{radius:.77,distance:8.65,color:0xd5a77f},{radius:.67,distance:11.3,color:0xd8c28d,ring:true},
+{radius:.49,distance:13.8,color:0x71cbd1,ring:true},{radius:.47,distance:16.1,color:0x456dd5}
+];
+if(index===0)return defaults.map(p=>({...p,name:generateName()}));
+const palette=choose(palettes),count=Math.floor(between(4,10)),planets=[];
+for(let i=0;i<count;i++)planets.push({name:generateName(),radius:between(.17,.66),distance:2.4+i*between(1.45,2.05),color:choose(palette),ring:rng()<.32});
+return planets;
+}
+
+function makeSystemPlanet(data,index,parent){
+const plane=new THREE.Group();
+plane.rotation.set(between(-.11,.11),between(0,Math.PI*2),between(-.08,.08));
+plane.userData.orbitSpeed=between(.018,.075)*(rng()<.5?-1:1);
+parent.add(plane);
+orbitLine(plane,data.distance,choose([0x36555a,0x394a65,0x655347,0x4d526a]));
+const angle=between(0,Math.PI*2);
+const anchor=new THREE.Group();
+anchor.position.set(Math.cos(angle)*data.distance,0,Math.sin(angle)*data.distance);
+plane.add(anchor);
+const planetGroup=new THREE.Group();anchor.add(planetGroup);
+const sphere=addSphere(planetGroup,data.radius,data.color,48);
+planetGroup.userData.spin=between(.05,.22);
+if(data.ring){
+const ring=new THREE.Mesh(new THREE.TorusGeometry(data.radius*1.55,data.radius*.14,5,64),material(choose([0xb9a77d,0xd5e1e6,0x9cc5c7,0xb58f74])));
+ring.rotation.set(Math.PI/2+between(-.22,.22),between(-.15,.15),between(-.15,.15));planetGroup.add(ring);
+}
+
+if(rng()<.38){
+const moon=new THREE.Group();moon.userData.name=generateName();moon.userData.orbitSpeed=between(.18,.55)*(rng()<.5?-1:1);planetGroup.add(moon);
+const moonDistance=data.radius*2.15;
+const moonRing=new THREE.Mesh(new THREE.TorusGeometry(moonDistance,.008,3,40),material(0x788b9b));moonRing.rotation.x=Math.PI/2;moon.add(moonRing);
+const moonMesh=addSphere(moon,.07,choose([0xc4cbd0,0x8fa1ad,0x8e806f]),12);
+moonMesh.position.set(moonDistance,0,0);
+}
+addPick(sphere,()=>showPlanet(data,index));
+return plane;
+}
+function showSystem(index,seedOverride){
+currentSystemIndex=index;
+currentSystemName=systemNames[index]||'Unknown System';
+activeSeed=seedOverride!==undefined?seedOverride:(systemSeeds[index]||Math.floor(Math.random()*900000000));
+rng=seededRandom(activeSeed);
+disposeWorld();
+currentMode='system';currentPlanet=null;currentCounty=null;currentCreature=null;
+const starColor=index===0?0xffd56b:choose([0xffdf86,0x9edfff,0xff9fca,0xafffd5,0xffffff]);
+const sun=addSphere(world,index===0?.78:between(.52,.9),starColor,32);
+sun.userData.spin=.04;
+const spikes=Math.floor(between(5,8));
+for(let i=0;i<spikes;i++){
+const ray=new THREE.Mesh(new THREE.ConeGeometry(between(.035,.08),between(.35,.8),4),material(starColor));
+const angle=i/spikes*Math.PI*2;
+ray.position.set(Math.cos(angle)*.65,between(-.2,.2),Math.sin(angle)*.65);
+ray.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),ray.position.clone().normalize());
+world.add(ray);
+}
+const planets=buildSystemData(index);
+planets.forEach((p,i)=>makeSystemPlanet(p,i,world));
+if(planets.length>=4)buildAsteroidBelt(world,index===0?7.35:(planets[1].distance+planets[2].distance)/2,72,0x8b97a1);
+const debrisCount= index===0?18:Math.floor(between(12,28));
+for(let i=0;i<debrisCount;i++){
+const bit=new THREE.Mesh(new THREE.TetrahedronGeometry(between(.025,.07),0),material(choose([0x79929b,0x8c8a7f,0x556f7d])));
+const a=between(0,Math.PI*2),r=between(2,planets[planets.length-1].distance+2);
+bit.position.set(Math.cos(a)*r,between(-.4,.4),Math.sin(a)*r);
+world.add(bit);
+}
+updateSeedButton();
+setPanel('Solar system',currentSystemName,planets.length+' planets are circling this star. Choose a planet to zoom in, inspect its counties, and meet the inhabitants living there.','Explore Milky Way',false);
+setCrumbs([{label:'MILKY WAY',action:buildGalaxy},{label:currentSystemName,current:true}]);
+focusSystemCamera();
+}
+function showPlanet(data,index){
+currentPlanet={...data,index,systemIndex:currentSystemIndex,systemName:currentSystemName,seed:activeSeed+index*9176};
+disposeWorld();currentMode='planet';currentCounty=null;currentCreature=null;
+const radius=3.15,globe=new THREE.Group();world.add(globe);
+const sphere=addTexturedSphere(globe,radius,data.color,5);
+const coords=[[-.2,.55],[.1,1.05],[.52,1.6],[-.48,2.2],[.78,2.55],[-.68,1.35],[.32,.12],[-.05,2.85]];
+const countyCount=6+Math.floor(rng()*3),counties=[];
+for(let i=0;i<countyCount;i++){
+const [lat,lon]=coords[i],normal=surfacePoint(1,lat,lon).normalize();
+const county={index:i,name:generateName(),planetName:data.name,systemName:currentSystemName,description:choose(['A settlement among mineral fields.','A forested place with farms and workshops.','A rocky region full of builders and miners.','A coastal place with tiny trading outposts.','A quiet valley with a busy population.']),normal,detail:null};
+const marker=new THREE.Group();marker.position.copy(normal.clone().multiplyScalar(radius+.025));
+marker.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),normal);globe.add(marker);
+const dot=addTexturedSphere(marker,.105,choose([0x00ffc8,0xffc45c,0x88aaff,0xff82be,0xa9ed72]),2);dot.position.y=.11;
+const preview=new THREE.Group();preview.position.y=.12;marker.add(preview);
+for(let k=0;k<4;k++){
+const mini=new THREE.Mesh(new THREE.IcosahedronGeometry(.075+between(0,.05),1),material(choose([0x9a8060,0x758f8a,0x8c8e9b,0x4d9c66])));
+mini.position.set(between(-.16,.16),between(.1,.28),between(-.16,.16));preview.add(mini);
+}
+county.marker=marker;counties.push(county);addPick(dot,()=>showCounty(county));
+}
+if(data.ring||rng()<.38){
+const ring=new THREE.Mesh(new THREE.TorusGeometry(radius*1.38,.09,5,96),material(0xc1b88c));
+ring.rotation.set(Math.PI/2+between(-.3,.3),between(-.2,.2),between(-.2,.2));globe.add(ring);
+}
+currentPlanet.globe=globe;currentPlanet.counties=counties;currentPlanet.radius=radius;
+addPick(sphere,()=>{});
+setPanel('Planet explorer',data.name,'A rounded polygon planet with '+countyCount+' named counties. Their tiny settlements are visible already. Zoom in for more detail or select a county.','Back to system');
+setCrumbs([{label:'MILKY WAY',action:buildGalaxy},{label:currentSystemName,action:()=>showSystem(currentSystemIndex)},{label:data.name,current:true}]);
+focusPlanetCamera();
+}
+
+function addBox(parent,size,position,color){
+const mesh=new THREE.Mesh(new THREE.BoxGeometry(size[0],size[1],size[2]),material(color));
+mesh.position.set(position[0],position[1],position[2]);parent.add(mesh);return mesh;
+}
+function addBuilding(x,z,kind,index){
+const group=new THREE.Group();group.position.set(x,0,z);world.add(group);
+const baseColor=[0x9a8060,0x758f8a,0x8c8e9b,0xb09569][index%4];
+addBox(group,[1.15,.82,.95],[0,.42,0],baseColor);
+const roof=new THREE.Mesh(new THREE.ConeGeometry(.88,.62,4),material([0x754d45,0x4d6c71,0x565875,0x8f6d43][index%4]));
+roof.position.y=1.12;roof.rotation.y=Math.PI/4;group.add(roof);
+addBox(group,[.22,.4,.04],[0,.25,.49],0x273b43);
+addBox(group,[.22,.2,.04],[-.37,.48,.49],0x9fd9d0);
+addBox(group,[.22,.2,.04],[.37,.48,.49],0x9fd9d0);
+if(kind==='workshop'){
+addBox(group,[.22,.55,.22],[.55,1.05,-.2],0x6d7379);
+for(let i=0;i<4;i++){
+const beam=addBox(group,[.055,1.45,.055],[(i%2?1:-1)*.72,.72,(i<2?1:-1)*.58],0xd2a75f);
+}
+}
+if(kind==='build'){
+for(let i=0;i<4;i++){
+addBox(group,[.06,1.65,.06],[(i%2?1:-1)*.72,.82,(i<2?1:-1)*.58],0xe6b85e);
+}
+for(let i=0;i<2;i++)addBox(group,[1.5,.055,.055],[0,.65+i*.45,-.58],0xe6b85e);
+}
+return group;
+}
+function addResource(x,z,color,label){
+const node=new THREE.Group();node.position.set(x,0,z);world.add(node);
+for(let i=0;i<4;i++){
+const crystal=new THREE.Mesh(new THREE.OctahedronGeometry(between(.18,.34),0),material(color));
+crystal.position.set(between(-.32,.32),between(.15,.38),between(-.28,.28));
+crystal.rotation.set(between(0,1),between(0,1),between(0,1));node.add(crystal);
+}
+const rock=new THREE.Mesh(new THREE.DodecahedronGeometry(.35,0),material(0x555f68));
+rock.position.y=.05;rock.scale.set(1,.55,1);node.add(rock);
+node.userData.name=generateName();
+return {x,z,node,label};
+}
+function addTree(x,z){
+const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.08,.11,.65,5),material(0x79533a));trunk.position.set(x,.32,z);world.add(trunk);
+const crown=new THREE.Mesh(new THREE.ConeGeometry(.48,1.15,5),material(choose([0x4d9c66,0x7dbb55,0x398a77])));
+crown.position.set(x,.98,z);world.add(crown);
+}
+function makeCreature(index,record,parent=world){
+ const group=new THREE.Group();
+ group.position.set(record.x,record.surfaceY?record.surfaceY(record.x,record.z):0,record.z);
+ parent.add(group);
+ const body=new THREE.Mesh(new THREE.ConeGeometry(.2,.48,3),material(record.color));
+ body.position.y=.25;body.rotation.y=Math.PI;group.add(body);
+ const head=new THREE.Mesh(new THREE.TetrahedronGeometry(.12,0),material(record.head));
+ head.position.set(0,.53,.015);group.add(head);
+ group.userData={name:record.name,role:record.role,activity:record.activity,route:record.route,routeIndex:0,state:'walk',stateTime:0,speed:between(.25,.48),phase:between(0,Math.PI*2),surfaceY:record.surfaceY};
+ addPick(body,()=>showCreature(group));addPick(head,()=>showCreature(group));agents.push(group);return group;
+}
+
+function showCounty(county){
+currentCounty=county;currentCreature=null;currentMode='county';
+rng=seededRandom(activeSeed+county.index*73651+currentPlanet.index*919);
+currentPlanet.counties.forEach(item=>{if(item.detail)item.detail.visible=item===county;item.marker.scale.setScalar(item===county?1.45:1);});
+if(!county.detail){
+const n=county.normal.clone();
+const east=new THREE.Vector3(-Math.sin(Math.atan2(n.z,n.x)),0,Math.cos(Math.atan2(n.z,n.x))).normalize();
+const north=new THREE.Vector3().crossVectors(east,n).normalize();
+const local=new THREE.Group();local.position.copy(n.clone().multiplyScalar(currentPlanet.radius+.012));
+local.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(east,n,north));currentPlanet.globe.add(local);county.detail=local;
+const radius=currentPlanet.radius,span=1.18,positions=[];
+const project=(x,z)=>{const v=n.clone().multiplyScalar(radius).add(east.clone().multiplyScalar(x)).add(north.clone().multiplyScalar(z));return v.normalize().multiplyScalar(radius+.014);};
+for(let iz=0;iz<10;iz++)for(let ix=0;ix<10;ix++){
+const x0=-span+ix*span/5,x1=x0+span/5,z0=-span+iz*span/5,z1=z0+span/5;
+const a=project(x0,z0),b=project(x1,z0),c=project(x1,z1),d=project(x0,z1);
+positions.push(a.x,a.y,a.z,b.x,b.y,b.z,c.x,c.y,c.z,a.x,a.y,a.z,c.x,c.y,c.z,d.x,d.y,d.z);
+}
+const terrain=new THREE.BufferGeometry();terrain.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));terrain.computeVertexNormals();
+local.add(new THREE.Mesh(terrain,material(choose([0x315a49,0x4b674d,0x596749,0x3a625d]),{side:THREE.DoubleSide})));
+const surfaceY=(x,z)=>Math.sqrt(Math.max(.01,radius*radius-x*x-z*z))-radius;
+for(let i=0;i<4;i++){
+const x=between(-.95,.95),z=between(-.95,.95);
+const trunk=new THREE.Mesh(new THREE.IcosahedronGeometry(.12,1),material(0x79533a));trunk.scale.set(.65,1.7,.65);trunk.position.set(x,surfaceY(x,z)+.18,z);local.add(trunk);
+const crown=new THREE.Mesh(new THREE.IcosahedronGeometry(.28,1),material(choose([0x4d9c66,0x7dbb55,0x398a77])));
+crown.userData.name=generateName();crown.position.set(x,surfaceY(x,z)+.55,z);local.add(crown);
+}
+for(let i=0;i<3;i++){
+const x=between(-1,1),z=between(-1,1),node=new THREE.Group();node.position.set(x,surfaceY(x,z),z);local.add(node);
+node.userData.name=generateName();
+for(let k=0;k<2;k++){const crystal=new THREE.Mesh(new THREE.TetrahedronGeometry(between(.12,.2),0),material(choose([0x57d5dc,0x8e79ec,0xe6b64e,0x69c9a0,0x9ba8b2])));crystal.position.set(between(-.1,.1),between(.12,.22),between(-.1,.1));node.add(crystal);}
+}
+for(let i=0;i<3;i++){
+ const x=between(-.9,.9),z=between(-.9,.9),building=new THREE.Group();building.position.set(x,surfaceY(x,z),z);local.add(building);building.userData.name=generateName();
+ const base=new THREE.Mesh(new THREE.TetrahedronGeometry(.34,0),material(choose([0x9a8060,0x758f8a,0x8c8e9b,0xb09569])));base.scale.set(1,.8,1);base.position.y=.22;building.add(base);
+ const roof=new THREE.Mesh(new THREE.TetrahedronGeometry(.24,0),material(choose([0x754d45,0x4d6c71,0x565875,0x8f6d43])));roof.position.y=.48;building.add(roof);
+}
+const records=[
+{name:createTextName(),role:'Miner',activity:'harvesting crystals',x:-.65,z:-.55,head:0xe9ba91,color:0x00b99a,toolColor:0x9dc7c1,route:[[-.7,-.5],[-.3,-.25],[.1,-.55]]},
+{name:createTextName(),role:'Builder',activity:'working on a new structure',x:.4,z:.3,head:0xc98c6e,color:0xd08c42,route:[[.4,.3],[.65,.1],[.3,-.1]]},
+{name:createTextName(),role:'Harvester',activity:'collecting rare gems',x:.75,z:-.3,head:0xb8d3e8,color:0x648bd1,route:[[.75,-.3],[.3,-.65],[-.1,-.3]]},
+{name:createTextName(),role:'Gardener',activity:'tending the gardens',x:-.55,z:.5,head:0xe1c18e,color:0x75a85c,route:[[-.55,.5],[-.2,.65],[.2,.4]]},
+{name:createTextName(),role:'Courier',activity:'carrying supplies',x:0,z:-.1,head:0xd9a3bc,color:0x9b72bb,route:[[-.5,.1],[0,.2],[.5,.1]]}
+];
+records.forEach(r=>{r.surfaceY=surfaceY;makeCreature(agents.length,r,local);});
+}
+setPanel('County explorer',county.name,county.description+' Tiny triangle-shaped residents walk around this part of the same planet. Zoom out at any time to see the whole globe again.','Back to planet');
+setCrumbs([{label:'MILKY WAY',action:buildGalaxy},{label:currentSystemName,action:()=>showSystem(currentSystemIndex)},{label:currentPlanet.name,action:()=>showPlanet(currentPlanet,currentPlanet.index)},{label:county.name,current:true}]);
+focusCountyCamera();
+}
+
+function showCreature(group){
+currentCreature=group;currentMode='creature';
+const data=group.userData,p=group.getWorldPosition(new THREE.Vector3());
+setPanel(data.role+' · local resident',data.name,data.name+' is a '+data.role.toLowerCase()+' currently '+data.activity+'. The camera follows their movements.', 'Back to county');
+setCrumbs([{label:'MILKY WAY',action:buildGalaxy},{label:currentSystemName,action:()=>showSystem(currentSystemIndex)},{label:currentPlanet.name,action:()=>showPlanet(currentPlanet,currentPlanet.index)},{label:currentCounty.name,action:()=>showCounty(currentCounty)},{label:data.name,current:true}]);
+moveCamera(p.clone().add(new THREE.Vector3(1.5,1.3,2.2)),p.clone().add(new THREE.Vector3(0,.6,0)),850,.8,70);
+}
+
+function goBack(){
+if(currentMode==='creature'){
+currentMode='county';currentCreature=null;
+setPanel('County explorer',currentCounty.name,currentCounty.description+' Locals continue their routines. Zoom out to see the whole planet.', 'Back to planet');
+setCrumbs([{label:'MILKY WAY',action:buildGalaxy},{label:currentSystemName,action:()=>showSystem(currentSystemIndex)},{label:currentPlanet.name,action:()=>showPlanet(currentPlanet,currentPlanet.index)},{label:currentCounty.name,current:true}]);
+focusCountyCamera();return;
+}
+if(currentMode==='county'){
+currentMode='planet';currentCreature=null;currentPlanet.counties.forEach(item=>item.marker.scale.setScalar(1));
+setPanel('Planet explorer',currentPlanet.name,'All counties remain on this same globe. Scroll or pinch out to see the whole planet again.','Back to system');
+setCrumbs([{label:'MILKY WAY',action:buildGalaxy},{label:currentSystemName,action:()=>showSystem(currentSystemIndex)},{label:currentPlanet.name,current:true}]);
+focusPlanetCamera();return;
+}
+if(currentMode==='planet'){showSystem(currentSystemIndex);return;}
+if(currentMode==='system'){buildGalaxy();return;}
+if(currentMode==='galaxy'){showSystem(0);return;}
+}
+
+function primaryAction(){
+if(currentMode==='system'){buildGalaxy();return;}
+if(currentMode==='galaxy'){showSystem(0);return;}
+goBack();
+}
+
+document.querySelector('#back').addEventListener('click',goBack);
+document.querySelector('#primary').addEventListener('click',primaryAction);
+document.querySelector('#motion').addEventListener('click',e=>{
+motionEnabled=!motionEnabled;
+e.currentTarget.classList.toggle('active',motionEnabled);
+e.currentTarget.textContent='Motion: '+(motionEnabled?'on':'off');
+e.currentTarget.setAttribute('aria-pressed',String(motionEnabled));
+});
+document.querySelector('#wire').addEventListener('click',()=>setWire(!wireEnabled));
+document.querySelector('#seed').addEventListener('click',async e=>{
+const url=new URL(location.href);url.searchParams.set('seed',String(activeSeed));
+try{await navigator.clipboard.writeText(url.toString());e.currentTarget.textContent='COPIED · '+activeSeed;window.setTimeout(()=>{e.currentTarget.textContent='SEED · '+activeSeed;},1200);}
+catch{e.currentTarget.textContent='SEED · '+activeSeed;}
+});
+renderer.domElement.addEventListener('pointerdown',e=>{pointerDown={x:e.clientX,y:e.clientY};});
+renderer.domElement.addEventListener('pointerup',e=>{
+if(!pointerDown)return;
+const moved=Math.hypot(e.clientX-pointerDown.x,e.clientY-pointerDown.y);
+pointerDown=null;
+if(moved>7)return;
+const rect=renderer.domElement.getBoundingClientRect();
+pointer.x=((e.clientX-rect.left)/rect.width)*2-1;
+pointer.y=-((e.clientY-rect.top)/rect.height)*2+1;
+raycaster.setFromCamera(pointer,camera);
+const hits=raycaster.intersectObjects(pickTargets,false);
+if(hits.length&&hits[0].object.userData.onPick)hits[0].object.userData.onPick();
+});
+
+function updateAgents(delta){
+if(!motionEnabled)return;
+for(const group of agents){
+const data=group.userData;
+data.phase+=delta*8;
+if(data.state==='walk'){
+const target=data.route[data.routeIndex%data.route.length];
+const dx=target[0]-group.position.x,dz=target[1]-group.position.z;
+const distance=Math.hypot(dx,dz);
+if(distance<.22){data.state='work';data.stateTime=between(1.4,3.1);}
+else{
+const step=Math.min(distance,data.speed*delta);
+group.position.x+=dx/distance*step;group.position.z+=dz/distance*step;
+if(data.surfaceY)group.position.y=data.surfaceY(group.position.x,group.position.z);
+group.rotation.y=Math.atan2(dx,dz);
+}
+}else{
+data.stateTime-=delta;
+if(data.stateTime<=0){data.state='walk';data.routeIndex=(data.routeIndex+1)%data.route.length;}
+}
+const walking=data.state==='walk';
+group.rotation.z=walking?Math.sin(data.phase)*.12:Math.sin(data.phase*.6)*.025;
+group.position.y=(data.surfaceY?data.surfaceY(group.position.x,group.position.z):0)+(walking?Math.abs(Math.sin(data.phase))*.035:0);
+}
+}
+function updateCamera(){
+if(!cameraTween){
+if(currentMode==='creature'&&currentCreature){
+const p=currentCreature.getWorldPosition(new THREE.Vector3());
+camera.position.lerp(p.clone().add(new THREE.Vector3(1.5,1.3,2.2)),.055);
+controls.target.lerp(p.clone().add(new THREE.Vector3(0,.6,0)),.055);
+}
+return;
+}
+const elapsed=performance.now()-cameraTween.start,t=Math.min(1,elapsed/cameraTween.duration),eased=t*t*(3-2*t);
+camera.position.lerpVectors(cameraTween.fromPosition,cameraTween.toPosition,eased);
+controls.target.lerpVectors(cameraTween.fromTarget,cameraTween.toTarget,eased);
+if(t>=1)cameraTween=null;
+}
+
+function animate(){
+requestAnimationFrame(animate);
+const delta=Math.min(clock.getDelta(),.05);
+if(motionEnabled){
+animationClock+=delta;
+world.traverse(obj=>{
+if(obj.userData.orbitSpeed)obj.rotation.y+=obj.userData.orbitSpeed*delta;
+if(obj.userData.spin)obj.rotation.y+=obj.userData.spin*delta;
+});
+updateAgents(delta);
+}
+updateCamera();
+controls.update();
+renderer.render(scene,camera);
+}
+const clock=new THREE.Clock();
+window.addEventListener('resize',()=>{
+camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();
+renderer.setSize(innerWidth,innerHeight);renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+});
+const requestedSeed=new URLSearchParams(location.search).get('seed');
+showSystem(0,requestedSeed!==null&&/^\d+$/.test(requestedSeed)?Number(requestedSeed):undefined);
+animate();
+window.__oddformStarted=true;
+</script>
+</body>
+</html>

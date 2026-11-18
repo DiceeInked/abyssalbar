@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#101215">
+  <title>DAG | Cave prototype</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <main class="game-shell">
+    <header class="game-header">
+      <div>
+        <p class="eyebrow">DRAWING ADVENTURE GAME</p>
+        <h1>Cave test</h1>
+      </div>
+      <div class="header-links">
+        <p class="header-note">Movement · Combat · Mining</p>
+        <button class="practice-toggle" id="practice-toggle" type="button" aria-pressed="false">PRACTICE TARGET: OFF</button>
+        <a class="drawing-link" href="./drawing/">DRAWING BOARD ↗</a>
+      </div>
+    </header>
+
+    <section class="game-frame" aria-label="DAG cave movement and combat test">
+      <canvas id="game" aria-label="A block-style character exploring a side-view cave">
+        Your browser does not support the HTML canvas element.
+      </canvas>
+
+      <button class="reset-button" type="button" data-action="reset" aria-label="Reset the cave test">RESET</button>
+
+      <div class="readout" aria-live="polite">
+        <span id="movement-state">READY</span>
+        <span id="collision-state">A99 · CAVE TEST</span>
+        <span id="ink-state">RAW INK 0</span>
+      </div>
+
+      <div class="touch-controls" aria-label="Touchscreen controls">
+        <div class="movement-buttons">
+          <button type="button" data-action="left" aria-label="Move left">←</button>
+          <button type="button" data-action="right" aria-label="Move right">→</button>
+        </div>
+        <div class="action-buttons">
+          <button class="attack-button" type="button" data-action="attack" aria-label="Attack or mine">HIT</button>
+          <button class="jump-button" type="button" data-action="jump" aria-label="Hold to jump">JUMP</button>
+        </div>
+      </div>
+    </section>
+
+    <footer class="game-footer">
+      <p><kbd>A</kbd> <kbd>D</kbd> move <span>·</span> <kbd>Space</kbd> jump <span>·</span> <kbd>J</kbd> hit / mine <span>·</span> <kbd>R</kbd> reset</p>
+      <p class="footer-secondary">The practice creature, ore nodes, and ledges are temporary test objects.</p>
+    </footer>
+  </main>
+
+  <script type="module" src="./scripts/main.js"></script>
+</body>
+</html>
