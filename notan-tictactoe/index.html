@@ -97,46 +97,42 @@
     return { vertices };
   }
 
-  function beginVertexWander(vertex, now, fromX=0, fromY=0) {
-    const target = randomDisk(BOARD_VERTEX_RADIUS);
-    vertex.motion = {
-      fromX, fromY,
-      toX: target.x, toY: target.y,
-      started: now,
-      duration: random(1500, 3300),
-      easing: Math.random() < .5 ? easeInOut : easeInOutQuint
-    };
-  }
-
   function startBoardVertexWander(now) {
-    // Every vertex begins at the center of its own movement boundary, then
-    // follows an independent sequence of smooth, bounded targets.
+    // Give every vertex its own overlapping wave phases. Their combined
+    // motion is smooth, continuous, and stays inside the original movement
+    // circle without ever stopping at a waypoint.
     for (const rect of boardRects) {
       for (const vertex of rect.vertices) {
-        beginVertexWander(vertex, now, 0, 0);
+        vertex.motion = {
+          started: now,
+          phaseX: Math.random()*TAU,
+          phaseX2: Math.random()*TAU,
+          phaseY: Math.random()*TAU,
+          phaseY2: Math.random()*TAU
+        };
       }
     }
   }
 
   function getVertexWanderOffset(vertex, time) {
-    let motion = vertex.motion;
+    const motion = vertex.motion;
     if (!motion) return { x:0, y:0 };
 
-    // Advance completed waypoints without changing the vertex's allowed
-    // disk. Interpolating between two points in a disk stays inside that disk.
-    while (time >= motion.started + motion.duration) {
-      const fromX = motion.toX;
-      const fromY = motion.toY;
-      const nextStart = motion.started + motion.duration;
-      beginVertexWander(vertex, nextStart, fromX, fromY);
-      motion = vertex.motion;
-    }
+    const elapsed = time-motion.started;
+    const wave = (speed,phase) => Math.sin(elapsed*speed+phase)-Math.sin(phase);
 
-    const t = clamp((time-motion.started)/motion.duration,0,1);
-    const k = motion.easing(t);
+    // Subtracting each wave's starting value makes the movement begin at
+    // the exact center. Each axis stays within 0.66 of the radius, so the
+    // combined offset always remains inside the original circular boundary.
     return {
-      x: lerp(motion.fromX,motion.toX,k),
-      y: lerp(motion.fromY,motion.toY,k)
+      x: BOARD_VERTEX_RADIUS*(
+        .23*wave(.00043,motion.phaseX) +
+        .10*wave(.00019,motion.phaseX2)
+      ),
+      y: BOARD_VERTEX_RADIUS*(
+        .23*wave(.00037,motion.phaseY) +
+        .10*wave(.00023,motion.phaseY2)
+      )
     };
   }
 
