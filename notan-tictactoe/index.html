@@ -1,0 +1,680 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#000000">
+<title>INVERT · Tic-Tac-Toe</title>
+<style>
+  :root { color-scheme: dark; background: #000; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    width: 100%; height: 100%; margin: 0; overflow: hidden;
+    background: #000; overscroll-behavior: none;
+    touch-action: none; user-select: none; -webkit-user-select: none;
+  }
+  body { position: fixed; inset: 0; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; }
+  #game {
+    display: block; width: 100%; height: 100%; touch-action: none;
+    cursor: default; outline: none;
+  }
+  #a11y {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+  }
+</style>
+</head>
+<body>
+<canvas id="game" aria-label="INVERT tic-tac-toe. Drag X or O into one of the nine checkerboard spaces. Tap after a game ends to replay."></canvas>
+<div id="a11y" aria-live="polite">X's turn</div>
+<script>
+(() => {
+  'use strict';
+
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d', { alpha: false });
+  const scene = document.createElement('canvas');
+  const sceneCtx = scene.getContext('2d', { alpha: false });
+  const transitionCanvas = document.createElement('canvas');
+  const transitionCtx = transitionCanvas.getContext('2d', { alpha: false });
+  const liveText = document.getElementById('a11y');
+  const TAU = Math.PI * 2;
+  const WINS = [
+    [0,1,2],[3,4,5],[6,7,8],
+    [0,3,6],[1,4,7],[2,5,8],
+    [0,4,8],[2,4,6]
+  ];
+
+  let width = 0, height = 0, dpr = 1, unit = 60;
+  let boardRects = [];
+  let board = Array(9).fill(null);
+  let currentPlayer = 'X';
+  let phase = 'playing'; // playing, settling, returning, win, draw
+  let trayPiece = null;
+  let trayEnterAt = 0;
+  let activeDrag = null;
+  let settle = null;
+  let returnAnim = null;
+  let moveCount = 0;
+  let winData = null;
+  let buildAnimation = null;
+  let transitionOut = null;
+  let layout = null;
+
+  const random = (min, max) => min + Math.random() * (max - min);
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const easeOut = t => 1 - Math.pow(1 - clamp(t, 0, 1), 3);
+  const easeInOut = t => t < .5 ? 4*t*t*t : 1 - Math.pow(-2*t+2, 3)/2;
+  const easeOutQuart = t => 1 - Math.pow(1-clamp(t,0,1),4);
+  const easeInOutQuart = t => t < .5 ? 8*t*t*t*t : 1-Math.pow(-2*t+2,4)/2;
+  const easeInOutQuint = t => t < .5 ? 16*Math.pow(t,5) : 1-Math.pow(-2*t+2,5)/2;
+  const BOARD_VERTEX_RADIUS = 0.125; // 0.25-unit diameter movement boundary
+  const easeOutQuint = t => 1 - Math.pow(1-clamp(t,0,1),5);
+  const lerp = (a,b,t) => a + (b-a)*t;
+
+  function randomDisk(radius) {
+    const a = Math.random() * TAU;
+    const r = radius * Math.sqrt(Math.random());
+    return { x: Math.cos(a)*r, y: Math.sin(a)*r };
+  }
+
+  // Rectangle dimensions are always authored as 1 x 4 units. The horizontal
+  // pair is the very same rectangle rotated by exactly 90 degrees.
+  function makeBoardRectangle(cx, cy, rotation) {
+    const w = 1, h = 4;
+    const local = [
+      [-w/2,-h/2], [w/2,-h/2], [w/2,h/2], [-w/2,h/2]
+    ];
+    const c = Math.cos(rotation), s = Math.sin(rotation);
+    // Each vertex has a fixed ideal point and its own bounded motion state.
+    // All offsets begin at (0, 0), the exact center of that vertex's allowed
+    // 0.25-unit-diameter circle. The vertices then wander independently.
+    const vertices = local.map(([x,y]) => ({
+      x: cx + x*c - y*s,
+      y: cy + x*s + y*c,
+      motion: null
+    }));
+    return { vertices };
+  }
+
+  function beginVertexWander(vertex, now, fromX=0, fromY=0) {
+    const target = randomDisk(BOARD_VERTEX_RADIUS);
+    vertex.motion = {
+      fromX, fromY,
+      toX: target.x, toY: target.y,
+      started: now,
+      duration: random(1500, 3300),
+      easing: Math.random() < .5 ? easeInOut : easeInOutQuint
+    };
+  }
+
+  function startBoardVertexWander(now) {
+    // Every vertex begins at the center of its own movement boundary, then
+    // follows an independent sequence of smooth, bounded targets.
+    for (const rect of boardRects) {
+      for (const vertex of rect.vertices) {
+        beginVertexWander(vertex, now, 0, 0);
+      }
+    }
+  }
+
+  function getVertexWanderOffset(vertex, time) {
+    let motion = vertex.motion;
+    if (!motion) return { x:0, y:0 };
+
+    // Advance completed waypoints without changing the vertex's allowed
+    // disk. Interpolating between two points in a disk stays inside that disk.
+    while (time >= motion.started + motion.duration) {
+      const fromX = motion.toX;
+      const fromY = motion.toY;
+      const nextStart = motion.started + motion.duration;
+      beginVertexWander(vertex, nextStart, fromX, fromY);
+      motion = vertex.motion;
+    }
+
+    const t = clamp((time-motion.started)/motion.duration,0,1);
+    const k = motion.easing(t);
+    return {
+      x: lerp(motion.fromX,motion.toX,k),
+      y: lerp(motion.fromY,motion.toY,k)
+    };
+  }
+
+  function makeBoard() {
+    boardRects = [
+      makeBoardRectangle(-1, 0, 0),
+      makeBoardRectangle( 1, 0, 0),
+      makeBoardRectangle(0, -1, Math.PI/2),
+      makeBoardRectangle(0,  1, Math.PI/2)
+    ];
+  }
+
+  function makeXGeometry() {
+    const polygons = [];
+    for (const angle of [Math.PI/4, -Math.PI/4]) {
+      const w = .25, h = .75;
+      const pts = [[-w/2,-h/2],[w/2,-h/2],[w/2,h/2],[-w/2,h/2]];
+      const c = Math.cos(angle), s = Math.sin(angle);
+      polygons.push(pts.map(([x,y]) => {
+        const jitter = randomDisk(.0125); // 0.025-unit diameter boundary
+        return { x: x*c-y*s+jitter.x, y: x*s+y*c+jitter.y };
+      }));
+    }
+    return { type: 'X', polygons, phase: Math.random()*TAU, phase2: Math.random()*TAU };
+  }
+
+  function makeOGeometry() {
+    function polygon(count, radius, phase) {
+      const pts = [];
+      for (let i=0; i<count; i++) {
+        const a = phase + TAU*i/count;
+        const jitter = randomDisk(.0125); // 0.025-unit diameter boundary
+        pts.push({ x: Math.cos(a)*radius+jitter.x, y: Math.sin(a)*radius+jitter.y });
+      }
+      return pts;
+    }
+    return {
+      type: 'O', outer: polygon(7,.375,-Math.PI/2),
+      inner: polygon(5,.205,-Math.PI/2+.12),
+      phase: Math.random()*TAU, phase2: Math.random()*TAU
+    };
+  }
+
+  function makePiece(type) { return type === 'X' ? makeXGeometry() : makeOGeometry(); }
+
+  function resize() {
+    const rect = canvas.getBoundingClientRect();
+    width = Math.max(1, rect.width);
+    height = Math.max(1, rect.height);
+    dpr = Math.min(2, window.devicePixelRatio || 1);
+    canvas.width = Math.round(width*dpr);
+    canvas.height = Math.round(height*dpr);
+    scene.width = canvas.width;
+    scene.height = canvas.height;
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    sceneCtx.setTransform(dpr,0,0,dpr,0,0);
+    unit = Math.max(34, Math.min(88, width*.78/4, height*.56/4));
+    layout = boardRects.length === 4 ? getLayout(performance.now()) : null;
+  }
+
+  function getLayout(time) {
+    const centerX = width/2;
+    const centerY = height*.425;
+    const morphOriginX = width/2;
+    const morphOriginY = height/2;
+    const isBuilding = phase === 'building' && buildAnimation;
+    const buildElapsed = isBuilding ? time-buildAnimation.started : 0;
+    const morphT = isBuilding
+      ? clamp(buildElapsed/buildAnimation.duration,0,1) : 1;
+    const states = boardRects.map((rect,index) => {
+      // The four bars stay anchored. Every corner moves independently inside
+      // its own circular boundary instead of translating an entire rectangle.
+      const targetPoints = rect.vertices.map(vertex => {
+        const offset = !isBuilding && phase !== 'win' && phase !== 'draw'
+          ? getVertexWanderOffset(vertex,time)
+          : {x:0,y:0};
+        return {
+          x: centerX + (vertex.x+offset.x)*unit,
+          y: centerY + (vertex.y+offset.y)*unit
+        };
+      });
+      let points = targetPoints;
+      if (isBuilding) {
+        // Every actual polygon vertex starts at the same screen-center point,
+        // then follows its own eased trajectory to its final coordinate.
+        // Independent curves make the bars visibly mutate instead of scaling
+        // outward as four rigid shapes. All trajectories start together and
+        // share one overall duration.
+        points = targetPoints.map((p,vertexIndex) => {
+          // One shared eased timeline means every vertex starts together and
+          // arrives together. Longer trips naturally travel faster, shorter
+          // trips slower, while all share the same ease-in/ease-out envelope.
+          const easing = buildAnimation.easing(morphT);
+          return {
+            x: lerp(morphOriginX,p.x,easing),
+            y: lerp(morphOriginY,p.y,easing)
+          };
+        });
+      }
+      const cx = points.reduce((sum,p)=>sum+p.x,0)/points.length;
+      const cy = points.reduce((sum,p)=>sum+p.y,0)/points.length;
+      return { points, cx, cy };
+    });
+    const xs = [states[0].cx, (states[0].cx+states[1].cx)/2, states[1].cx];
+    const ys = [states[2].cy, (states[2].cy+states[3].cy)/2, states[3].cy];
+    return { centerX, centerY, rects: states, xs, ys };
+  }
+
+  function cellCenter(row, col, activeLayout=layout) {
+    return { x: activeLayout.xs[col], y: activeLayout.ys[row] };
+  }
+
+  function cellBox(index, activeLayout=layout, inset=.44) {
+    const row = Math.floor(index/3), col = index%3;
+    const center = cellCenter(row,col,activeLayout);
+    return { x:center.x, y:center.y, halfW:unit*inset, halfH:unit*inset };
+  }
+
+  function pathPolygon(context, points, close=true) {
+    context.beginPath();
+    if (!points.length) return;
+    context.moveTo(points[0].x, points[0].y);
+    for (let i=1;i<points.length;i++) context.lineTo(points[i].x,points[i].y);
+    if (close) context.closePath();
+  }
+
+  function drawPiece(context, piece, x, y, scale=1, color='#fff') {
+    if (!piece) return;
+    context.save();
+    context.translate(x,y);
+    context.scale(unit*scale,unit*scale);
+    context.fillStyle = color;
+    context.strokeStyle = color;
+    context.lineJoin = 'round';
+    context.lineCap = 'round';
+    if (piece.type === 'X') {
+      // Both rotated rectangles are filled in one non-zero path, making a
+      // single merged-looking X rather than a text glyph.
+      context.beginPath();
+      for (const poly of piece.polygons) {
+        context.moveTo(poly[0].x,poly[0].y);
+        for (let i=1;i<poly.length;i++) context.lineTo(poly[i].x,poly[i].y);
+        context.closePath();
+      }
+      context.fill('nonzero');
+    } else {
+      context.beginPath();
+      for (const poly of [piece.outer,piece.inner]) {
+        context.moveTo(poly[0].x,poly[0].y);
+        for (let i=1;i<poly.length;i++) context.lineTo(poly[i].x,poly[i].y);
+        context.closePath();
+      }
+      context.fill('evenodd');
+    }
+    context.restore();
+  }
+
+  function drawInvertingRectangles(context, activeLayout, opacity=1) {
+    context.save();
+    context.globalCompositeOperation = 'difference';
+    context.globalAlpha = opacity;
+    context.fillStyle = '#fff';
+    for (const rect of activeLayout.rects) {
+      pathPolygon(context, rect.points);
+      context.fill();
+    }
+    context.restore();
+  }
+
+  function pieceCenter(piece, index, activeLayout, time) {
+    const base = cellCenter(Math.floor(index/3), index%3, activeLayout);
+    const a = time*.0007 + piece.phase;
+    const b = time*.00053 + piece.phase2;
+    return {
+      x: base.x + Math.sin(a)*unit*.027,
+      y: base.y + Math.cos(b)*unit*.027
+    };
+  }
+
+  function renderBaseScene(time, activeLayout, boardOpacity=1, useAmbientPieces=true, settlePiece=null) {
+    const g = sceneCtx;
+    g.save();
+    g.setTransform(dpr,0,0,dpr,0,0);
+    g.globalCompositeOperation = 'source-over';
+    g.globalAlpha = 1;
+    g.fillStyle = '#000';
+    g.fillRect(0,0,width,height);
+
+    for (let i=0;i<9;i++) {
+      const piece = board[i];
+      if (!piece || (settlePiece && settlePiece.index === i)) continue;
+      const p = useAmbientPieces ? pieceCenter(piece,i,activeLayout,time) : cellCenter(Math.floor(i/3),i%3,activeLayout);
+      drawPiece(g,piece,p.x,p.y,1,'#fff');
+    }
+    if (settlePiece) {
+      const t = clamp((time-settlePiece.started)/settlePiece.duration,0,1);
+      const p = cellCenter(Math.floor(settlePiece.index/3),settlePiece.index%3,activeLayout);
+      const k = easeOut(t);
+      const x = lerp(settlePiece.from.x,p.x,k);
+      const y = lerp(settlePiece.from.y,p.y,k);
+      drawPiece(g,board[settlePiece.index],x,y,lerp(1.16,1,k),'#fff');
+    }
+    if (boardOpacity > 0) drawInvertingRectangles(g,activeLayout,boardOpacity);
+    g.restore();
+  }
+
+  function targetAt(x,y) {
+    let best = -1, bestScore = Infinity;
+    for (let i=0;i<9;i++) {
+      if (board[i]) continue;
+      const b = cellBox(i,layout,.53);
+      const dx = Math.abs(x-b.x), dy = Math.abs(y-b.y);
+      if (dx <= b.halfW && dy <= b.halfH) {
+        const score = (dx/b.halfW)**2 + (dy/b.halfH)**2;
+        if (score < bestScore) { bestScore = score; best = i; }
+      }
+    }
+    return best;
+  }
+
+  function drawDraggedPieceInverted(time) {
+    // The piece is a true inversion mask: white geometry with `difference`
+    // inverts the already-rendered board and pieces beneath its exact shape.
+    // It is not painted as a white foreground object and the environment is
+    // not dimmed while dragging.
+    const grow = easeOut((time-activeDrag.started)/155);
+    ctx.save();
+    ctx.globalCompositeOperation = 'difference';
+    ctx.globalAlpha = 1;
+    drawPiece(ctx,trayPiece,activeDrag.x,activeDrag.y,lerp(1,1.18,grow),'#fff');
+    ctx.restore();
+  }
+
+  function trayPosition(time) {
+    const sideX = currentPlayer === 'X' ? Math.min(58,width*.15) : width-Math.min(58,width*.15);
+    const y = Math.min(height-50, layout.centerY + unit*2.55);
+    const entered = easeOut((time-trayEnterAt)/460);
+    const startX = currentPlayer === 'X' ? -unit*.8 : width+unit*.8;
+    const x = lerp(startX,sideX,entered);
+    const bob = Math.sin(time*.0012 + (trayPiece?.phase || 0))*unit*.025;
+    return {x,y:y+bob,scale:1};
+  }
+
+  function winningCombination() {
+    for (const line of WINS) {
+      const a = board[line[0]];
+      if (a && board[line[1]] && board[line[2]] && a.type === board[line[1]].type && a.type === board[line[2]].type) {
+        return line;
+      }
+    }
+    return null;
+  }
+
+  function startWin(now, line) {
+    const frozenLayout = getLayout(now);
+    const centers = line.map(index => cellCenter(Math.floor(index/3),index%3,frozenLayout));
+    const first = centers[0], last = centers[2];
+    let dx = last.x-first.x, dy = last.y-first.y;
+    const mag = Math.hypot(dx,dy) || 1;
+    dx /= mag; dy /= mag;
+    const angle = Math.atan2(dy,dx);
+    const normalX = -dy, normalY = dx;
+    const projections = centers.map(p=>p.x*normalX+p.y*normalY);
+    const spread = Math.max(...projections)-Math.min(...projections);
+    winData = {
+      line, centers, angle,
+      center: {x:centers.reduce((s,p)=>s+p.x,0)/3,y:centers.reduce((s,p)=>s+p.y,0)/3},
+      thickness: Math.max(unit*.98, spread+unit*.9),
+      started: now,
+      frozenLayout
+    };
+    phase = 'win';
+    liveText.textContent = currentPlayer + ' wins.';
+  }
+
+  function finishSettle(now) {
+    if (!settle) return;
+    settle = null;
+    const line = winningCombination();
+    if (line) {
+      startWin(now,line);
+    } else if (moveCount === 9) {
+      phase = 'draw';
+      winData = { started:now, frozenLayout:getLayout(now) };
+      liveText.textContent = 'Draw.';
+    } else {
+      currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+      trayPiece = makePiece(currentPlayer);
+      trayEnterAt = now;
+      phase = 'playing';
+      liveText.textContent = currentPlayer + "'s turn";
+    }
+  }
+
+  function commitTarget(index, now, x, y) {
+    if (index < 0 || board[index]) return false;
+    const piece = trayPiece;
+    const from = {x,y};
+    board[index] = piece;
+    moveCount++;
+    settle = { index, from, started:now, duration:245 };
+    trayPiece = null;
+    phase = 'settling';
+    liveText.textContent = 'Piece placed.';
+    return true;
+  }
+
+
+  function findDragTarget() {
+    return activeDrag ? targetAt(activeDrag.x,activeDrag.y) : -1;
+  }
+
+  function handlePointerDown(event) {
+    event.preventDefault();
+    if (phase === 'win' || phase === 'draw') {
+      const elapsed = performance.now()-winData.started;
+      const replayDelay = phase === 'draw' ? 850 : 1450;
+      if (elapsed > replayDelay) startReplayTransition(performance.now());
+      return;
+    }
+    if (phase !== 'playing' || !trayPiece || activeDrag) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = event.clientX-rect.left, y = event.clientY-rect.top;
+    const tray = trayPosition(performance.now());
+    const hitRadius = unit*.62;
+    if (Math.hypot(x-tray.x,y-tray.y) > hitRadius) return;
+    activeDrag = { pointerId:event.pointerId, x, y, started:performance.now(), scale:1 };
+    try { canvas.setPointerCapture(event.pointerId); } catch (_) {}
+  }
+
+  function handlePointerMove(event) {
+    if (!activeDrag || activeDrag.pointerId !== event.pointerId) return;
+    event.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    activeDrag.x = event.clientX-rect.left;
+    activeDrag.y = event.clientY-rect.top;
+  }
+
+  function handlePointerUp(event) {
+    if (!activeDrag || activeDrag.pointerId !== event.pointerId) return;
+    event.preventDefault();
+    const now = performance.now();
+    const {x,y} = activeDrag;
+    const target = findDragTarget();
+    if (target >= 0 && !board[target]) {
+      commitTarget(target,now,x,y);
+    } else {
+      returnAnim = { from:{x,y}, started:now, duration:230 };
+      phase = 'returning';
+    }
+    activeDrag = null;
+  }
+
+  function handlePointerCancel(event) {
+    if (!activeDrag || activeDrag.pointerId !== event.pointerId) return;
+    const now = performance.now();
+    returnAnim = { from:{x:activeDrag.x,y:activeDrag.y}, started:now, duration:230 };
+    activeDrag = null;
+    phase = 'returning';
+  }
+
+  function drawWinScene(time) {
+    const elapsed = time-winData.started;
+    const boardFade = 1-easeInOut(clamp(elapsed/470,0,1));
+    renderBaseScene(winData.started,winData.frozenLayout,boardFade,false);
+    ctx.drawImage(scene,0,0,width,height);
+
+    if (winData.line && elapsed > 470) {
+      const stripeT = easeOut(clamp((elapsed-470)/850,0,1));
+      // The stripe is screen-spanning from its first visible frame. Only its
+      // thickness grows, starting at zero and reaching the winning-piece span.
+      const axisX = Math.cos(winData.angle), axisY = Math.sin(winData.angle);
+      const corners = [[0,0],[width,0],[0,height],[width,height]];
+      const reach = Math.max(...corners.map(([x,y]) =>
+        Math.abs((x-winData.center.x)*axisX + (y-winData.center.y)*axisY)
+      )) + unit;
+      const length = reach*2;
+      const thickness = winData.thickness*stripeT;
+      if (thickness > 0.25) {
+        ctx.save();
+        ctx.translate(winData.center.x,winData.center.y);
+        ctx.rotate(winData.angle);
+        ctx.globalCompositeOperation = 'difference';
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(-length/2,-thickness/2,length,thickness);
+        ctx.restore();
+      }
+    }
+    // No visible win/draw/replay copy: the artwork is the entire ending.
+  }
+
+  function beginBoardBuild(now) {
+    board = Array(9).fill(null);
+    moveCount = 0;
+    currentPlayer = 'X';
+    phase = 'building';
+    activeDrag = null;
+    settle = null;
+    returnAnim = null;
+    winData = null;
+    transitionOut = null;
+    makeBoard();
+    trayPiece = null;
+    buildAnimation = {
+      started: now,
+      duration: 1080,
+      // Every real vertex shares one start time, finish time, and ease-in /
+      // ease-out curve. Its travel distance determines its required speed.
+      easing: easeInOutQuint
+    };
+    liveText.textContent = 'Building board.';
+    layout = getLayout(now);
+  }
+
+  function finishBoardBuild(now) {
+    buildAnimation = null;
+    startBoardVertexWander(now);
+    phase = 'playing';
+    currentPlayer = 'X';
+    trayPiece = makePiece('X');
+    trayEnterAt = now;
+    liveText.textContent = "X's turn";
+  }
+
+  function startReplayTransition(now) {
+    // Preserve the exact completed composition, then move that image downward
+    // while fading it away before constructing the next board.
+    transitionCanvas.width = canvas.width;
+    transitionCanvas.height = canvas.height;
+    transitionCtx.setTransform(1,0,0,1,0,0);
+    transitionCtx.globalCompositeOperation = 'copy';
+    transitionCtx.globalAlpha = 1;
+    transitionCtx.drawImage(canvas,0,0);
+    transitionCtx.globalCompositeOperation = 'source-over';
+    transitionOut = { started:now, duration:620 };
+    phase = 'transitionOut';
+    activeDrag = null;
+    trayPiece = null;
+    buildAnimation = null;
+  }
+
+  function drawTransitionOut(time) {
+    const t = clamp((time-transitionOut.started)/transitionOut.duration,0,1);
+    const eased = easeInOut(t);
+    ctx.save();
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0,0,width,height);
+    ctx.globalAlpha = 1-eased;
+    ctx.drawImage(transitionCanvas,0,eased*height*.34,width,height);
+    ctx.restore();
+    if (t >= 1) beginBoardBuild(time);
+  }
+
+  function drawBoardBuild(time) {
+    // The same live scene renderer is used for initial launch and replay.
+    // During construction, getLayout supplies the individually moving
+    // vertices, so the actual board polygons visibly deform into place.
+    renderBaseScene(time,layout,1,false);
+    ctx.drawImage(scene,0,0,width,height);
+  }
+
+  function render(time) {
+    if (phase === 'transitionOut') {
+      drawTransitionOut(time);
+      return;
+    }
+    if (phase === 'building') {
+      const buildElapsed = time-buildAnimation.started;
+      if (buildElapsed >= buildAnimation.duration) {
+        finishBoardBuild(time);
+      } else {
+        layout = getLayout(time);
+        drawBoardBuild(time);
+        return;
+      }
+    }
+
+    layout = getLayout(phase === 'win' || phase === 'draw' ? winData.started : time);
+
+    if (phase === 'win' || phase === 'draw') {
+      drawWinScene(time);
+      return;
+    }
+
+    if (phase === 'settling' && settle && time-settle.started >= settle.duration) finishSettle(time);
+    if (phase === 'returning' && returnAnim && time-returnAnim.started >= returnAnim.duration) {
+      returnAnim = null;
+      phase = 'playing';
+    }
+
+    renderBaseScene(time,layout,1,true,phase === 'settling' ? settle : null);
+
+    if (activeDrag) {
+      // Repaint the complete, clean scene on every animation frame before
+      // applying the dragged piece's difference mask. Without this blit the
+      // previous frame remains on the visible canvas, so each new inversion
+      // accumulates and leaves a trail of ghost copies behind the pointer.
+      ctx.save();
+      ctx.setTransform(dpr,0,0,dpr,0,0);
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.globalAlpha = 1;
+      ctx.drawImage(scene,0,0,width,height);
+      ctx.restore();
+      drawDraggedPieceInverted(time);
+    } else {
+      ctx.drawImage(scene,0,0,width,height);
+      if (phase === 'playing' && trayPiece) {
+        const p = trayPosition(time);
+        drawPiece(ctx,trayPiece,p.x,p.y,p.scale,'#fff');
+      } else if (phase === 'returning' && trayPiece && returnAnim) {
+        const p = trayPosition(time);
+        const k = easeOut((time-returnAnim.started)/returnAnim.duration);
+        const x = lerp(returnAnim.from.x,p.x,k);
+        const y = lerp(returnAnim.from.y,p.y,k);
+        drawPiece(ctx,trayPiece,x,y,lerp(1.18,1,k),'#fff');
+      }
+    }
+  }
+
+  function frame(time) {
+    render(time);
+    requestAnimationFrame(frame);
+  }
+
+  canvas.addEventListener('pointerdown',handlePointerDown,{passive:false});
+  canvas.addEventListener('pointermove',handlePointerMove,{passive:false});
+  canvas.addEventListener('pointerup',handlePointerUp,{passive:false});
+  canvas.addEventListener('pointercancel',handlePointerCancel,{passive:false});
+  window.addEventListener('resize',resize,{passive:true});
+  window.addEventListener('contextmenu',event=>event.preventDefault());
+  window.addEventListener('selectstart',event=>event.preventDefault());
+
+  resize();
+  beginBoardBuild(performance.now());
+  requestAnimationFrame(frame);
+
+})();
+</script>
+</body>
+</html>
