@@ -209,7 +209,7 @@ for(const [key,piece] of Object.entries(PIECES)){
   piece.linework=new Path2D(SOURCE_LINEWORK[key].d);
 }
 
-let width=1,height=1,dpr=1,layout=null;
+let width=1,height=1,dpr=1,layout=null,boardScale=1;
 let states=[initialState()],moveNotes=[],selected=-1,selectedMoves=[],promotion=null,claimText='';
 let lastMove=null,lastMoveHistory=[null],statusCache=null,statusCacheLength=-1,statusCacheClaim='';
 let arrivalEffect=null,residueEffect=null,fadingResidue=null,activeWiggle=-1;
@@ -405,9 +405,24 @@ function drawPromotion(){
   });
 }
 
+function drawZoomControls(){
+  const size=34,gap=8,x=12,y=12;
+  ctx.save();
+  for(let i=0;i<2;i++){
+    const bx=x+i*(size+gap),by=y;
+    // The button face uses difference compositing, so it inverts the board
+    // and any other pixels directly beneath the control.
+    ctx.globalCompositeOperation='difference';ctx.fillStyle='#fff';ctx.fillRect(bx,by,size,size);
+    ctx.globalCompositeOperation='source-over';ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.strokeRect(bx+.75,by+.75,size-1.5,size-1.5);
+    ctx.beginPath();ctx.moveTo(bx+9,by+size/2);ctx.lineTo(bx+size-9,by+size/2);
+    if(i===0){ctx.moveTo(bx+size/2,by+9);ctx.lineTo(bx+size/2,by+size-9);}
+    ctx.stroke();
+  }
+  ctx.restore();
+}
 function render(time){
   ctx.setTransform(dpr,0,0,dpr,0,0);ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';ctx.fillStyle='#000';ctx.fillRect(0,0,width,height);
-  drawBoard();drawPieces(time);drawInvertingMarkers();
+  drawBoard();drawPieces(time);drawInvertingMarkers();drawZoomControls();
   if(promotion)drawPromotion();
 }
 function finishMove(m,time){
@@ -455,16 +470,23 @@ function claimDraw(){
 function resize(){
   const r=canvas.getBoundingClientRect();width=Math.max(1,r.width);height=Math.max(1,r.height);dpr=Math.min(3,window.devicePixelRatio||1);
   canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);
-  const top=70,bottom=72,availableHeight=Math.max(100,height-top-bottom);
-  const rawSize=Math.max(80,Math.min(width-24,availableHeight,720));
+  // Fit the board to the available screen in both directions, leaving only
+  // a small, even margin. The same zoom factor applies to every piece.
+  const rawSize=Math.max(8,Math.min(width-16,height-16)*boardScale);
   const cell=Math.max(1,Math.floor(rawSize*dpr/8))/dpr;
   const size=cell*8;
-  const x=Math.round(((width-size)/2)*dpr)/dpr,y=Math.round((top+(availableHeight-size)/2)*dpr)/dpr;
+  const x=Math.round(((width-size)/2)*dpr)/dpr,y=Math.round(((height-size)/2)*dpr)/dpr;
   layout={x,y,size,cell};
 }
 function squareAt(x,y){if(!layout||x<layout.x||y<layout.y||x>=layout.x+layout.size||y>=layout.y+layout.size)return-1;return Math.floor((y-layout.y)/layout.cell)*16+Math.floor((x-layout.x)/layout.cell);}
 function pointer(e){
   e.preventDefault();const r=canvas.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top,now=performance.now();
+  const controlSize=34,controlGap=8,controlY=12,controlX=12;
+  if(!promotion&&y>=controlY&&y<=controlY+controlSize){
+    if(x>=controlX&&x<=controlX+controlSize){boardScale=Math.min(1,Math.round((boardScale+.1)*100)/100);resize();return;}
+    const minusX=controlX+controlSize+controlGap;
+    if(x>=minusX&&x<=minusX+controlSize){boardScale=Math.max(.5,Math.round((boardScale-.1)*100)/100);resize();return;}
+  }
   if(promotion){
     const boxW=layout.cell*4.8,boxH=layout.cell*1.45,bx=(width-boxW)/2,by=(height-boxH)/2;
     if(x>=bx&&x<=bx+boxW&&y>=by&&y<=by+boxH){const i=Math.floor((x-bx)/(boxW/4));if(i>=0&&i<4){const choice=promotion.options[i];promotion=null;play(choice,now);}}
