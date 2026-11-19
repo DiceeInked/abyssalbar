@@ -229,8 +229,6 @@ function drawBoard(){
   ctx.fillRect(x+4*c,y,4*c,8*c);
   ctx.fillRect(x,y+4*c,8*c,4*c);
   ctx.restore();
-  ctx.save();ctx.strokeStyle='#fff';ctx.lineWidth=1/dpr;
-  ctx.strokeRect(x+.5/dpr,y+.5/dpr,layout.size-1/dpr,layout.size-1/dpr);ctx.restore();
 }
 function polygon(points,fill,stroke=null,lineWidth=1){
   if(points.length<3)return;ctx.beginPath();ctx.moveTo(points[0].x,points[0].y);
@@ -386,28 +384,11 @@ function drawPromotion(){
     drawPieceAt(current().turn===1?p.toUpperCase():p,cx,cy,.72);
   });
 }
-function drawButton(x,y,w,h,label,enabled=true){
-  ctx.save();ctx.fillStyle='#000';ctx.fillRect(x,y,w,h);ctx.strokeStyle=enabled?'#fff':'#555';ctx.lineWidth=1.25;ctx.strokeRect(x+.5,y+.5,w-1,h-1);
-  ctx.fillStyle=enabled?'#fff':'#666';ctx.font='600 11px Arial,Helvetica,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(label,x+w/2,y+h/2);ctx.restore();
-}
-let buttonRects={};
-function drawInterface(time){
-  const status=nowStatus(),headerY=Math.max(16,layout.y-58);
-  ctx.save();ctx.fillStyle='#fff';ctx.font='700 13px Arial,Helvetica,sans-serif';ctx.textAlign='left';ctx.textBaseline='middle';ctx.fillText('NOTAN CHESS',16,headerY+14);
-  ctx.font='600 11px Arial,Helvetica,sans-serif';ctx.textAlign='right';ctx.fillStyle='#fff';ctx.fillText(status.text, width-16,headerY+14);
-  ctx.restore();
-  const btnY=Math.min(height-48,layout.y+layout.size+18),btnH=32,gap=10;
-  const w=82,total=w*2+gap+(status.claim&&!status.over?gap+118:0),left=(width-total)/2;
-  buttonRects={undo:{x:left,y:btnY,w,h:btnH},restart:{x:left+w+gap,y:btnY,w,h:btnH}};
-  drawButton(buttonRects.undo.x,btnY,w,btnH,'UNDO',states.length>1&&!promotion);
-  drawButton(buttonRects.restart.x,btnY,w,btnH,'RESTART',true);
-  if(status.claim&&!status.over){const c={x:left+w*2+gap*2,y:btnY,w:118,h:btnH};buttonRects.claim=c;drawButton(c.x,c.y,c.w,c.h,'CLAIM DRAW',!promotion);}
-}
+
 function render(time){
   ctx.setTransform(dpr,0,0,dpr,0,0);ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';ctx.fillStyle='#000';ctx.fillRect(0,0,width,height);
   drawBoard();drawPieces(time);drawInvertingMarkers();
   if(promotion)drawPromotion();
-  drawInterface(time);
 }
 function finishMove(m,time){
   const before=current(),notation=san(before,m),moving=before.board[m.from],after=applyMove(before,m);
@@ -470,19 +451,14 @@ function pointer(e){
     else promotion=null;
     return;
   }
-  if(x>=buttonRects.undo?.x&&x<=buttonRects.undo?.x+buttonRects.undo?.w&&y>=buttonRects.undo?.y&&y<=buttonRects.undo?.y+buttonRects.undo?.h){undo();return;}
-  if(x>=buttonRects.restart?.x&&x<=buttonRects.restart?.x+buttonRects.restart?.w&&y>=buttonRects.restart?.y&&y<=buttonRects.restart?.y+buttonRects.restart?.h){restart();return;}
-  if(buttonRects.claim&&x>=buttonRects.claim.x&&x<=buttonRects.claim.x+buttonRects.claim.w&&y>=buttonRects.claim.y&&y<=buttonRects.claim.y+buttonRects.claim.h){claimDraw();return;}
   const square=squareAt(x,y);if(square>=0)chooseSquare(square,now);
 }
 function keydown(e){
-  if(e.key==='Escape'){promotion=null;selected=-1;selectedMoves=[];return;}
-  if((e.key==='Backspace'||e.key==='ArrowLeft')&&!e.repeat){e.preventDefault();undo();}
-  if((e.key==='r'||e.key==='R')&&!e.repeat)restart();
+  if(e.key==='Escape'){promotion=null;selected=-1;selectedMoves=[];}
 }
 function frame(time){render(time);requestAnimationFrame(frame);}
 canvas.addEventListener('pointerdown',pointer,{passive:false});
-window.addEventListener('keydown',keydown);window.addEventListener('resize',resize);
+window.addEventListener('resize',resize);
 window.addEventListener('contextmenu',e=>e.preventDefault());window.addEventListener('selectstart',e=>e.preventDefault());
 resize();a11y.textContent=gameStatus(current(),states).text;requestAnimationFrame(frame);
 })();
