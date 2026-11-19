@@ -253,15 +253,10 @@ function blobPoints(points,seed){
     return{x:center.x+Math.cos(angle)*radius*wobble,y:center.y+Math.sin(angle)*radius*wobble};
   });
 }
-function easedTravel(t){
-  t=clamp(t,0,1);
-  if(t<.72)return t;
-  return .72+.28*easeOut((t-.72)/.28);
-}
 function animatedPoints(piece,time,mode,started,seed=1){
   const def=PIECES[kind(piece)],base=def.points,center=pieceCenter(def);
   const elapsed=Math.max(0,time-started);
-  const target=mode==='blob'?blobPoints(base,seed):null;
+  const blob=mode==='blob'||mode==='shrink'?blobPoints(base,seed):null;
   return base.map((p,i)=>{
     if(mode==='wiggle'){
       const phase=time*.0062+i*1.73+seed;
@@ -270,16 +265,24 @@ function animatedPoints(piece,time,mode,started,seed=1){
         y:p.y+Math.cos(phase*1.13)*amount+Math.cos(phase*.71+i*1.3)*amount*.42};
     }
     if(mode==='expand'){
-      const progress=easedTravel(elapsed/285);
-      return{x:center.x+(p.x-center.x)*progress,y:center.y+(p.y-center.y)*progress};
+      const dx=p.x-center.x,dy=p.y-center.y,distance=Math.hypot(dx,dy);
+      const easeLength=Math.min(24,distance*.24),linearLength=distance-easeLength,speed=.62,easeTime=70;
+      const linearTime=linearLength/speed;
+      const travelled=elapsed<linearTime?elapsed*speed:linearLength+easeLength*easeOut((elapsed-linearTime)/easeTime);
+      const progress=distance?Math.min(1,travelled/distance):1;
+      return{x:center.x+dx*progress,y:center.y+dy*progress};
     }
     if(mode==='blob'){
-      const progress=easeOut(elapsed/245);
-      return{x:lerp(p.x,target[i].x,progress),y:lerp(p.y,target[i].y,progress)};
+      const progress=easeOut(elapsed/245),phase=time*.0048+i*2.17+seed;
+      const wobble=progress*10;
+      return{x:lerp(p.x,blob[i].x,progress)+Math.sin(phase)*wobble,
+        y:lerp(p.y,blob[i].y,progress)+Math.cos(phase*1.19)*wobble};
     }
     if(mode==='shrink'){
-      const progress=1-easeOut(elapsed/210);
-      return{x:center.x+(p.x-center.x)*progress,y:center.y+(p.y-center.y)*progress};
+      const progress=1-easeOut(elapsed/210),phase=time*.0048+i*2.17+seed;
+      const wobble=10*progress;
+      return{x:center.x+(blob[i].x-center.x)*progress+Math.sin(phase)*wobble,
+        y:center.y+(blob[i].y-center.y)*progress+Math.cos(phase*1.19)*wobble};
     }
     return p;
   });
@@ -311,7 +314,7 @@ function drawPieces(time){
     if(!valid(i)||board[i]==='.')continue;
     if(arrivalEffect&&arrivalEffect.square===i){
       const age=time-arrivalEffect.start;
-      if(age<285){
+      if(age<300){
         drawPolygonPiece(board[i],i,animatedPoints(board[i],time,'expand',arrivalEffect.start,arrivalEffect.seed));
         continue;
       }
