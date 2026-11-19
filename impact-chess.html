@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IMPACT CHESS</title>
+<style>
+  @import url('https://googleapis.com');
+
+  :root {
+    --bg-color: #0d0e15;
+    --board-light: #e2e8f0;
+    --board-dark: #475569;
+    --accent: #f43f5e;
+    --highlight: rgba(250, 204, 21, 0.55);
+    --valid-dot: rgba(16, 185, 129, 0.65);
+    --capture-ring: rgba(244, 63, 94, 0.85);
+  }
+
+  * {
+    box-sizing: border-box;
+    user-select: none;
+  }
+
+  body {
+    margin: 0;
+    padding: 0;
+    background-color: var(--bg-color);
+    color: #fff;
+    font-family: 'Inter', sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    overflow: hidden;
+  }
+
+  #game-container {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    z-index: 2;
+    transition: transform 0.05s ease-out;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    max-width: 560px;
+    padding: 0 8px;
+  }
+
+  h1 {
+    font-family: 'Black Ops One', cursive;
+    font-size: 2rem;
+    margin: 0;
+    letter-spacing: 2px;
+    background: linear-gradient(90deg, #fff, #f43f5e);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0 4px 20px rgba(244, 63, 94, 0.3);
+  }
+
+  .controls {
+    display: flex;
+    gap: 8px;
+  }
+
+  button {
+    background: #1e293b;
+    color: #f8fafc;
+    border: 1px solid #334155;
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  button:hover {
+    background: #334155;
+    border-color: #f43f5e;
+  }
+
+  #status-bar {
+    width: 100%;
+    max-width: 560px;
+    background: #161822;
+    border: 1px solid #262938;
+    padding: 10px 16px;
+    border-radius: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 700;
+    font-size: 0.95rem;
+  }
+
+  #turn-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .turn-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 0 8px #fff;
+  }
+
+  .turn-dot.black {
+    background: #0f172a;
+    border: 2px solid #94a3b8;
+    box-shadow: none;
+  }
+
+  #board-wrapper {
+    position: relative;
+    padding: 10px;
+    background: #1e293b;
+    border-radius: 10px;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7);
+  }
+
+  #board {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    grid-template-rows: repeat(8, 1fr);
+    width: min(88vw, 540px);
+    height: min(88vw, 540px);
+    border: 3px solid #0f172a;
+    position: relative;
+  }
+
+  .square {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    cursor: pointer;
+  }
+
+  .square.light { background-color: var(--board-light); }
+  .square.dark { background-color: var(--board-dark); }
+
+  .square.selected {
+    background-color: #fde047 !important;
+  }
+
+  .square.last-move {
+    box-shadow: inset 0 0 0 4px rgba(250, 204, 21, 0.7);
+  }
+
+  .square.in-check {
+    background: radial-gradient(circle, #ef4444 20%, #991b1b 90%) !important;
+    animation: pulseCheck 0.8s infinite alternate;
+  }
+
+  @keyframes pulseCheck {
+    from { box-shadow: inset 0 0 10px #000; }
+    to { box-shadow: inset 0 0 25px #fca5a5; }
+  }
+
+  .piece {
+    font-size: clamp(2.1rem, 7vw, 3.4rem);
+    line-height: 1;
+    z-index: 3;
+    transition: transform 0.12s cubic-bezier(0.2, 0.8, 0.2, 1);
+    pointer-events: none;
+  }
+
+  .piece.white {
+    color: #ffffff;
+    text-shadow: 0 2px 0 #0f172a, 0 -1px 0 #0f172a, 2px 0 0 #0f172a, -2px 0 0 #0f172a, 0 5px 10px rgba(0,0,0,0.45);
+  }
+
+  .piece.black {
+    color: #0f172a;
+    text-shadow: 0 1px 0 #94a3b8, 0 -1px 0 #94a3b8, 1px 0 0 #94a3b8, -1px 0 0 #94a3b8, 0 5px 10px rgba(0,0,0,0.5);
+  }
+
+  .square:hover .piece {
+    transform: translateY(-3px) scale(1.06);
+  }
+
+  /* Move Indicators */
+  .valid-move::after {
+    content: '';
+    width: 28%;
+    height: 28%;
+    background: var(--valid-dot);
+    border-radius: 50%;
+    position: absolute;
+    z-index: 2;
+  }
+
+  .valid-capture::after {
+    content: '';
+    width: 82%;
+    height: 82%;
+    border: 5px solid var(--capture-ring);
+    border-radius: 50%;
+    position: absolute;
+    z-index: 2;
+    animation: spinRing 4s linear infinite;
+  }
+
+  @keyframes spinRing {
+    to { transform: rotate(360deg); }
+  }
+
+  /* FX & Impact Frame Canvas */
+  #fx-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    z-index: 999;
+  }
+
+  /* Impact Frame Flash Overlay */
+  #impact-overlay {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 998;
+    opacity: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  #impact-text {
+    font-family: 'Black Ops One', cursive;
+    font-size: clamp(3.5rem, 12vw, 7rem);
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    transform: scale(0.8) rotate(-4deg);
+    transition: transform 0.08s ease-out;
+  }
+
+  /* Promotion Modal */
+  #promo-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.82);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .promo-box {
+    background: #1e293b;
+    padding: 24px;
+    border-radius: 12px;
+    border: 2px solid #f43f5e;
+    text-align: center;
+  }
+
+  .promo-choices {
+    display: flex;
+    gap: 16px;
+    margin-top: 16px;
+  }
+
+  .promo-btn {
+    font-size: 3rem;
+    padding: 10px 18px;
+    background: #0f172a;
+    border-radius: 8px;
+  }
+
+  /* Screen Shake Animations */
+  .shake-light { animation: shakeLight 0.25s cubic-bezier(.36,.07,.19,.97) both; }
+  .shake-heavy { animation: shakeHeavy 0.45s cubic-bezier(.36,.07,.19,.97) both; }
+
+  @keyframes shakeLight {
+    10%, 90% { transform: translate3d(-3px, 2px, 0); }
+    20%, 80% { transform: translate3d(4px, -2px, 0); }
+    30%, 50%, 70% { transform: translate3d(-6px, 3px, 0); }
+    40%, 60% { transform: translate3d(6px, -3px, 0); }
+  }
+
+  @keyframes shakeHeavy {
+    10%, 90% { transform: translate3d(-8px, 6px, 0) rotate(-1deg); }
+    20%, 80% { transform: translate3d(10px, -6px, 0) rotate(1deg); }
+    30%, 50%, 70% { transform: translate3d(-12px, 8px, 0) rotate(-1.5deg); }
+    40%, 60% { transform: translate3d(12px, -8px, 0) rotate(1.5deg); }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="fx-canvas"></canvas>
+<div id="impact-overlay"><div id="impact-text"></div></div>
+
+<div id="game-container">
+  <header>
+    <h1>IMPACT CHESS</h1>
+    <div class="controls">
+      <button id="mode-btn">Mode: vs AI</button>
+      <button id="sound-btn">SFX: ON</button>
+      <button id="reset-btn">Reset</button>
+    </div>
+  </header>
+
+  <div id="status-bar">
+    <div id="turn-indicator">
+      <div class="turn-dot" id="turn-dot"></div>
+      <span id="turn-text">White's Turn</span>
+    </div>
+    <div id="game-msg">Strike hard.</div>
+  </div>
+
+  <div id="board-wrapper">
+    <div id="board"></div>
+  </div>
+</div>
+
+<div id="promo-modal">
+  <div class="promo-box">
+    <div style="font-weight: 900; font-size: 1.2rem;">AWAKEN PAWN</div>
+    <div class="promo-choices" id="promo-choices"></div>
+  </div>
+</div>
+
+<script>
+/**
+ * AUDIO SYNTHESIZER (Web Audio API - Zero external assets)
+ */
+class SoundFX {
+  constructor() {
+    this.enabled = true;
+    this.ctx = null;
+  }
+
+  init() {
+    if (!this.ctx) {
+      this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (this.ctx.state === 'suspended') {
+      this.ctx.resume();
+    }
+  }
+
+  playMove() {
+    if (!this.enabled) return;
+    this.init();
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(180, this.ctx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(60, this.ctx.currentTime + 0.08);
+    gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.08);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.08);
+  }
+
+  playImpact(heavy = false) {
+    if (!this.enabled) return;
+    this.init();
+    const now = this.ctx.currentTime;
+
+    // 1. Sub-bass punch
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(heavy ? 150 : 120, now);
+    osc.frequency.exponentialRampToValueAtTime(22, now + (heavy ? 0.55 : 0.35));
+    gain.gain.setValueAtTime(heavy ? 0.9 : 0.65, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + (heavy ? 0.55 : 0.35));
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + (heavy ? 0.55 : 0.35));
+
+    // 2. White noise crunch / anime slash
+    const bufferSize = this.ctx.sampleRate * (heavy ? 0.45 : 0.25);
+    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.3));
+    }
+
+    const noise = this.ctx.createBufferSource();
+    noise.buffer = buffer;
+
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(heavy ? 900 : 1400, now);
+    filter.Q.value = 1.2;
+
+    const nGain = this.ctx.createGain();
+    nGain.gain.setValueAtTime(heavy ? 0.8 : 0.5, now);
+    nGain.gain.exponentialRampToValueAtTime(0.01, now + (heavy ? 0.45 : 0.25));
+
+    noise.connect(filter);
+    filter.connect(nGain);
+    nGain.connect(this.ctx.destination);
+    noise.start(now);
+  }
+}
+
+const sfx = new SoundFX();
+/**
+* IMPACT FRAME & PARTICLE ENGINE */ const canvas = document.getElementById('fx-canvas'); const ctx = canvas.getContext('2d'); let particles = []; let shockwaves = []; let speedLines = []; let impactFrameActive = false;
+function resizeCanvas() {
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+function triggerImpactFrame({ x, y, intensity = 1, label = '', color = '#ff1e42' }) {
+const container = document.getElementById('game-container');
+const overlay = document.getElementById('impact-overlay');
+const textEl = document.getElementById('impact-text');
+sfx.playImpact(intensity >= 2);
+// Shake screen
+container.classList.remove('shake-light', 'shake-heavy');
+void container.offsetWidth;
+container.classList.add(intensity >= 2 ? 'shake-heavy' : 'shake-light');
+// Spawn Shockwaves
+shockwaves.push({
+x, y,
+radius: 10,
+maxRadius: intensity >= 2 ? 420 : 240,
+alpha: 1,
+lineWidth: intensity >= 2 ? 18 : 10,
+color: '#ffffff'
+});
+// Spawn Anime Speed Lines radiating from impact point
+const lineCount = intensity >= 2 ? 48 : 26;
+for (let i = 0; i < lineCount; i++) {
+const angle = (Math.PI * 2 * i) / lineCount + (Math.random() * 0.1);
+speedLines.push({
+x, y,
+angle,
+innerR: 50 + Math.random() * 80,
+outerR: Math.max(canvas.width, canvas.height),
+width: 2 + Math.random() * (intensity >= 2 ? 8 : 4),
+life: 1.0
+});
+}
+// Spawn Debris Particles
+const pCount = intensity >= 2 ? 55 : 28;
+for (let i = 0; i < pCount; i++) {
+const angle = Math.random() * Math.PI * 2;
+const speed = (4 + Math.random() * 14) * (intensity >= 2 ? 1.4 : 1);
+particles.push({
+x, y,
+vx: Math.cos(angle) * speed,
+vy: Math.sin(angle) * speed,
+size: 4 + Math.random() * 8,
+color: i % 3 === 0 ? '#ffffff' : (i % 2 === 0 ? color : '#facc15'),
+life: 1.0,
+decay: 0.02 + Math.random() * 0.025
+});
+}
+// True Anime Impact Frame Sequence (Invert -> High-Contrast Black/White -> Color Flash)
+impactFrameActive = true;
+if (label) {
+textEl.textContent = label;
+textEl.style.color = '#ffffff';
+textEl.style.textShadow = 0 0 25px ${color}, 4px 4px 0 #000;
+textEl.style.transform = 'scale(1.15) rotate(-3deg)';
+}
+// Frame 1: Pure High-Contrast Invert
+overlay.style.opacity = '1';
+overlay.style.background = 'rgba(255, 255, 255, 0.92)';
+overlay.style.mixBlendMode = 'difference';
+setTimeout(() => {
+// Frame 2: Stark Pitch Black & Crimson Silhouette
+overlay.style.mixBlendMode = 'normal';
+overlay.style.background = intensity >= 2 ? 'rgba(15, 0, 5, 0.88)' : 'rgba(0, 0, 0, 0.78)';
+if (label) textEl.style.color = color;
+}, 55);
+setTimeout(() => {
+// Frame 3: White Flash Burn
+overlay.style.background = 'rgba(255, 255, 255, 0.65)';
+}, 115);
+setTimeout(() => {
+// Release Hitstop
+overlay.style.opacity = '0';
+textEl.textContent = '';
+textEl.style.transform = 'scale(0.8) rotate(-4deg)';
+impactFrameActive = false;
+}, intensity >= 2 ? 240 : 165);
+}
+function renderFX() {
+ctx.clearRect(0, 0, canvas.width, canvas.height);
+// Speed Lines
+for (let i = speedLines.length - 1; i >= 0; i--) {
+const l = speedLines[i];
+ctx.save();
+ctx.beginPath();
+ctx.moveTo(l.x + Math.cos(l.angle) * l.innerR, l.y + Math.sin(l.angle) * l.innerR);
+ctx.lineTo(l.x + Math.cos(l.angle) * l.outerR, l.y + Math.sin(l.angle) * l.outerR);
+ctx.strokeStyle = rgba(255, 255, 255, ${l.life * 0.85});
+ctx.lineWidth = l.width;
+ctx.stroke();
+ctx.restore();
+l.life -= 0.08;
+if (l.life <= 0) speedLines.splice(i, 1);
+}
+// Shockwaves
+for (let i = shockwaves.length - 1; i >= 0; i--) {
+const s = shockwaves[i];
+ctx.save();
+ctx.beginPath();
+ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
+ctx.strokeStyle = rgba(255, 255, 255, ${s.alpha});
+ctx.lineWidth = s.lineWidth;
+ctx.stroke();
+ctx.restore();
+s.radius += (s.maxRadius - s.radius) * 0.22;
+s.alpha -= 0.055;
+s.lineWidth *= 0.92;
+if (s.alpha <= 0) shockwaves.splice(i, 1);
+}
+// Particles
+for (let i = particles.length - 1; i >= 0; i--) {
+const p = particles[i];
+ctx.save();
+ctx.fillStyle = p.color;
+ctx.globalAlpha = p.life;
+ctx.translate(p.x, p.y);
+ctx.rotate(p.life * 6);
+ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+ctx.restore();
+p.x += p.vx;
+p.y += p.vy;
+p.vx *= 0.93;
+p.vy *= 0.93;
+p.life -= p.decay;
+if (p.life <= 0) particles.splice(i, 1);
+}
+requestAnimationFrame(renderFX);
+}
+renderFX();
+/**
+* FULL CHESS ENGINE (Legal moves, Check, Checkmate, Castling, En Passant, Promotion) */ const GLYPHS = { wK: '♔', wQ: '♕', wR: '♖', wB: '♗', wN: '♘', wP: '♙', bK: '♚', bQ: '♛', bR: '♜', bB: '♝', bN: '♞', bP: '♟' };
+const PIECE_VALUES = { P: 100, N: 320, B: 330, R: 500, Q: 900, K: 20000 };
+class ChessGame {
+constructor() {
+this.vsAI = true;
+this.reset();
+}
+reset() {
+this.board = [
+['bR','bN','bB','bQ','bK','bB','bN','bR'],
+['bP','bP','bP','bP','bP','bP','bP','bP'],
+[null,null,null,null,null,null,null,null],
+[null,null,null,null,null,null,null,null],
+[null,null,null,null,null,null,null,null],
+[null,null,null,null,null,null,null,null],
+['wP','wP','wP','wP','wP','wP','wP','wP'],
+['wR','wN','wB','wQ','wK','wB','wN','wR']
+];
+this.turn = 'w';
+this.selected = null;
+this.validMoves = [];
+this.lastMove = null;
+this.enPassant = null;
+this.castling = { wK: true, wQ: true, bK: true, bQ: true };
+this.gameOver = false;
+this.pendingPromotion = null;
+}
+inBounds(r, c) {
+return r >= 0 && r < 8 && c >= 0 && c < 8;
+}
+colorOf(piece) {
+return piece ? piece[0] : null;
+}
+typeOf(piece) {
+return piece ? piece[1] : null;
+}
+cloneState() {
+return {
+board: this.board.map(row => [...row]),
+turn: this.turn,
+enPassant: this.enPassant ? { ...this.enPassant } : null,
+castling: { ...this.castling }
+};
+}
+restoreState(state) {
+this.board = state.board.map(row => [...row]);
+this.turn = state.turn;
+this.enPassant = state.enPassant ? { ...state.enPassant } : null;
+this.castling = { ...state.castling };
+}
+getPseudoMoves(r, c, board = this.board, enPassant = this.enPassant, castling = this.castling) {
+const piece = board[r][c];
+if (!piece) return [];
+const color = piece[0];
+const type = piece[1];
+const enemy = color === 'w' ? 'b' : 'w';
+const moves = [];
+const addIfValid = (nr, nc) => {
+if (!this.inBounds(nr, nc)) return false;
+const target = board[nr][nc];
+if (!target) {
+moves.push({ from: { r, c }, to: { r: nr, c: nc }, capture: false });
+return true;
+} else if (target[0] === enemy) {
+moves.push({ from: { r, c }, to: { r: nr, c: nc }, capture: true });
+return false;
+}
+return false;
+};
+if (type === 'P') {
+const dir = color === 'w' ? -1 : 1;
+const startRow = color === 'w' ? 6 : 1;
+const promoRow = color === 'w' ? 0 : 7;
+// Forward 1
+if (this.inBounds(r + dir, c) && !board[r + dir][c]) {
+moves.push({ from: { r, c }, to: { r: r + dir, c }, capture: false, promotion: r + dir === promoRow });
+// Forward 2
+if (r === startRow && !board[r + dir * 2][c]) {
+moves.push({ from: { r, c }, to: { r: r + dir * 2, c }, capture: false, doublePawn: true });
+}
+}
+// Captures
+for (const dc of [-1, 1]) {
+const nr = r + dir, nc = c + dc;
+if (this.inBounds(nr, nc)) {
+const target = board[nr][nc];
+if (target && target[0] === enemy) {
+moves.push({ from: { r, c }, to: { r: nr, c: nc }, capture: true, promotion: nr === promoRow });
+} else if (enPassant && enPassant.r === nr && enPassant.c === nc) {
+moves.push({ from: { r, c }, to: { r: nr, c: nc }, capture: true, enPassant: true });
+}
+}
+}
+} else if (type === 'N') {
+const jumps = [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]];
+jumps.forEach(([dr, dc]) => addIfValid(r + dr, c + dc));
+} else if (type === 'B' || type === 'R' || type === 'Q') {
+const dirs = [];
+if (type === 'B' || type === 'Q') dirs.push([-1,-1],[-1,1],[1,-1],[1,1]);
+if (type === 'R' || type === 'Q') dirs.push([-1,0],[1,0],[0,-1],[0,1]);
+dirs.forEach(([dr, dc]) => {
+let nr = r + dr, nc = c + dc;
+while (addIfValid(nr, nc)) {
+nr += dr;
+nc += dc;
+}
+});
+} else if (type === 'K') {
+for (let dr = -1; dr <= 1; dr++) {
+for (let dc = -1; dc <= 1; dc++) {
+if (dr !== 0 || dc !== 0) addIfValid(r + dr, c + dc);
+}
+}
+// Castling
+const row = color === 'w' ? 7 : 0;
+if (r === row && c === 4) {
+if (castling[color + 'K'] && !board[row][5] && !board[row][6] && board[row][7] === color + 'R') {
+moves.push({ from: { r, c }, to: { r: row, c: 6 }, castle: 'K' });
+}
+if (castling[color + 'Q'] && !board[row][3] && !board[row][2] && !board[row][1] && board[row][0] === color + 'R') {
+moves.push({ from: { r, c }, to: { r: row, c: 2 }, castle: 'Q' });
+}
+}
+}
+return moves;
+}
+isSquareAttacked(r, c, attackerColor, board = this.board) {
+for (let ir = 0; ir < 8; ir++) {
+for (let ic = 0; ic < 8; ic++) {
+const p = board[ir][ic];
+if (p && p[0] === attackerColor) {
+const moves = this.getPseudoMoves(ir, ic, board, null, { wK:false, wQ:false, bK:false, bQ:false });
+if (moves.some(m => m.to.r === r && m.to.c === c)) return true;
+}
+}
+}
+return false;
+}
+findKing(color, board = this.board) {
+for (let r = 0; r < 8; r++) {
+for (let c = 0; c < 8; c++) {
+if (board[r][c] === color + 'K') return { r, c };
+}
+}
+return null;
+}
+isInCheck(color, board = this.board) {
+const king = this.findKing(color, board);
+if (!king) return false;
+const enemy = color === 'w' ? 'b' : 'w';
+return this.isSquareAttacked(king.r, king.c, enemy, board);
+}
+applyMoveRaw(move, board, castling) {
+const piece = board[move.from.r][move.from.c];
+const color = piece[0];
+const type = piece[1];
+board[move.to.r][move.to.c] = move.promoChoice ? color + move.promoChoice : piece;
+board[move.from.r][move.from.c] = null;
+if (move.enPassant) {
+const capRow = color === 'w' ? move.to.r + 1 : move.to.r - 1;
+board[capRow][move.to.c] = null;
+}
+if (move.castle) {
+const row = move.from.r;
+if (move.castle === 'K') {
+board[row][5] = color + 'R';
+board[row][7] = null;
+} else {
+board[row][3] = color + 'R';
+board[row][0] = null;
+}
+}
+// Update castling rights
+if (type === 'K') {
+castling[color + 'K'] = false;
+castling[color + 'Q'] = false;
+}
+if (move.from.r === 7 && move.from.c === 0) castling.wQ = false;
+if (move.from.r === 7 && move.from.c === 7) castling.wK = false;
+if (move.from.r === 0 && move.from.c === 0) castling.bQ = false;
+if (move.from.r === 0 && move.from.c === 7) castling.bK = false;
+if (move.to.r === 7 && move.to.c === 0) castling.wQ = false;
+if (move.to.r === 7 && move.to.c === 7) castling.wK = false;
+if (move.to.r === 0 && move.to.c === 0) castling.bQ = false;
+if (move.to.r === 0 && move.to.c === 7) castling.bK = false;
+}
+getLegalMoves(r, c) {
+const piece = this.board[r][c];
+if (!piece || piece[0] !== this.turn) return [];
+const color = piece[0];
+const enemy = color === 'w' ? 'b' : 'w';
+const pseudo = this.getPseudoMoves(r, c);
+return pseudo.filter(move => {
+// Cannot castle out of, through, or into check
+if (move.castle) {
+if (this.isInCheck(color)) return false;
+const passCol = move.castle === 'K' ? 5 : 3;
+if (this.isSquareAttacked(r, passCol, enemy)) return false;
+}
+const tempBoard = this.board.map(row => [...row]);
+const tempCastling = { ...this.castling };
+this.applyMoveRaw(move, tempBoard, tempCastling);
+return !this.isInCheck(color, tempBoard);
+});
+}
+getAllLegalMoves(color) {
+const all = [];
+for (let r = 0; r < 8; r++) {
+for (let c = 0; c < 8; c++) {
+if (this.board[r][c] && this.board[r][c][0] === color) {
+all.push(...this.getLegalMoves(r, c));
+}
+}
+}
+return all;
+}
+executeMove(move, promoChoice = 'Q') {
+const movingPiece = this.board[move.from.r][move.from.c];
+const capturedPiece = this.board[move.to.r][move.to.c];
+if (move.promotion) {
+move.promoChoice = promoChoice;
+}
+this.applyMoveRaw(move, this.board, this.castling);
+// Update en passant target
+if (move.doublePawn) {
+this.enPassant = {
+r: (move.from.r + move.to.r) / 2,
+c: move.from.c
+};
+} else {
+this.enPassant = null;
+}
+this.lastMove = move;
+this.selected = null;
+this.validMoves = [];
+this.turn = this.turn === 'w' ? 'b' : 'w';
+// Determine Impact Frame triggers
+const inCheck = this.isInCheck(this.turn);
+const nextMoves = this.getAllLegalMoves(this.turn);
+const isCheckmate = inCheck && nextMoves.length === 0;
+const isStalemate = !inCheck && nextMoves.length === 0;
+const coords = getSquareCenter(move.to.r, move.to.c);
+if (isCheckmate) {
+this.gameOver = true;
+triggerImpactFrame({
+x: coords.x,
+y: coords.y,
+intensity: 3,
+label: 'CHECKMATE!',
+color: '#f43f5e'
+});
+setStatus(${this.turn === 'w' ? 'Black' : 'White'} Wins by Checkmate!);
+} else if (isStalemate) {
+this.gameOver = true;
+sfx.playMove();
+setStatus('Draw by Stalemate!');
+} else if (inCheck) {
+triggerImpactFrame({
+x: coords.x,
+y: coords.y,
+intensity: 2,
+label: 'CHECK!',
+color: '#f97316'
+});
+setStatus('CHECK! Defend the King!');
+} else if (move.capture) {
+const capType = capturedPiece ? capturedPiece[1] : 'P';
+const heavy = capType === 'Q' || capType === 'R';
+triggerImpactFrame({
+x: coords.x,
+y: coords.y,
+intensity: heavy ? 2 : 1,
+label: heavy ? 'CRITICAL!' : 'SMASH!',
+color: heavy ? '#e11d48' : '#38bdf8'
+});
+setStatus('Piece Obliterated!');
+} else if (move.promotion) {
+triggerImpactFrame({
+x: coords.x,
+y: coords.y,
+intensity: 2,
+label: 'AWAKENED!',
+color: '#eab308'
+});
+setStatus('Pawn Promoted!');
+} else {
+sfx.playMove();
+setStatus(this.turn === 'w' ? 'Your move.' : (this.vsAI ? 'AI is thinking...' : "Black's move."));
+}
+renderBoard();
+// AI Response
+if (!this.gameOver && this.vsAI && this.turn === 'b') {
+setTimeout(() => this.makeAIMove(), 420);
+}
+}
+evaluateBoard(board) {
+let score = 0;
+for (let r = 0; r < 8; r++) {
+for (let c = 0; c < 8; c++) {
+const p = board[r][c];
+if (!p) continue;
+const val = PIECE_VALUES[p[1]];
+// Center control bonus
+const centerBonus = (3.5 - Math.abs(3.5 - r)) + (3.5 - Math.abs(3.5 - c));
+if (p[0] === 'b') score += val + centerBonus * 4;
+else score -= val + centerBonus * 4;
+}
+}
+return score;
+}
+makeAIMove() {
+if (this.gameOver) return;
+const moves = this.getAllLegalMoves('b');
+if (moves.length === 0) return;
+let bestScore = -Infinity;
+let bestMoves = [];
+for (const move of moves) {
+if (move.promotion) move.promoChoice = 'Q';
+const saved = this.cloneState();
+this.applyMoveRaw(move, this.board, this.castling);
+// 1-ply lookahead + opponent best response (Minimax depth 2)
+const oppMoves = this.getAllLegalMoves('w');
+let minReply = Infinity;
+if (oppMoves.length === 0) {
+minReply = this.isInCheck('w') ? 99999 : 0;
+} else {
+for (const reply of oppMoves) {
+if (reply.promotion) reply.promoChoice = 'Q';
+const saved2 = this.cloneState();
+this.applyMoveRaw(reply, this.board, this.castling);
+const evalScore = this.evaluateBoard(this.board);
+if (evalScore < minReply) minReply = evalScore;
+this.restoreState(saved2);
+}
+}
+this.restoreState(saved);
+if (minReply > bestScore) {
+bestScore = minReply;
+bestMoves = [move];
+} else if (minReply === bestScore) {
+bestMoves.push(move);
+}
+}
+const chosen = bestMoves[Math.floor(Math.random() * bestMoves.length)];
+this.executeMove(chosen, 'Q');
+}
+}
+/**
+* UI & BOARD RENDERING */ const game = new ChessGame(); const boardEl = document.getElementById('board');
+function getSquareCenter(r, c) {
+const sq = boardEl.children[r * 8 + c];
+if (!sq) return { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+const rect = sq.getBoundingClientRect();
+return {
+x: rect.left + rect.width / 2,
+y: rect.top + rect.height / 2
+};
+}
+function setStatus(msg) {
+document.getElementById('game-msg').textContent = msg;
+const dot = document.getElementById('turn-dot');
+const turnText = document.getElementById('turn-text');
+if (game.turn === 'w') {
+dot.classList.remove('black');
+turnText.textContent = "White's Turn";
+} else {
+dot.classList.add('black');
+turnText.textContent = "Black's Turn";
+}
+}
+function showPromotionModal(move) {
+const modal = document.getElementById('promo-modal');
+const choicesEl = document.getElementById('promo-choices');
+choicesEl.innerHTML = '';
+const color = game.turn;
+['Q', 'R', 'B', 'N'].forEach(type => {
+const btn = document.createElement('button');
+btn.className = 'promo-btn';
+btn.textContent = GLYPHS[color + type];
+btn.onclick = () => {
+modal.style.display = 'none';
+game.executeMove(move, type);
+};
+choicesEl.appendChild(btn);
+});
+modal.style.display = 'flex';
+}
+function handleSquareClick(r, c) {
+if (game.gameOver) return;
+if (game.vsAI && game.turn === 'b') return;
+// Check if clicked square is a valid move destination
+const chosenMove = game.validMoves.find(m => m.to.r === r && m.to.c === c);
+if (chosenMove) {
+if (chosenMove.promotion) {
+showPromotionModal(chosenMove);
+} else {
+game.executeMove(chosenMove);
+}
+return;
+}
+// Select own piece
+const piece = game.board[r][c];
+if (piece && piece[0] === game.turn) {
+game.selected = { r, c };
+game.validMoves = game.getLegalMoves(r, c);
+} else {
+game.selected = null;
+game.validMoves = [];
+}
+renderBoard();
+}
+function renderBoard() {
+boardEl.innerHTML = '';
+const wCheck = game.isInCheck('w');
+const bCheck = game.isInCheck('b');
+for (let r = 0; r < 8; r++) {
+for (let c = 0; c < 8; c++) {
+const sq = document.createElement('div');
+sq.className = 'square ' + ((r + c) % 2 === 0 ? 'light' : 'dark');
+if (game.selected && game.selected.r === r && game.selected.c === c) {
+sq.classList.add('selected');
+}
+if (game.lastMove &&
+((game.lastMove.from.r === r && game.lastMove.from.c === c) ||
+(game.lastMove.to.r === r && game.lastMove.to.c === c))) {
+sq.classList.add('last-move');
+}
+const piece = game.board[r][c];
+if ((piece === 'wK' && wCheck) || (piece === 'bK' && bCheck)) {
+sq.classList.add('in-check');
+}
+const moveHint = game.validMoves.find(m => m.to.r === r && m.to.c === c);
+if (moveHint) {
+sq.classList.add(moveHint.capture ? 'valid-capture' : 'valid-move');
+}
+if (piece) {
+const pEl = document.createElement('span');
+pEl.className = 'piece ' + (piece[0] === 'w' ? 'white' : 'black');
+pEl.textContent = GLYPHS[piece];
+sq.appendChild(pEl);
+}
+sq.addEventListener('click', () => handleSquareClick(r, c));
+boardEl.appendChild(sq);
+}
+}
+}
+// Controls
+document.getElementById('reset-btn').addEventListener('click', () => {
+game.reset();
+setStatus('Strike hard.');
+renderBoard();
+});
+document.getElementById('mode-btn').addEventListener('click', (e) => {
+game.vsAI = !game.vsAI;
+e.target.textContent = game.vsAI ? 'Mode: vs AI' : 'Mode: 2 Player';
+game.reset();
+setStatus('Strike hard.');
+renderBoard();
+});
+document.getElementById('sound-btn').addEventListener('click', (e) => {
+sfx.enabled = !sfx.enabled;
+e.target.textContent = sfx.enabled ? 'SFX: ON' : 'SFX: OFF';
+});
+// Initial render
+renderBoard();
