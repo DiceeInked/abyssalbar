@@ -263,11 +263,13 @@ function pieceCenter(def){
 }
 function blobPoints(points,seed){
   const center=points.reduce((p,v)=>({x:p.x+v.x/points.length,y:p.y+v.y/points.length}),{x:0,y:0});
-  const radius=points.reduce((sum,v)=>sum+Math.hypot(v.x-center.x,v.y-center.y),0)/points.length*.78;
+  const radius=points.reduce((sum,v)=>sum+Math.hypot(v.x-center.x,v.y-center.y),0)/points.length*.72;
+  const area=points.reduce((sum,v,i)=>sum+v.x*points[(i+1)%points.length].y-points[(i+1)%points.length].x*v.y,0);
+  const direction=area<0?-1:1;
   return points.map((v,i)=>{
-    const angle=Math.atan2(v.y-center.y,v.x-center.x);
-    const wobble=.78+.22*Math.sin(i*2.37+seed*1.91);
-    return{x:center.x+Math.cos(angle)*radius*wobble,y:center.y+Math.sin(angle)*radius*wobble};
+    const angle=-Math.PI/2+direction*i*TAU/points.length+seed*.13;
+    const radiusVariation=1+.035*Math.sin(i*2.41+seed*1.73);
+    return{x:center.x+Math.cos(angle)*radius*radiusVariation,y:center.y+Math.sin(angle)*radius*radiusVariation};
   });
 }
 function animatedPoints(piece,time,mode,started,seed=1){
@@ -283,29 +285,35 @@ function animatedPoints(piece,time,mode,started,seed=1){
     }
     if(mode==='expand'){
       const dx=p.x-center.x,dy=p.y-center.y,distance=Math.hypot(dx,dy);
-      const easeLength=Math.min(24,distance*.24),linearLength=distance-easeLength,speed=.62,easeTime=70;
+      const easeLength=Math.min(24,distance*.24),linearLength=distance-easeLength,speed=.48,easeTime=90;
       const linearTime=linearLength/speed;
       const travelled=elapsed<linearTime?elapsed*speed:linearLength+easeLength*easeOut((elapsed-linearTime)/easeTime);
       const progress=distance?Math.min(1,travelled/distance):1;
       return{x:center.x+dx*progress,y:center.y+dy*progress};
     }
     if(mode==='blob'){
-      const progress=easeOut(elapsed/245),phase=time*.0048+i*2.17+seed;
-      const wobble=progress*10;
-      return{x:lerp(p.x,blob[i].x,progress)+Math.sin(phase)*wobble,
-        y:lerp(p.y,blob[i].y,progress)+Math.cos(phase*1.19)*wobble};
+      const formation=easeOut(elapsed/360);
+      const angle=Math.atan2(blob[i].y-center.y,blob[i].x-center.x);
+      const radius=Math.hypot(blob[i].x-center.x,blob[i].y-center.y);
+      const wander=smooth((elapsed-360)/140);
+      const phase=time*.0023+i*2.399+seed*1.37;
+      const radial=(Math.sin(phase)*.045+Math.sin(phase*.61+i*1.31)*.018)*radius*wander;
+      const angular=Math.sin(phase*.73+i*1.77)*.035*wander;
+      const settledAngle=angle+angular,settledRadius=radius+radial;
+      const wandering={x:center.x+Math.cos(settledAngle)*settledRadius,y:center.y+Math.sin(settledAngle)*settledRadius};
+      return{x:lerp(p.x,blob[i].x,formation)+(wandering.x-blob[i].x)*wander,
+        y:lerp(p.y,blob[i].y,formation)+(wandering.y-blob[i].y)*wander};
     }
     if(mode==='shrink'){
-      const progress=1-easeOut(elapsed/210),phase=time*.0048+i*2.17+seed;
-      const wobble=10*progress;
-      return{x:center.x+(blob[i].x-center.x)*progress+Math.sin(phase)*wobble,
-        y:center.y+(blob[i].y-center.y)*progress+Math.cos(phase*1.19)*wobble};
+      const progress=1-easeOut(elapsed/320);
+      return{x:center.x+(blob[i].x-center.x)*progress,y:center.y+(blob[i].y-center.y)*progress};
     }
     return p;
   });
 }
 function drawPolygonPiece(piece,square,points,scale=1,alpha=1){
   const def=PIECES[kind(piece)];if(!def)return;
+  scale*=.95;
   const center=squareCenter(square),unit=layout.cell/320*scale,baseline=center.y+layout.cell*.36;
   const fill=side(piece)===1?'#fff':'#000',outer=side(piece)===1?'#000':'#fff';
   ctx.save();ctx.globalAlpha=alpha;ctx.translate(center.x,baseline);
@@ -313,9 +321,9 @@ function drawPolygonPiece(piece,square,points,scale=1,alpha=1){
   ctx.beginPath();ctx.moveTo(points[0].x,points[0].y);
   for(let i=1;i<points.length;i++)ctx.lineTo(points[i].x,points[i].y);
   ctx.closePath();ctx.lineJoin='miter';ctx.lineCap='square';
-  ctx.strokeStyle=outer;ctx.lineWidth=layout.cell*.15/unit;ctx.stroke();
+  ctx.strokeStyle=outer;ctx.lineWidth=layout.cell*.15/unit*scale;ctx.stroke();
   ctx.fillStyle=fill;ctx.fill();
-  ctx.strokeStyle=fill;ctx.lineWidth=layout.cell*.035/unit;ctx.stroke();
+  ctx.strokeStyle=fill;ctx.lineWidth=layout.cell*.035/unit*scale;ctx.stroke();
   ctx.restore();
 }
 function drawPiece(piece,square,scale=1,rotation=0,alpha=1){
@@ -324,15 +332,16 @@ function drawPiece(piece,square,scale=1,rotation=0,alpha=1){
 }
 function drawPieceAt(piece,x,y,scale=1,rotation=0,alpha=1){
   const def=PIECES[kind(piece)];if(!def)return;
+  scale*=.95;
   const unit=layout.cell/320*scale,baseline=y+layout.cell*.36;
   const fill=side(piece)===1?'#fff':'#000',outer=side(piece)===1?'#000':'#fff';
   ctx.save();ctx.globalAlpha=alpha;ctx.translate(x,baseline);ctx.translate(-def.cx*unit,-313.5*unit);ctx.scale(unit,unit);
   ctx.beginPath();ctx.moveTo(def.points[0].x,def.points[0].y);
   for(let i=1;i<def.points.length;i++)ctx.lineTo(def.points[i].x,def.points[i].y);
   ctx.closePath();ctx.lineJoin='miter';ctx.lineCap='square';
-  ctx.strokeStyle=outer;ctx.lineWidth=layout.cell*.15/unit;ctx.stroke();
+  ctx.strokeStyle=outer;ctx.lineWidth=layout.cell*.15/unit*scale;ctx.stroke();
   ctx.fillStyle=fill;ctx.fill();
-  ctx.strokeStyle=fill;ctx.lineWidth=layout.cell*.035/unit;ctx.stroke();
+  ctx.strokeStyle=fill;ctx.lineWidth=layout.cell*.035/unit*scale;ctx.stroke();
   ctx.restore();
 }
 function drawPieces(time){
@@ -341,7 +350,7 @@ function drawPieces(time){
     if(!valid(i)||board[i]==='.')continue;
     if(arrivalEffect&&arrivalEffect.square===i){
       const age=time-arrivalEffect.start;
-      if(age<300){
+      if(age<380){
         drawPolygonPiece(board[i],i,animatedPoints(board[i],time,'expand',arrivalEffect.start,arrivalEffect.seed));
         continue;
       }
@@ -355,7 +364,7 @@ function drawPieces(time){
   }
   if(fadingResidue){
     const age=time-fadingResidue.shrinkStart;
-    if(age<210)drawPolygonPiece(fadingResidue.piece,fadingResidue.square,
+    if(age<320)drawPolygonPiece(fadingResidue.piece,fadingResidue.square,
       animatedPoints(fadingResidue.piece,time,'shrink',fadingResidue.shrinkStart,fadingResidue.seed));
     else fadingResidue=null;
   }
