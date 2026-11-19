@@ -219,7 +219,9 @@ function drawBoard(){
   ctx.fillStyle='#000';ctx.fillRect(layout.x,layout.y,layout.size,layout.size);
   for(let rank=0;rank<8;rank++)for(let file=0;file<8;file++){
     const i=rank*16+file,x=layout.x+file*layout.cell,y=layout.y+rank*layout.cell;
-    ctx.fillStyle=((rank+file)&1)?'#000':'#fff';ctx.fillRect(x,y,layout.cell,layout.cell);
+    const piece=current().board[i];
+    ctx.fillStyle=piece==='.'?(((rank+file)&1)?'#000':'#fff'):(side(piece)===1?'#000':'#fff');
+    ctx.fillRect(x,y,layout.cell,layout.cell);
   }
   ctx.save();ctx.strokeStyle='#fff';ctx.lineWidth=1;ctx.strokeRect(layout.x+.5,layout.y+.5,layout.size-1,layout.size-1);ctx.restore();
 }
@@ -244,13 +246,11 @@ function drawPiece(piece,square,scale=1,rotation=0,alpha=1){
   const center=squareCenter(square),unit=layout.cell/320*scale;
   const baseline=center.y+layout.cell*.36;
   const fill=side(piece)===1?'#fff':'#000';
-  const stroke=side(piece)===1?'#000':'#fff';
   ctx.save();ctx.globalAlpha=alpha;
   ctx.translate(center.x,baseline);if(rotation)ctx.rotate(rotation);
   ctx.translate(-def.cx*unit,-313.5*unit);ctx.scale(unit,unit);
-  ctx.fillStyle=fill;ctx.strokeStyle=stroke;ctx.lineWidth=layout.cell*.016/unit;
-  ctx.lineJoin='miter';ctx.lineCap='square';
-  ctx.fill(def.path);ctx.stroke(def.linework);
+  ctx.fillStyle=fill;
+  ctx.fill(def.path);
   ctx.restore();
 }
 function drawPieceAt(piece,x,y,scale=1,rotation=0,alpha=1){
@@ -258,8 +258,8 @@ function drawPieceAt(piece,x,y,scale=1,rotation=0,alpha=1){
   const unit=layout.cell/320*scale,baseline=y+layout.cell*.36;
   ctx.save();ctx.globalAlpha=alpha;ctx.translate(x,baseline);if(rotation)ctx.rotate(rotation);
   ctx.translate(-def.cx*unit,-313.5*unit);ctx.scale(unit,unit);
-  ctx.fillStyle=side(piece)===1?'#fff':'#000';ctx.strokeStyle=side(piece)===1?'#000':'#fff';ctx.lineWidth=layout.cell*.016/unit;
-  ctx.lineJoin='miter';ctx.lineCap='square';ctx.fill(def.path);ctx.stroke(def.linework);ctx.restore();
+  ctx.fillStyle=side(piece)===1?'#fff':'#000';
+  ctx.fill(def.path);ctx.restore();
 }
 function drawPieces(){
   const board=current().board;
