@@ -262,12 +262,15 @@ function pieceCenter(def){
 function blobPoints(points,seed){
   const center=points.reduce((p,v)=>({x:p.x+v.x/points.length,y:p.y+v.y/points.length}),{x:0,y:0});
   const radius=points.reduce((sum,v)=>sum+Math.hypot(v.x-center.x,v.y-center.y),0)/points.length*.72;
-  const area=points.reduce((sum,v,i)=>sum+v.x*points[(i+1)%points.length].y-points[(i+1)%points.length].x*v.y,0);
-  const direction=area<0?-1:1;
   return points.map((v,i)=>{
-    const angle=-Math.PI/2+direction*i*TAU/points.length+seed*.13;
+    // Preserve each vertex's direction from the piece center. This lets
+    // the silhouette round out in place instead of drawing its vertices
+    // inward toward the center before spreading into a circle.
+    const dx=v.x-center.x,dy=v.y-center.y;
+    const angle=Math.atan2(dy,dx);
     const radiusVariation=1+.035*Math.sin(i*2.41+seed*1.73);
-    return{x:center.x+Math.cos(angle)*radius*radiusVariation,y:center.y+Math.sin(angle)*radius*radiusVariation};
+    const targetRadius=radius*radiusVariation;
+    return{x:center.x+Math.cos(angle)*targetRadius,y:center.y+Math.sin(angle)*targetRadius};
   });
 }
 function animatedPoints(piece,time,mode,started,seed=1){
@@ -309,19 +312,37 @@ function animatedPoints(piece,time,mode,started,seed=1){
     return p;
   });
 }
+function expandedPolygon(points,distance){
+  const area=points.reduce((sum,p,i)=>sum+p.x*points[(i+1)%points.length].y-points[(i+1)%points.length].x*p.y,0);
+  const direction=area>=0?1:-1;
+  const normals=points.map((p,i)=>{
+    const next=points[(i+1)%points.length],dx=next.x-p.x,dy=next.y-p.y,length=Math.hypot(dx,dy)||1;
+    return{x:direction*dy/length,y:-direction*dx/length};
+  });
+  return points.map((p,i)=>{
+    const before=normals[(i+points.length-1)%points.length],after=normals[i];
+    const sx=before.x+after.x,sy=before.y+after.y,sl=Math.hypot(sx,sy)||1;
+    const bx=sx/sl,by=sy/sl;
+    const projection=bx*after.x+by*after.y;
+    const amount=Math.min(distance/Math.max(.25,projection),distance*3);
+    return{x:p.x+bx*amount,y:p.y+by*amount};
+  });
+}
 function drawPolygonPiece(piece,square,points,scale=1,alpha=1){
   const def=PIECES[kind(piece)];if(!def)return;
-  scale*=.95;
+  scale*=.9025;
   const center=squareCenter(square),unit=layout.cell/320*scale,baseline=center.y+layout.cell*.36;
   const fill=side(piece)===1?'#fff':'#000',outer=side(piece)===1?'#000':'#fff';
   ctx.save();ctx.globalAlpha=alpha;ctx.translate(center.x,baseline);
   ctx.translate(-def.cx*unit,-313.5*unit);ctx.scale(unit,unit);
+  const outline=expandedPolygon(points,24);
+  ctx.beginPath();ctx.moveTo(outline[0].x,outline[0].y);
+  for(let i=1;i<outline.length;i++)ctx.lineTo(outline[i].x,outline[i].y);
+  ctx.closePath();ctx.fillStyle=outer;ctx.fill();
   ctx.beginPath();ctx.moveTo(points[0].x,points[0].y);
   for(let i=1;i<points.length;i++)ctx.lineTo(points[i].x,points[i].y);
-  ctx.closePath();ctx.lineJoin='miter';ctx.lineCap='square';
-  ctx.strokeStyle=outer;ctx.lineWidth=layout.cell*.15/unit*scale;ctx.stroke();
-  ctx.fillStyle=fill;ctx.fill();
-  ctx.strokeStyle=fill;ctx.lineWidth=layout.cell*.035/unit*scale;ctx.stroke();
+  ctx.closePath();ctx.fillStyle=fill;ctx.fill();
+  ctx.strokeStyle=fill;ctx.lineWidth=11;ctx.lineJoin='miter';ctx.lineCap='square';ctx.stroke();
   ctx.restore();
 }
 function drawPiece(piece,square,scale=1,rotation=0,alpha=1){
@@ -330,16 +351,18 @@ function drawPiece(piece,square,scale=1,rotation=0,alpha=1){
 }
 function drawPieceAt(piece,x,y,scale=1,rotation=0,alpha=1){
   const def=PIECES[kind(piece)];if(!def)return;
-  scale*=.95;
+  scale*=.9025;
   const unit=layout.cell/320*scale,baseline=y+layout.cell*.36;
   const fill=side(piece)===1?'#fff':'#000',outer=side(piece)===1?'#000':'#fff';
   ctx.save();ctx.globalAlpha=alpha;ctx.translate(x,baseline);ctx.translate(-def.cx*unit,-313.5*unit);ctx.scale(unit,unit);
+  const outline=expandedPolygon(def.points,24);
+  ctx.beginPath();ctx.moveTo(outline[0].x,outline[0].y);
+  for(let i=1;i<outline.length;i++)ctx.lineTo(outline[i].x,outline[i].y);
+  ctx.closePath();ctx.fillStyle=outer;ctx.fill();
   ctx.beginPath();ctx.moveTo(def.points[0].x,def.points[0].y);
   for(let i=1;i<def.points.length;i++)ctx.lineTo(def.points[i].x,def.points[i].y);
-  ctx.closePath();ctx.lineJoin='miter';ctx.lineCap='square';
-  ctx.strokeStyle=outer;ctx.lineWidth=layout.cell*.15/unit*scale;ctx.stroke();
-  ctx.fillStyle=fill;ctx.fill();
-  ctx.strokeStyle=fill;ctx.lineWidth=layout.cell*.035/unit*scale;ctx.stroke();
+  ctx.closePath();ctx.fillStyle=fill;ctx.fill();
+  ctx.strokeStyle=fill;ctx.lineWidth=11;ctx.lineJoin='miter';ctx.lineCap='square';ctx.stroke();
   ctx.restore();
 }
 function drawPieces(time){
