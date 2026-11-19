@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="363.5 113.5 150.0 200.0" role="img" aria-label="Pawn chess piece">
+  <path d="M363.5 313.5 L513.5 313.5 L513.5 288.5 L488.5 263.5 L463.5 188.5 L488.5 163.5 L438.5 113.5 L388.5 163.5 L413.5 188.5 L388.5 263.5 L363.5 288.5 Z" fill="var(--piece-fill, #fff)"/>
+  <path d="M413.5 188.5L388.5 163.5 M388.5 163.5L438.5 113.5 M438.5 113.5L488.5 163.5 M463.5 188.5L488.5 163.5 M363.5 313.5L513.5 313.5 M363.5 288.5L388.5 263.5 M513.5 288.5L488.5 263.5 M513.5 313.5L513.5 288.5 M363.5 313.5L363.5 288.5 M488.5 263.5L463.5 188.5 M388.5 263.5L413.5 188.5" fill="none" stroke="var(--piece-stroke, #000)" stroke-width="4.5" stroke-linejoin="miter" stroke-linecap="square"/>
+</svg>
