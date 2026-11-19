@@ -39,7 +39,10 @@ function initialState(){
   const board=Array(128).fill('.');
   const rows=['rnbqkbnr','pppppppp','........','........','........','........','PPPPPPPP','RNBQKBNR'];
   rows.forEach((row,y)=>[...row].forEach((piece,x)=>board[y*16+x]=piece));
-  return{board,turn:1,castle:15,ep:-1,half:0,full:1};
+  const squareColors=Array(128).fill(0);
+  for(let rank=0;rank<8;rank++)for(let file=0;file<8;file++)
+    squareColors[rank*16+file]=rank<4?1:-1;
+  return{board,squareColors,turn:1,castle:15,ep:-1,half:0,full:1};
 }
 function attacked(s,target,by){
   for(let from=0;from<128;from++){
@@ -65,16 +68,22 @@ function inCheck(s,color=s.turn){
   return king>=0&&attacked(s,king,-color);
 }
 function applyMove(s,m){
-  const board=s.board.slice();
+  const board=s.board.slice(),squareColors=s.squareColors.slice();
   const moving=board[m.from],captured=board[m.to];
   let castle=s.castle;
+  const flipLandingSquare=(square,color)=>{
+    if(squareColors[square]===color)squareColors[square]=-color;
+  };
   board[m.from]='.';
   board[m.to]=m.promo?(s.turn===1?m.promo.toUpperCase():m.promo):moving;
+  flipLandingSquare(m.to,s.turn);
   if(m.flag==='ep')board[m.to+16*s.turn]='.';
   if(m.flag==='castle'){
     const rookFrom=m.to>m.from?m.from+3:m.from-4;
     const rookTo=m.to>m.from?m.from+1:m.from-1;
-    board[rookTo]=board[rookFrom];board[rookFrom]='.';
+    const rook=board[rookFrom];
+    board[rookTo]=rook;board[rookFrom]='.';
+    flipLandingSquare(rookTo,side(rook));
   }
   if(moving==='K')castle&=~3;
   if(moving==='k')castle&=~12;
@@ -82,7 +91,7 @@ function applyMove(s,m){
   if(kind(moving)==='r')castle&=~(rookRights[m.from]||0);
   if(kind(captured)==='r')castle&=~(rookRights[m.to]||0);
   return{
-    board,turn:-s.turn,castle,
+    board,squareColors,turn:-s.turn,castle,
     ep:kind(moving)==='p'&&Math.abs(m.to-m.from)===32?(m.from+m.to)/2:-1,
     half:kind(moving)==='p'||captured!=='.'||m.flag==='ep'?0:s.half+1,
     full:s.full+(s.turn===-1?1:0)
@@ -218,17 +227,17 @@ function nowStatus(){if(!statusCache||statusCacheLength!==states.length||statusC
 function squareCenter(i){return{x:layout.x+(i&7)*layout.cell+layout.cell/2,y:layout.y+(i>>4)*layout.cell+layout.cell/2}}
 function squareRect(i){return{x:layout.x+(i&7)*layout.cell,y:layout.y+(i>>4)*layout.cell,w:layout.cell,h:layout.cell}}
 function drawBoard(){
-  ctx.fillStyle='#000';ctx.fillRect(0,0,width,height);
-  // The inversion pattern spans the entire canvas, not just the board.
-  // Pieces are rendered afterward, so their colors remain untouched.
-  ctx.save();ctx.globalCompositeOperation='difference';ctx.fillStyle='#fff';
-  const c=layout.cell,x=layout.x,y=layout.y;
-  const stripPositions=[0,2,5,7];
-  for(const column of stripPositions)ctx.fillRect(x+column*c,0,c,height);
-  for(const row of stripPositions)ctx.fillRect(0,y+row*c,width,c);
-  ctx.fillRect(x+4*c,0,width-(x+4*c),height);
-  ctx.fillRect(0,y+4*c,width,height-(y+4*c));
-  ctx.restore();
+  // The background is a single horizontal split through the screen center.
+  ctx.fillStyle='#fff';ctx.fillRect(0,0,width,height);
+  ctx.fillStyle='#000';ctx.fillRect(0,height/2,width,height-height/2);
+  // The board itself has no grid or outlines. Each square keeps its own
+  // color after a piece changes it, including after that piece moves away.
+  const c=layout.cell,x=layout.x,y=layout.y,colors=current().squareColors;
+  for(let rank=0;rank<8;rank++)for(let file=0;file<8;file++){
+    const color=colors[rank*16+file]===1?'#fff':'#000';
+    ctx.fillStyle=color;
+    ctx.fillRect(x+file*c,y+rank*c,c,c);
+  }
 }
 function polygon(points,fill,stroke=null,lineWidth=1){
   if(points.length<3)return;ctx.beginPath();ctx.moveTo(points[0].x,points[0].y);
@@ -329,17 +338,12 @@ function drawPolygonPiece(piece,square,points,scale=1,alpha=1){
   const def=PIECES[kind(piece)];if(!def)return;
   scale*=.9025;
   const center=squareCenter(square),unit=layout.cell/320*scale,baseline=center.y+layout.cell*.36;
-  const fill=side(piece)===1?'#fff':'#000',outer=side(piece)===1?'#000':'#fff';
+  const fill=side(piece)===1?'#fff':'#000';
   ctx.save();ctx.globalAlpha=alpha;ctx.translate(center.x,baseline);
   ctx.translate(-def.cx*unit,-313.5*unit);ctx.scale(unit,unit);
-  const outline=expandedPolygon(points,24);
-  ctx.beginPath();ctx.moveTo(outline[0].x,outline[0].y);
-  for(let i=1;i<outline.length;i++)ctx.lineTo(outline[i].x,outline[i].y);
-  ctx.closePath();ctx.fillStyle=outer;ctx.fill();
   ctx.beginPath();ctx.moveTo(points[0].x,points[0].y);
   for(let i=1;i<points.length;i++)ctx.lineTo(points[i].x,points[i].y);
   ctx.closePath();ctx.fillStyle=fill;ctx.fill();
-  ctx.strokeStyle=fill;ctx.lineWidth=11;ctx.lineJoin='miter';ctx.lineCap='square';ctx.stroke();
   ctx.restore();
 }
 function drawPiece(piece,square,scale=1,rotation=0,alpha=1){
@@ -350,16 +354,11 @@ function drawPieceAt(piece,x,y,scale=1,rotation=0,alpha=1){
   const def=PIECES[kind(piece)];if(!def)return;
   scale*=.9025;
   const unit=layout.cell/320*scale,baseline=y+layout.cell*.36;
-  const fill=side(piece)===1?'#fff':'#000',outer=side(piece)===1?'#000':'#fff';
+  const fill=side(piece)===1?'#fff':'#000';
   ctx.save();ctx.globalAlpha=alpha;ctx.translate(x,baseline);ctx.translate(-def.cx*unit,-313.5*unit);ctx.scale(unit,unit);
-  const outline=expandedPolygon(def.points,24);
-  ctx.beginPath();ctx.moveTo(outline[0].x,outline[0].y);
-  for(let i=1;i<outline.length;i++)ctx.lineTo(outline[i].x,outline[i].y);
-  ctx.closePath();ctx.fillStyle=outer;ctx.fill();
   ctx.beginPath();ctx.moveTo(def.points[0].x,def.points[0].y);
   for(let i=1;i<def.points.length;i++)ctx.lineTo(def.points[i].x,def.points[i].y);
   ctx.closePath();ctx.fillStyle=fill;ctx.fill();
-  ctx.strokeStyle=fill;ctx.lineWidth=11;ctx.lineJoin='miter';ctx.lineCap='square';ctx.stroke();
   ctx.restore();
 }
 function drawPieces(time){
