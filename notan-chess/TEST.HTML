@@ -219,15 +219,15 @@ function squareCenter(i){return{x:layout.x+(i&7)*layout.cell+layout.cell/2,y:lay
 function squareRect(i){return{x:layout.x+(i&7)*layout.cell,y:layout.y+(i>>4)*layout.cell,w:layout.cell,h:layout.cell}}
 function drawBoard(){
   ctx.fillStyle='#000';ctx.fillRect(0,0,width,height);
-  // The board is an XOR pattern: four one-cell-wide inversion strips,
-  // a right-half inversion, and their horizontal copies.
+  // The inversion pattern spans the entire canvas, not just the board.
+  // Pieces are rendered afterward, so their colors remain untouched.
   ctx.save();ctx.globalCompositeOperation='difference';ctx.fillStyle='#fff';
   const c=layout.cell,x=layout.x,y=layout.y;
   const stripPositions=[0,2,5,7];
-  for(const column of stripPositions)ctx.fillRect(x+column*c,y-.5*c,c,9*c);
-  for(const row of stripPositions)ctx.fillRect(x-.5*c,y+row*c,9*c,c);
-  ctx.fillRect(x+4*c,y,4*c,8*c);
-  ctx.fillRect(x,y+4*c,8*c,4*c);
+  for(const column of stripPositions)ctx.fillRect(x+column*c,0,c,height);
+  for(const row of stripPositions)ctx.fillRect(0,y+row*c,width,c);
+  ctx.fillRect(x+4*c,0,width-(x+4*c),height);
+  ctx.fillRect(0,y+4*c,width,height-(y+4*c));
   ctx.restore();
 }
 function polygon(points,fill,stroke=null,lineWidth=1){
