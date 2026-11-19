@@ -259,24 +259,38 @@ function drawInvertingMarkers(){
 function pieceCenter(def){
   return def.points.reduce((p,v)=>({x:p.x+v.x/def.points.length,y:p.y+v.y/def.points.length}),{x:0,y:0});
 }
-function blobPoints(points,seed){
+function hexagonPoints(points){
   const center=points.reduce((p,v)=>({x:p.x+v.x/points.length,y:p.y+v.y/points.length}),{x:0,y:0});
-  const radius=points.reduce((sum,v)=>sum+Math.hypot(v.x-center.x,v.y-center.y),0)/points.length*.72;
-  return points.map((v,i)=>{
-    // Preserve each vertex's direction from the piece center. This lets
-    // the silhouette round out in place instead of drawing its vertices
-    // inward toward the center before spreading into a circle.
-    const dx=v.x-center.x,dy=v.y-center.y;
-    const angle=Math.atan2(dy,dx);
-    const radiusVariation=1+.035*Math.sin(i*2.41+seed*1.73);
-    const targetRadius=radius*radiusVariation;
-    return{x:center.x+Math.cos(angle)*targetRadius,y:center.y+Math.sin(angle)*targetRadius};
+  const averageRadius=points.reduce((sum,v)=>sum+Math.hypot(v.x-center.x,v.y-center.y),0)/points.length;
+  const radius=averageRadius*.72;
+  // The previous-move residue always has six evenly spaced vertices.
+  return Array.from({length:6},(_,i)=>{
+    const angle=-Math.PI/2+i*TAU/6;
+    return{x:center.x+Math.cos(angle)*radius,y:center.y+Math.sin(angle)*radius};
   });
 }
 function animatedPoints(piece,time,mode,started,seed=1){
   const def=PIECES[kind(piece)],base=def.points,center=pieceCenter(def);
   const elapsed=Math.max(0,time-started);
-  const blob=mode==='blob'||mode==='shrink'?blobPoints(base,seed):null;
+  if(mode==='blob'||mode==='shrink'){
+    const hexagon=hexagonPoints(base);
+    if(mode==='shrink'){
+      const progress=1-easeOut(elapsed/320);
+      return hexagon.map(p=>({x:center.x+(p.x-center.x)*progress,y:center.y+(p.y-center.y)*progress}));
+    }
+    // Let each of the hexagon's six corners drift independently, gently
+    // changing its angles and radius without losing the six-sided silhouette.
+    const mutation=easeOut(elapsed/300);
+    return hexagon.map((p,i)=>{
+      const angle=Math.atan2(p.y-center.y,p.x-center.x);
+      const radius=Math.hypot(p.x-center.x,p.y-center.y);
+      const phase=time*.0023+i*2.399+seed*1.37;
+      const radial=(Math.sin(phase)*.055+Math.sin(phase*.61+i*1.31)*.02)*radius*mutation;
+      const angular=Math.sin(phase*.73+i*1.77)*.045*mutation;
+      const shiftedAngle=angle+angular,shiftedRadius=radius+radial;
+      return{x:center.x+Math.cos(shiftedAngle)*shiftedRadius,y:center.y+Math.sin(shiftedAngle)*shiftedRadius};
+    });
+  }
   return base.map((p,i)=>{
     if(mode==='wiggle'){
       const phase=time*.0062+i*1.73+seed;
@@ -291,23 +305,6 @@ function animatedPoints(piece,time,mode,started,seed=1){
       const travelled=elapsed<linearTime?elapsed*speed:linearLength+easeLength*easeOut((elapsed-linearTime)/easeTime);
       const progress=distance?Math.min(1,travelled/distance):1;
       return{x:center.x+dx*progress,y:center.y+dy*progress};
-    }
-    if(mode==='blob'){
-      const formation=easeOut(elapsed/360);
-      const angle=Math.atan2(blob[i].y-center.y,blob[i].x-center.x);
-      const radius=Math.hypot(blob[i].x-center.x,blob[i].y-center.y);
-      const wander=smooth((elapsed-360)/140);
-      const phase=time*.0023+i*2.399+seed*1.37;
-      const radial=(Math.sin(phase)*.045+Math.sin(phase*.61+i*1.31)*.018)*radius*wander;
-      const angular=Math.sin(phase*.73+i*1.77)*.035*wander;
-      const settledAngle=angle+angular,settledRadius=radius+radial;
-      const wandering={x:center.x+Math.cos(settledAngle)*settledRadius,y:center.y+Math.sin(settledAngle)*settledRadius};
-      return{x:lerp(p.x,blob[i].x,formation)+(wandering.x-blob[i].x)*wander,
-        y:lerp(p.y,blob[i].y,formation)+(wandering.y-blob[i].y)*wander};
-    }
-    if(mode==='shrink'){
-      const progress=1-easeOut(elapsed/320);
-      return{x:center.x+(blob[i].x-center.x)*progress,y:center.y+(blob[i].y-center.y)*progress};
     }
     return p;
   });
