@@ -225,14 +225,17 @@ let arrivalEffect=null,residueEffect=null,fadingResidue=null,activeWiggle=-1;
 let pieceFlipEffect=null;
 const PIECE_FLIP_DURATION=210;
 const current=()=>states[states.length-1];
-function pieceFlipScale(time){
-  if(!pieceFlipEffect)return current().turn;
+function pieceRotation(time){
+  const restingAngle=current().turn===1?0:Math.PI;
+  if(!pieceFlipEffect)return restingAngle;
   const effect=pieceFlipEffect;
   const progress=clamp((time-effect.start)/PIECE_FLIP_DURATION,0,1);
   const eased=(1-Math.cos(Math.PI*progress))*.5;
-  const scale=lerp(effect.from,effect.to,eased);
+  const fromAngle=effect.from===1?0:Math.PI;
+  const toAngle=effect.to===1?0:Math.PI;
+  const angle=lerp(fromAngle,toAngle,eased);
   if(progress>=1)pieceFlipEffect=null;
-  return scale;
+  return angle;
 }
 function nowStatus(){if(!statusCache||statusCacheLength!==states.length||statusCacheClaim!==claimText){statusCache=claimText?{over:true,text:claimText,claim:''}:gameStatus(current(),states);statusCacheLength=states.length;statusCacheClaim=claimText;}return statusCache;}
 function squareCenter(i){return{x:layout.x+(i&7)*layout.cell+layout.cell/2,y:layout.y+(i>>4)*layout.cell+layout.cell/2}}
@@ -345,24 +348,25 @@ function expandedPolygon(points,distance){
     return{x:p.x+bx*amount,y:p.y+by*amount};
   });
 }
-function drawPolygonPiece(piece,square,points,scale=1,alpha=1,flip=1){
+function drawPolygonPiece(piece,square,points,scale=1,alpha=1,rotation=0){
   const def=PIECES[kind(piece)];if(!def)return;
   scale*=.9025;
-  const center=squareCenter(square),unit=layout.cell/320*scale,baseline=center.y+layout.cell*.36;
+  const center=squareCenter(square),unit=layout.cell/320*scale;
   const fill=side(piece)===1?'#fff':'#000';
-  ctx.save();ctx.globalAlpha=alpha;ctx.translate(center.x,baseline);
-  // A horizontal squash-flip narrows each piece to an edge, then expands
-  // it mirrored for the opposing player's perspective.
-  ctx.scale(flip,1);
+  ctx.save();ctx.globalAlpha=alpha;ctx.translate(center.x,center.y);
+  // Rotate around the square center so the silhouettes turn fully upside down
+  // for the opposing player's perspective, without mirroring or squashing.
+  ctx.rotate(rotation);
+  ctx.translate(0,layout.cell*.36);
   ctx.translate(-def.cx*unit,-313.5*unit);ctx.scale(unit,unit);
   ctx.beginPath();ctx.moveTo(points[0].x,points[0].y);
   for(let i=1;i<points.length;i++)ctx.lineTo(points[i].x,points[i].y);
   ctx.closePath();ctx.fillStyle=fill;ctx.fill();
   ctx.restore();
 }
-function drawPiece(piece,square,scale=1,rotation=0,alpha=1,flip=1){
+function drawPiece(piece,square,scale=1,rotation=0,alpha=1){
   const def=PIECES[kind(piece)];if(!def)return;
-  drawPolygonPiece(piece,square,def.points,scale,alpha,flip);
+  drawPolygonPiece(piece,square,def.points,scale,alpha,rotation);
 }
 function drawPieceAt(piece,x,y,scale=1,rotation=0,alpha=1){
   const def=PIECES[kind(piece)];if(!def)return;
@@ -377,13 +381,13 @@ function drawPieceAt(piece,x,y,scale=1,rotation=0,alpha=1){
 }
 function drawPieces(time){
   const board=current().board;
-  const flip=pieceFlipScale(time);
+  const rotation=pieceRotation(time);
   for(let i=0;i<128;i++){
     if(!valid(i)||board[i]==='.')continue;
     if(arrivalEffect&&arrivalEffect.square===i){
       const age=time-arrivalEffect.start;
       if(age<380){
-        drawPolygonPiece(board[i],i,animatedPoints(board[i],time,'expand',arrivalEffect.start,arrivalEffect.seed),1,1,flip);
+        drawPolygonPiece(board[i],i,animatedPoints(board[i],time,'expand',arrivalEffect.start,arrivalEffect.seed),1,1,rotation);
         continue;
       }
       arrivalEffect=null;
@@ -391,20 +395,20 @@ function drawPieces(time){
     const wiggle=i===selected||i===activeWiggle;
     if(wiggle){
       const seed=i===selected?11:23;
-      drawPolygonPiece(board[i],i,animatedPoints(board[i],time,'wiggle',0,seed),1,1,flip);
-    }else drawPiece(board[i],i,1,0,1,flip);
+      drawPolygonPiece(board[i],i,animatedPoints(board[i],time,'wiggle',0,seed),1,1,rotation);
+    }else drawPiece(board[i],i,1,0,1,rotation);
   }
   if(fadingResidue){
     const age=time-fadingResidue.shrinkStart;
     if(age<320)drawPolygonPiece(fadingResidue.piece,fadingResidue.square,
-      animatedPoints(fadingResidue.piece,time,'shrink',fadingResidue.shrinkStart,fadingResidue.seed),1,1,flip);
+      animatedPoints(fadingResidue.piece,time,'shrink',fadingResidue.shrinkStart,fadingResidue.seed),1,1,rotation);
     else fadingResidue=null;
   }
   if(residueEffect){
     // Keep the departure copy as its own visible piece-shaped residue.
     // It is deliberately drawn last so board pieces cannot cover it.
     drawPolygonPiece(residueEffect.piece,residueEffect.square,
-      animatedPoints(residueEffect.piece,time,'blob',residueEffect.start,residueEffect.seed),1,1,flip);
+      animatedPoints(residueEffect.piece,time,'blob',residueEffect.start,residueEffect.seed),1,1,rotation);
   }
 }
 function drawPromotion(){
