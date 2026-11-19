@@ -282,8 +282,52 @@ function slashDiamond(x,y,angle,length,width,fill){
   ],fill);
 }
 function impactBurst(x,y,size,color='#fff'){
-  const s=size;
-  polygon([{x,y:y-s},{x:x+s*.24,y:y-s*.24},{x:x+s,y},{x:x+s*.24,y:y+s*.24},{x,y:y+s},{x:x-s*.24,y:y+s*.24},{x:x-s,y},{x:x-s*.24,y:y-s*.24}],color);
+  const points=[];
+  for(let i=0;i<16;i++){
+    const angle=-Math.PI/2+i*Math.PI/8;
+    const radius=size*(i%2===0?1:.28);
+    points.push({x:x+Math.cos(angle)*radius,y:y+Math.sin(angle)*radius});
+  }
+  polygon(points,color);
+}
+function drawImpactFrame(a,t){
+  if(a.type==='queen'||t<a.impactStart||t>=a.impactEnd)return;
+  const c=squareCenter(a.to),cell=layout.cell;
+  const dx=(a.to&7)-(a.from&7),dy=(a.to>>4)-(a.from>>4);
+  const angle=Math.atan2(dy,dx),reach=cell*1.85;
+  ctx.save();
+  ctx.globalCompositeOperation='difference';
+  ctx.fillStyle='#fff';
+  for(let i=0;i<4;i++){
+    const a0=angle+i*Math.PI/2;
+    const ux=Math.cos(a0),uy=Math.sin(a0),px=-uy,py=ux;
+    const p1={x:c.x+ux*cell*.12+px*cell*.10,y:c.y+uy*cell*.12+py*cell*.10};
+    const p2={x:c.x+ux*reach+px*cell*.035,y:c.y+uy*reach+py*cell*.035};
+    const p3={x:c.x+ux*reach-px*cell*.035,y:c.y+uy*reach-py*cell*.035};
+    const p4={x:c.x+ux*cell*.12-px*cell*.10,y:c.y+uy*cell*.12-py*cell*.10};
+    polygon([p1,p2,p3,p4],'#fff');
+  }
+  ctx.restore();
+  impactBurst(c.x,c.y,cell*1.18,'#fff');
+  const inner=[];
+  for(let i=0;i<8;i++){
+    const a0=-Math.PI/2+i*Math.PI/4;
+    const radius=cell*(i%2===0?.43:.20);
+    inner.push({x:c.x+Math.cos(a0)*radius,y:c.y+Math.sin(a0)*radius});
+  }
+  polygon(inner,'#000');
+  slashDiamond(c.x,c.y,angle,cell*1.42,cell*.16,'#fff');
+  const shardAngles=[angle+.55,angle+1.72,angle+2.82,angle+4.02,angle+5.12];
+  shardAngles.forEach((a0,i)=>{
+    const ux=Math.cos(a0),uy=Math.sin(a0),px=-uy,py=ux;
+    const start=cell*.76,end=cell*(1.15+(i%3)*.20),half=cell*.09;
+    polygon([
+      {x:c.x+ux*start+px*half,y:c.y+uy*start+py*half},
+      {x:c.x+ux*end,y:c.y+uy*end},
+      {x:c.x+ux*start-px*half,y:c.y+uy*start-py*half}
+    ],i%2?'#000':'#fff','#000',Math.max(1,cell*.018));
+  });
+  drawPieceAt(a.piece,c.x,c.y,1);
 }
 function drawSpikes(square,progress){
   const r=squareRect(square),c=squareCenter(square),h=layout.cell*.48*progress,w=layout.cell*.16;
@@ -393,6 +437,7 @@ function drawAnimationOverlays(time){
   if(a.type==='bishop'&&t>=a.impactStart&&t<=a.impactEnd){
     slashDiamond(target.x,target.y,Math.atan2(squareCenter(a.to).y-squareCenter(a.from).y,squareCenter(a.to).x-squareCenter(a.from).x),layout.cell*.62,layout.cell*.20,'#fff');
   }
+  drawImpactFrame(a,t);
 }
 function drawPromotion(){
   if(!promotion)return;
@@ -437,18 +482,18 @@ function finishMove(m,time){
   const notation=san(before,m),after=applyMove(before,m);
   states.push(after);moveNotes.push(notation);lastMove={from:m.from,to:m.to};lastMoveHistory.push(lastMove);statusCache=null;
   selected=-1;selectedMoves=[];promotion=null;claimText='';
-  let type='quiet',duration=250,impactStart=.48,impactEnd=.51,impactAt=impactStart;
+  let type='quiet',duration=250,impactStart=.48,impactEnd=.535,impactAt=impactStart;
   if(captured!=='.'){
     const movingKind=kind(moving);
     type=({b:'bishop',k:'king',p:'pawn',n:'knight',r:'rook',q:'queen'})[movingKind]||'quiet';
     duration=type==='queen'?850:type==='knight'?880:type==='pawn'&&m.flag==='ep'?940:720;
-    if(type==='king'){impactStart=.48;impactEnd=.502;}
-    else if(type==='bishop'){impactStart=.60;impactEnd=.62;}
-    else if(type==='knight'){impactStart=.60;impactEnd=.62;}
-    else if(type==='rook'){impactStart=.56;impactEnd=.58;}
-    else if(type==='queen'){impactStart=.76;impactEnd=.77;}
-    else if(m.flag==='ep'){impactStart=.42;impactEnd=.44;}
-    else{impactStart=.60;impactEnd=.62;}
+    if(type==='king'){impactStart=.48;impactEnd=.525;}
+    else if(type==='bishop'){impactStart=.60;impactEnd=.645;}
+    else if(type==='knight'){impactStart=.60;impactEnd=.645;}
+    else if(type==='rook'){impactStart=.56;impactEnd=.605;}
+    else if(type==='queen'){impactStart=.76;impactEnd=.795;}
+    else if(m.flag==='ep'){impactStart=.42;impactEnd=.465;}
+    else{impactStart=.60;impactEnd=.645;}
     impactAt=impactStart;
   }
   const castleRook=m.flag==='castle'?{from:m.to>m.from?m.from+3:m.from-4,to:m.to>m.from?m.from+1:m.from-1}:null;
