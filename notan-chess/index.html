@@ -218,14 +218,19 @@ function nowStatus(){if(!statusCache||statusCacheLength!==states.length||statusC
 function squareCenter(i){return{x:layout.x+(i&7)*layout.cell+layout.cell/2,y:layout.y+(i>>4)*layout.cell+layout.cell/2}}
 function squareRect(i){return{x:layout.x+(i&7)*layout.cell,y:layout.y+(i>>4)*layout.cell,w:layout.cell,h:layout.cell}}
 function drawBoard(){
-  ctx.fillStyle='#000';ctx.fillRect(layout.x,layout.y,layout.size,layout.size);
-  for(let rank=0;rank<8;rank++)for(let file=0;file<8;file++){
-    const i=rank*16+file,x=layout.x+file*layout.cell,y=layout.y+rank*layout.cell;
-    const piece=current().board[i];
-    ctx.fillStyle=piece==='.'?(((rank+file)&1)?'#000':'#fff'):(side(piece)===1?'#000':'#fff');
-    ctx.fillRect(x,y,layout.cell,layout.cell);
-  }
-  ctx.save();ctx.strokeStyle='#fff';ctx.lineWidth=1;ctx.strokeRect(layout.x+.5,layout.y+.5,layout.size-1,layout.size-1);ctx.restore();
+  ctx.fillStyle='#000';ctx.fillRect(0,0,width,height);
+  // The board is an XOR pattern: four one-cell-wide inversion strips,
+  // a right-half inversion, and their horizontal copies.
+  ctx.save();ctx.globalCompositeOperation='difference';ctx.fillStyle='#fff';
+  const c=layout.cell,x=layout.x,y=layout.y;
+  const stripPositions=[0,2,5,7];
+  for(const column of stripPositions)ctx.fillRect(x+column*c,y-.5*c,c,9*c);
+  for(const row of stripPositions)ctx.fillRect(x-.5*c,y+row*c,9*c,c);
+  ctx.fillRect(x+4*c,y,4*c,8*c);
+  ctx.fillRect(x,y+4*c,8*c,4*c);
+  ctx.restore();
+  ctx.save();ctx.strokeStyle='#fff';ctx.lineWidth=1/dpr;
+  ctx.strokeRect(x+.5/dpr,y+.5/dpr,layout.size-1/dpr,layout.size-1/dpr);ctx.restore();
 }
 function polygon(points,fill,stroke=null,lineWidth=1){
   if(points.length<3)return;ctx.beginPath();ctx.moveTo(points[0].x,points[0].y);
@@ -290,11 +295,16 @@ function animatedPoints(piece,time,mode,started,seed=1){
 function drawPolygonPiece(piece,square,points,scale=1,alpha=1){
   const def=PIECES[kind(piece)];if(!def)return;
   const center=squareCenter(square),unit=layout.cell/320*scale,baseline=center.y+layout.cell*.36;
+  const fill=side(piece)===1?'#fff':'#000',outer=side(piece)===1?'#000':'#fff';
   ctx.save();ctx.globalAlpha=alpha;ctx.translate(center.x,baseline);
   ctx.translate(-def.cx*unit,-313.5*unit);ctx.scale(unit,unit);
   ctx.beginPath();ctx.moveTo(points[0].x,points[0].y);
   for(let i=1;i<points.length;i++)ctx.lineTo(points[i].x,points[i].y);
-  ctx.closePath();ctx.fillStyle=side(piece)===1?'#fff':'#000';ctx.fill();ctx.restore();
+  ctx.closePath();ctx.lineJoin='miter';ctx.lineCap='square';
+  ctx.strokeStyle=outer;ctx.lineWidth=layout.cell*.15/unit;ctx.stroke();
+  ctx.fillStyle=fill;ctx.fill();
+  ctx.strokeStyle=fill;ctx.lineWidth=layout.cell*.035/unit;ctx.stroke();
+  ctx.restore();
 }
 function drawPiece(piece,square,scale=1,rotation=0,alpha=1){
   const def=PIECES[kind(piece)];if(!def)return;
@@ -303,10 +313,15 @@ function drawPiece(piece,square,scale=1,rotation=0,alpha=1){
 function drawPieceAt(piece,x,y,scale=1,rotation=0,alpha=1){
   const def=PIECES[kind(piece)];if(!def)return;
   const unit=layout.cell/320*scale,baseline=y+layout.cell*.36;
+  const fill=side(piece)===1?'#fff':'#000',outer=side(piece)===1?'#000':'#fff';
   ctx.save();ctx.globalAlpha=alpha;ctx.translate(x,baseline);ctx.translate(-def.cx*unit,-313.5*unit);ctx.scale(unit,unit);
   ctx.beginPath();ctx.moveTo(def.points[0].x,def.points[0].y);
   for(let i=1;i<def.points.length;i++)ctx.lineTo(def.points[i].x,def.points[i].y);
-  ctx.closePath();ctx.fillStyle=side(piece)===1?'#fff':'#000';ctx.fill();ctx.restore();
+  ctx.closePath();ctx.lineJoin='miter';ctx.lineCap='square';
+  ctx.strokeStyle=outer;ctx.lineWidth=layout.cell*.15/unit;ctx.stroke();
+  ctx.fillStyle=fill;ctx.fill();
+  ctx.strokeStyle=fill;ctx.lineWidth=layout.cell*.035/unit;ctx.stroke();
+  ctx.restore();
 }
 function drawPieces(time){
   const board=current().board;
@@ -417,9 +432,11 @@ function resize(){
   const r=canvas.getBoundingClientRect();width=Math.max(1,r.width);height=Math.max(1,r.height);dpr=Math.min(3,window.devicePixelRatio||1);
   canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);
   const top=70,bottom=72,availableHeight=Math.max(100,height-top-bottom);
-  const size=Math.max(80,Math.min(width-24,availableHeight,720));
-  const x=(width-size)/2,y=top+(availableHeight-size)/2;
-  layout={x,y,size,cell:size/8};
+  const rawSize=Math.max(80,Math.min(width-24,availableHeight,720));
+  const cell=Math.max(1,Math.floor(rawSize*dpr/8))/dpr;
+  const size=cell*8;
+  const x=Math.round(((width-size)/2)*dpr)/dpr,y=Math.round((top+(availableHeight-size)/2)*dpr)/dpr;
+  layout={x,y,size,cell};
 }
 function squareAt(x,y){if(!layout||x<layout.x||y<layout.y||x>=layout.x+layout.size||y>=layout.y+layout.size)return-1;return Math.floor((y-layout.y)/layout.cell)*16+Math.floor((x-layout.x)/layout.cell);}
 function pointer(e){
