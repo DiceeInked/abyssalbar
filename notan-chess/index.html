@@ -242,8 +242,20 @@ function diamondAt(x,y,halfWidth,halfHeight,fill,stroke=null,lineWidth=1){
   polygon([{x,y:y-halfHeight},{x:x+halfWidth,y},{x,y:y+halfHeight},{x:x-halfWidth,y}],fill,stroke,lineWidth);
 }
 function drawInvertingMarkers(){
-  ctx.save();ctx.globalCompositeOperation='difference';
-  if(selectedMoves.length){ctx.fillStyle='#fff';for(const m of selectedMoves){const c=squareCenter(m.to);const captured=current().board[m.to]!=='.'||m.flag==='ep';const w=captured?layout.cell*.23:layout.cell*.10;const h=captured?layout.cell*.23:layout.cell*.10;diamondAt(c.x,c.y,w,h,'#fff');}}
+  if(!selectedMoves.length)return;
+  ctx.save();
+  ctx.globalCompositeOperation='difference';
+  ctx.fillStyle='#fff';
+  for(const m of selectedMoves){
+    const c=squareCenter(m.to);
+    const captured=current().board[m.to]!=='.'||m.flag==='ep';
+    const half=captured?layout.cell*.23:layout.cell*.10;
+    // Snap the marker's center and extents to the device-pixel grid so
+    // the inversion is crisp and is composited over every piece layer.
+    const snap=value=>Math.round(value*dpr)/dpr;
+    const cx=snap(c.x),cy=snap(c.y),w=snap(half),h=snap(half);
+    diamondAt(cx,cy,w,h,'#fff');
+  }
   ctx.restore();
 }
 function pieceCenter(def){
@@ -341,15 +353,17 @@ function drawPieces(time){
       drawPolygonPiece(board[i],i,animatedPoints(board[i],time,'wiggle',0,seed));
     }else drawPiece(board[i],i);
   }
-  if(residueEffect){
-    drawPolygonPiece(residueEffect.piece,residueEffect.square,
-      animatedPoints(residueEffect.piece,time,'blob',residueEffect.start,residueEffect.seed));
-  }
   if(fadingResidue){
     const age=time-fadingResidue.shrinkStart;
     if(age<210)drawPolygonPiece(fadingResidue.piece,fadingResidue.square,
       animatedPoints(fadingResidue.piece,time,'shrink',fadingResidue.shrinkStart,fadingResidue.seed));
     else fadingResidue=null;
+  }
+  if(residueEffect){
+    // Keep the departure copy as its own visible piece-shaped residue.
+    // It is deliberately drawn last so board pieces cannot cover it.
+    drawPolygonPiece(residueEffect.piece,residueEffect.square,
+      animatedPoints(residueEffect.piece,time,'blob',residueEffect.start,residueEffect.seed));
   }
 }
 function drawPromotion(){
@@ -382,7 +396,7 @@ function drawInterface(time){
 }
 function render(time){
   ctx.setTransform(dpr,0,0,dpr,0,0);ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';ctx.fillStyle='#000';ctx.fillRect(0,0,width,height);
-  drawBoard();drawInvertingMarkers();drawPieces(time);
+  drawBoard();drawPieces(time);drawInvertingMarkers();
   if(promotion)drawPromotion();
   drawInterface(time);
 }
