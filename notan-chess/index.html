@@ -276,21 +276,21 @@ function appendPolygon(points){
 }
 function drawTurnRing(square,scale){
   if(scale<=.001)return;
-  // One connected contour: the outer loop and inner loop share a
-  // doubled bridge at the first vertex, creating a polygonal frame.
+  // The inner vertices are part of the same connected contour as the
+  // outer vertices. Their loop expands outward from the center.
   const outer=cellPolygon(square,1);
   const innerScale=lerp(0,.76,clamp(scale,0,1));
   const inner=cellPolygon(square,innerScale);
   const ringVertices=[...outer,outer[0],inner[0],...inner.slice(1),inner[0]];
   ctx.save();
   ctx.globalCompositeOperation='source-over';
+  // White is the cell beneath the opening; the frame itself is one polygon.
+  ctx.fillStyle='#fff';
+  ctx.beginPath();appendPolygon(outer);
+  ctx.fill();
   ctx.fillStyle='#000';
   ctx.beginPath();appendPolygon(ringVertices);
   ctx.fill('evenodd');
-  // Color the opening white; the surrounding black area is the frame.
-  ctx.fillStyle='#fff';
-  ctx.beginPath();appendPolygon(inner);
-  ctx.fill();
   ctx.restore();
 }
 function drawTurnRings(squares,scale){
