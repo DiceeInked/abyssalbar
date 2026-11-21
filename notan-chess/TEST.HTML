@@ -276,7 +276,11 @@ function appendPolygon(points){
 }
 function drawTurnRing(square,scale){
   if(scale<=.001)return;
-  const outer=cellPolygon(square,scale),inner=cellPolygon(square,scale*.76);
+  // The outer polygon always matches the cell. Only the inner polygon
+  // moves inward, revealing the frame as this side becomes active.
+  const outer=cellPolygon(square,1);
+  const innerScale=lerp(1,.76,clamp(scale,0,1));
+  const inner=cellPolygon(square,innerScale);
   ctx.save();
   ctx.globalCompositeOperation='difference';
   ctx.fillStyle='#fff';
