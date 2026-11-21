@@ -242,13 +242,22 @@ function drawBoard(){
   // The background is a single horizontal split through the screen center.
   ctx.fillStyle='#fff';ctx.fillRect(0,0,width,height);
   ctx.fillStyle='#000';ctx.fillRect(0,height/2,width,height-height/2);
-  // The board itself has no grid or outlines. Each square keeps its own
-  // color after a piece changes it, including after that piece moves away.
+  // Keep each square's own color, then outline it in the opposite color.
+  // Drawing the outlines in a second pass keeps neighboring fills from
+  // painting over one another's borders.
   const c=layout.cell,x=layout.x,y=layout.y,colors=current().squareColors;
+  const outline=Math.max(1.5,c*.045),inset=outline/2;
   for(let rank=0;rank<8;rank++)for(let file=0;file<8;file++){
     const color=colors[rank*16+file]===1?'#fff':'#000';
     ctx.fillStyle=color;
     ctx.fillRect(x+file*c,y+rank*c,c,c);
+  }
+  ctx.lineWidth=outline;
+  ctx.lineJoin='miter';
+  for(let rank=0;rank<8;rank++)for(let file=0;file<8;file++){
+    const light=colors[rank*16+file]===1;
+    ctx.strokeStyle=light?'#000':'#fff';
+    ctx.strokeRect(x+file*c+inset,y+rank*c+inset,c-outline,c-outline);
   }
 }
 function polygon(points,fill,stroke=null,lineWidth=1){
