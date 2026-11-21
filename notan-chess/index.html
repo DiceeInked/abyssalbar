@@ -298,7 +298,7 @@ function drawBoard(){
   // Tile geometry uses the same 320-unit grid and cell scale as the piece paths.
   ctx.fillStyle='#fff';ctx.fillRect(0,0,width,height);
   const c=layout.cell,x=layout.x,y=layout.y,unit=c/320;
-  const inset=40*unit,bulge=10*unit;
+  const inset=35*unit,bulge=10*unit;
   for(let rank=0;rank<8;rank++)for(let file=0;file<8;file++){
     const left=x+file*c+inset,right=x+(file+1)*c-inset;
     const top=y+rank*c+inset,bottom=y+(rank+1)*c-inset;
@@ -412,7 +412,7 @@ function expandedPolygon(points,distance){
 }
 function drawPolygonPiece(piece,square,points,scale=1,alpha=1,flipY=1){
   const def=PIECES[kind(piece)];if(!def)return;
-  scale*=.9025;
+  scale*=.87;
   const center=squareCenter(square),unit=layout.cell/320*scale;
   const fill=side(piece)===1?pieceColors.white:pieceColors.black;
   ctx.save();ctx.globalAlpha=alpha;ctx.translate(center.x,center.y);
@@ -432,7 +432,7 @@ function drawPiece(piece,square,scale=1,alpha=1,flipY=1){
 }
 function drawPieceAt(piece,x,y,scale=1,rotation=0,alpha=1){
   const def=PIECES[kind(piece)];if(!def)return;
-  scale*=.9025;
+  scale*=.87;
   const unit=layout.cell/320*scale,baseline=y+layout.cell*.36;
   const fill=side(piece)===1?pieceColors.white:pieceColors.black;
   ctx.save();ctx.globalAlpha=alpha;ctx.translate(x,baseline);ctx.translate(-def.cx*unit,-313.5*unit);ctx.scale(unit,unit);
