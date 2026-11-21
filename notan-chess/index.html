@@ -11,52 +11,11 @@
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#000;overscroll-behavior:none;touch-action:auto;user-select:none;-webkit-user-select:none}
 body{position:fixed;inset:0}
-#game{display:none;width:100%;height:100%;touch-action:none;outline:none}
-body.playing #game{display:block}
-#setup{position:fixed;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;padding:24px;background:#000;touch-action:auto}
-#setup[hidden]{display:none}
-.setup-card{width:min(100%,420px);padding:clamp(24px,6vw,38px);border:1px solid #fff;background:#000;color:#fff}
-.setup-eyebrow{margin:0 0 12px;font-size:11px;font-weight:700;letter-spacing:.2em}
-.setup-card h1{margin:0;font-size:clamp(26px,7vw,34px);font-weight:700;letter-spacing:-.04em}
-.setup-copy{margin:12px 0 30px;color:#c8c8c8;font-size:14px;line-height:1.5}
-.color-field{margin:0 0 22px}
-.color-field label{display:block;margin-bottom:9px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
-.color-entry{display:flex;align-items:center;gap:10px}
-.color-swatch{width:44px;height:44px;flex:0 0 44px;border:1px solid #fff;background:#fff}
-.color-field input{width:100%;min-width:0;height:44px;padding:0 12px;border:1px solid #fff;border-radius:0;background:#fff;color:#000;font:600 16px/1 Arial,Helvetica,sans-serif;letter-spacing:.04em;user-select:text;-webkit-user-select:text;touch-action:manipulation}
-.color-field input:focus{outline:2px solid #aaa;outline-offset:3px}
-.setup-error{min-height:18px;margin:0 0 16px;color:#ff8585;font-size:12px;line-height:1.5}
-.setup-error[hidden]{display:none}
-.setup-card button{width:100%;height:48px;border:1px solid #fff;border-radius:0;background:#fff;color:#000;font:700 12px/1 Arial,Helvetica,sans-serif;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;touch-action:manipulation}
-.setup-card button:disabled{opacity:.4;cursor:not-allowed}
-.setup-card button:focus-visible{outline:2px solid #aaa;outline-offset:4px}
+#game{display:block;width:100%;height:100%;touch-action:none;outline:none}
 #a11y{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 </style>
 </head>
 <body>
-<section id="setup" aria-labelledby="setup-title">
-  <form id="setup-form" class="setup-card" novalidate>
-    <p class="setup-eyebrow">NOTAN CHESS</p>
-    <h1 id="setup-title">Choose your colors</h1>
-    <p class="setup-copy">Set the colors used by each side's pieces before starting the game.</p>
-    <div class="color-field">
-      <label for="white-color">White pieces</label>
-      <div class="color-entry">
-        <span id="white-preview" class="color-swatch" aria-hidden="true"></span>
-        <input id="white-color" name="white-color" type="text" value="#FFFFFF" maxlength="7" placeholder="#RRGGBB" autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text">
-      </div>
-    </div>
-    <div class="color-field">
-      <label for="black-color">Black pieces</label>
-      <div class="color-entry">
-        <span id="black-preview" class="color-swatch" aria-hidden="true"></span>
-        <input id="black-color" name="black-color" type="text" value="#000000" maxlength="7" placeholder="#RRGGBB" autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text">
-      </div>
-    </div>
-    <p id="setup-error" class="setup-error" aria-live="polite" hidden>Enter a valid six-digit hex code, such as #12A4C8.</p>
-    <button id="start-game" type="submit">Start game</button>
-  </form>
-</section>
 <canvas id="game" tabindex="0" aria-label="Notan Chess. Select a piece, then select a highlighted destination."></canvas>
 <div id="a11y" aria-live="polite">Notan Chess. White to move.</div>
 <script>
@@ -64,28 +23,6 @@ body.playing #game{display:block}
 const canvas=document.getElementById('game');
 const ctx=canvas.getContext('2d',{alpha:false});
 const a11y=document.getElementById('a11y');
-const setup=document.getElementById('setup');
-const setupForm=document.getElementById('setup-form');
-const whiteInput=document.getElementById('white-color');
-const blackInput=document.getElementById('black-color');
-const whitePreview=document.getElementById('white-preview');
-const blackPreview=document.getElementById('black-preview');
-const setupError=document.getElementById('setup-error');
-const startButton=document.getElementById('start-game');
-let pieceColors={white:'#FFFFFF',black:'#000000'};
-function normalizeHex(value){
-  const match=value.trim().match(/^#?([0-9a-f]{6})$/i);
-  return match?'#'+match[1].toUpperCase():null;
-}
-function updateSetup(){
-  const white=normalizeHex(whiteInput.value),black=normalizeHex(blackInput.value);
-  whitePreview.style.backgroundColor=white||'transparent';
-  blackPreview.style.backgroundColor=black||'transparent';
-  const validColors=!!white&&!!black;
-  setupError.hidden=validColors;
-  startButton.disabled=!validColors;
-  return{white,black};
-}
 const FILES='abcdefgh',TAU=Math.PI*2;
 const DIR={n:[-33,-31,-18,-14,14,18,31,33],b:[-17,-15,15,17],r:[-16,-1,1,16],k:[-17,-16,-15,-1,1,15,16,17]};
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -278,7 +215,9 @@ let states=[initialState()],moveNotes=[],selected=-1,selectedMoves=[],promotion=
 let lastMove=null,lastMoveHistory=[null],statusCache=null,statusCacheLength=-1,statusCacheClaim='';
 let arrivalEffect=null,residueEffect=null,fadingResidue=null,activeWiggle=-1;
 let pieceFlipEffect=null;
+let turnMarkerTransition=null;
 const PIECE_FLIP_DURATION=210;
+const TURN_MARKER_DURATION=420;
 const current=()=>states[states.length-1];
 function pieceFlipY(time){
   const restingFlip=current().turn;
@@ -314,6 +253,60 @@ function drawBoard(){
       {x:left-bulge,y:middleY}
     ],'#000');
   }
+}
+function cellPolygon(square,scale=1){
+  const c=layout.cell,unit=c/320,half=c/2-35*unit,tip=half+10*unit;
+  const center=squareCenter(square),hx=half*scale,hy=half*scale,tx=tip*scale,ty=tip*scale;
+  return[
+    {x:center.x-hx,y:center.y-hy},
+    {x:center.x,y:center.y-ty},
+    {x:center.x+hx,y:center.y-hy},
+    {x:center.x+tx,y:center.y},
+    {x:center.x+hx,y:center.y+hy},
+    {x:center.x,y:center.y+ty},
+    {x:center.x-hx,y:center.y+hy},
+    {x:center.x-tx,y:center.y}
+  ];
+}
+function appendPolygon(points){
+  if(!points.length)return;
+  ctx.moveTo(points[0].x,points[0].y);
+  for(let i=1;i<points.length;i++)ctx.lineTo(points[i].x,points[i].y);
+  ctx.closePath();
+}
+function drawTurnRing(square,scale){
+  if(scale<=.001)return;
+  const outer=cellPolygon(square,scale),inner=cellPolygon(square,scale*.76);
+  ctx.save();
+  ctx.globalCompositeOperation='difference';
+  ctx.fillStyle='#fff';
+  ctx.beginPath();appendPolygon(outer);appendPolygon(inner);
+  ctx.fill('evenodd');
+  ctx.restore();
+}
+function drawTurnRings(squares,scale){
+  if(scale<=.001)return;
+  for(const square of squares)drawTurnRing(square,scale);
+}
+function squaresForSide(board,color){
+  const squares=[];
+  for(let i=0;i<128;i++)if(valid(i)&&side(board[i])===color)squares.push(i);
+  return squares;
+}
+function drawTurnMarkers(time){
+  if(!turnMarkerTransition){
+    drawTurnRings(squaresForSide(current().board,current().turn),1);
+    return;
+  }
+  const transition=turnMarkerTransition;
+  const progress=smooth((time-transition.start)/TURN_MARKER_DURATION);
+  if(progress>=1){
+    turnMarkerTransition=null;
+    drawTurnRings(squaresForSide(current().board,current().turn),1);
+    return;
+  }
+  drawTurnRings(transition.from,1-progress);
+  drawTurnRings(transition.to,progress);
 }
 function polygon(points,fill,stroke=null,lineWidth=1){
   if(points.length<3)return;ctx.beginPath();ctx.moveTo(points[0].x,points[0].y);
@@ -414,8 +407,7 @@ function drawPolygonPiece(piece,square,points,scale=1,alpha=1,flipY=1){
   const def=PIECES[kind(piece)];if(!def)return;
   scale*=.8375;
   const center=squareCenter(square),unit=layout.cell/320*scale;
-  const fill=side(piece)===1?pieceColors.white:pieceColors.black;
-  ctx.save();ctx.globalAlpha=alpha;ctx.translate(center.x,center.y);
+  ctx.save();ctx.globalAlpha=alpha;ctx.globalCompositeOperation='difference';ctx.translate(center.x,center.y);
   // Flip across the horizontal x-axis: top and bottom exchange places,
   // while left and right stay unchanged for the opposing perspective.
   ctx.scale(1,flipY);
@@ -423,7 +415,7 @@ function drawPolygonPiece(piece,square,points,scale=1,alpha=1,flipY=1){
   ctx.translate(-def.cx*unit,-313.5*unit);ctx.scale(unit,unit);
   ctx.beginPath();ctx.moveTo(points[0].x,points[0].y);
   for(let i=1;i<points.length;i++)ctx.lineTo(points[i].x,points[i].y);
-  ctx.closePath();ctx.fillStyle=fill;ctx.fill();
+  ctx.closePath();ctx.fillStyle='#fff';ctx.fill();
   ctx.restore();
 }
 function drawPiece(piece,square,scale=1,alpha=1,flipY=1){
@@ -434,11 +426,10 @@ function drawPieceAt(piece,x,y,scale=1,rotation=0,alpha=1){
   const def=PIECES[kind(piece)];if(!def)return;
   scale*=.8375;
   const unit=layout.cell/320*scale,baseline=y+layout.cell*.36;
-  const fill=side(piece)===1?pieceColors.white:pieceColors.black;
-  ctx.save();ctx.globalAlpha=alpha;ctx.translate(x,baseline);ctx.translate(-def.cx*unit,-313.5*unit);ctx.scale(unit,unit);
+  ctx.save();ctx.globalAlpha=alpha;ctx.globalCompositeOperation='difference';ctx.translate(x,baseline);ctx.translate(-def.cx*unit,-313.5*unit);ctx.scale(unit,unit);
   ctx.beginPath();ctx.moveTo(def.points[0].x,def.points[0].y);
   for(let i=1;i<def.points.length;i++)ctx.lineTo(def.points[i].x,def.points[i].y);
-  ctx.closePath();ctx.fillStyle=fill;ctx.fill();
+  ctx.closePath();ctx.fillStyle='#fff';ctx.fill();
   ctx.restore();
 }
 function drawPieces(time){
@@ -502,11 +493,12 @@ function drawZoomControls(){
 }
 function render(time){
   ctx.setTransform(dpr,0,0,dpr,0,0);ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';ctx.fillStyle='#fff';ctx.fillRect(0,0,width,height);
-  drawBoard();drawPieces(time);drawInvertingMarkers();drawZoomControls();
+  drawBoard();drawTurnMarkers(time);drawPieces(time);drawInvertingMarkers();drawZoomControls();
   if(promotion)drawPromotion();
 }
 function finishMove(m,time){
   const before=current(),notation=san(before,m),moving=before.board[m.from],after=applyMove(before,m);
+  turnMarkerTransition={from:squaresForSide(before.board,before.turn),to:squaresForSide(after.board,after.turn),start:time};
   if(residueEffect)fadingResidue={...residueEffect,shrinkStart:time};
   residueEffect={piece:moving,square:m.from,start:time,seed:states.length+7};
   arrivalEffect={piece:after.board[m.to],square:m.to,start:time,seed:states.length+13};
@@ -536,12 +528,18 @@ function chooseSquare(square,time){
 }
 function undo(){
   if(states.length<=1||promotion)return;
-  states.pop();moveNotes.pop();lastMoveHistory.pop();lastMove=lastMoveHistory[lastMoveHistory.length-1]||null;selected=-1;selectedMoves=[];claimText='';statusCache=null;
+  const before=current();
+  states.pop();
+  const after=current();
+  turnMarkerTransition={from:squaresForSide(before.board,before.turn),to:squaresForSide(after.board,after.turn),start:performance.now()};moveNotes.pop();lastMoveHistory.pop();lastMove=lastMoveHistory[lastMoveHistory.length-1]||null;selected=-1;selectedMoves=[];claimText='';statusCache=null;
   arrivalEffect=null;residueEffect=null;fadingResidue=null;activeWiggle=-1;
   a11y.textContent=nowStatus().text;
 }
 function restart(){
-  states=[initialState()];moveNotes=[];lastMove=null;lastMoveHistory=[null];selected=-1;selectedMoves=[];promotion=null;claimText='';statusCache=null;
+  const before=current(),after=initialState();
+  states=[after];
+  turnMarkerTransition={from:squaresForSide(before.board,before.turn),to:squaresForSide(after.board,after.turn),start:performance.now()};
+  moveNotes=[];lastMove=null;lastMoveHistory=[null];selected=-1;selectedMoves=[];promotion=null;claimText='';statusCache=null;
   arrivalEffect=null;residueEffect=null;fadingResidue=null;activeWiggle=-1;
   a11y.textContent='New game. White to move.';
 }
@@ -581,30 +579,14 @@ function keydown(e){
 }
 function frame(time){render(time);requestAnimationFrame(frame);}
 canvas.addEventListener('pointerdown',pointer,{passive:false});
-setupForm.addEventListener('submit',e=>{
-  e.preventDefault();
-  const colors=updateSetup();
-  if(!colors.white||!colors.black)return;
-  pieceColors=colors;
-  setup.hidden=true;
-  document.body.classList.add('playing');
-  resize();
-  a11y.textContent=gameStatus(current(),states).text;
-  canvas.focus({preventScroll:true});
-  requestAnimationFrame(frame);
-});
-for(const input of [whiteInput,blackInput]){
-  input.addEventListener('input',updateSetup);
-  input.addEventListener('blur',()=>{
-    const normalized=normalizeHex(input.value);
-    if(normalized)input.value=normalized;
-    updateSetup();
-  });
-}
-window.addEventListener('resize',()=>{if(document.body.classList.contains('playing'))resize();});
-window.addEventListener('contextmenu',e=>{if(!e.target.closest('#setup'))e.preventDefault();});
-window.addEventListener('selectstart',e=>{if(!e.target.closest('#setup'))e.preventDefault();});
-updateSetup();
+resize();
+turnMarkerTransition={from:[],to:squaresForSide(current().board,current().turn),start:performance.now()};
+a11y.textContent=gameStatus(current(),states).text;
+canvas.focus({preventScroll:true});
+window.addEventListener('resize',resize);
+window.addEventListener('contextmenu',e=>e.preventDefault());
+window.addEventListener('selectstart',e=>e.preventDefault());
+requestAnimationFrame(frame);
 })();
 </script>
 </body>
