@@ -27,6 +27,15 @@ body.playing #game{display:block}
 .color-field input:focus{outline:2px solid #aaa;outline-offset:3px}
 .setup-error{min-height:18px;margin:0 0 16px;color:#ff8585;font-size:12px;line-height:1.5}
 .setup-error[hidden]{display:none}
+.setup-toggle{display:flex;align-items:center;justify-content:space-between;gap:18px;margin:2px 0 24px;cursor:pointer}
+.setup-toggle-copy{display:flex;flex-direction:column;gap:5px}
+.setup-toggle-copy strong{font-size:12px;letter-spacing:.08em;text-transform:uppercase}
+.setup-toggle-copy small{color:#c8c8c8;font-size:12px;line-height:1.4}
+.setup-toggle input{appearance:none;position:relative;flex:0 0 44px;width:44px;height:26px;margin:0;border:1px solid #fff;border-radius:0;background:#151515;cursor:pointer;transition:background .18s ease}
+.setup-toggle input::before{content:"";position:absolute;top:4px;left:4px;width:16px;height:16px;background:#fff;transition:transform .18s ease}
+.setup-toggle input:checked{background:#fff}
+.setup-toggle input:checked::before{background:#000;transform:translateX(18px)}
+.setup-toggle input:focus-visible{outline:2px solid #aaa;outline-offset:4px}
 .setup-card button{width:100%;height:48px;border:1px solid #fff;border-radius:0;background:#fff;color:#000;font:700 12px/1 Arial,Helvetica,sans-serif;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;touch-action:manipulation}
 .setup-card button:disabled{opacity:.4;cursor:not-allowed}
 .setup-card button:focus-visible{outline:2px solid #aaa;outline-offset:4px}
@@ -53,11 +62,18 @@ body.playing #game{display:block}
         <input id="black-color" name="black-color" type="text" value="#000000" maxlength="7" placeholder="#RRGGBB" autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text">
       </div>
     </div>
+    <label class="setup-toggle" for="brain-mode">
+      <span class="setup-toggle-copy">
+        <strong>Brain mode</strong>
+        <small id="brain-mode-description">Hide the visible legal-move indicators.</small>
+      </span>
+      <input id="brain-mode" name="brain-mode" type="checkbox" aria-describedby="brain-mode-description">
+    </label>
     <p id="setup-error" class="setup-error" aria-live="polite" hidden>Enter a valid six-digit hex code, such as #12A4C8.</p>
     <button id="start-game" type="submit">Start game</button>
   </form>
 </section>
-<canvas id="game" tabindex="0" aria-label="Notan Chess. Select a piece, then select a highlighted destination."></canvas>
+<canvas id="game" tabindex="0" aria-label="Notan Chess. Select a piece, then select a legal destination."></canvas>
 <div id="a11y" aria-live="polite">Notan Chess. White to move.</div>
 <script>
 (()=>{'use strict';
@@ -72,7 +88,9 @@ const whitePreview=document.getElementById('white-preview');
 const blackPreview=document.getElementById('black-preview');
 const setupError=document.getElementById('setup-error');
 const startButton=document.getElementById('start-game');
+const brainModeInput=document.getElementById('brain-mode');
 let pieceColors={white:'#FFFFFF',black:'#000000'};
+let brainMode=false;
 function normalizeHex(value){
   const match=value.trim().match(/^#?([0-9a-f]{6})$/i);
   return match?'#'+match[1].toUpperCase():null;
@@ -325,7 +343,7 @@ function diamondAt(x,y,halfWidth,halfHeight,fill,stroke=null,lineWidth=1){
   polygon([{x,y:y-halfHeight},{x:x+halfWidth,y},{x,y:y+halfHeight},{x:x-halfWidth,y}],fill,stroke,lineWidth);
 }
 function drawInvertingMarkers(){
-  if(!selectedMoves.length)return;
+  if(brainMode||!selectedMoves.length)return;
   ctx.save();
   ctx.globalCompositeOperation='difference';
   ctx.fillStyle='#fff';
@@ -586,6 +604,7 @@ setupForm.addEventListener('submit',e=>{
   const colors=updateSetup();
   if(!colors.white||!colors.black)return;
   pieceColors=colors;
+  brainMode=brainModeInput.checked;
   setup.hidden=true;
   document.body.classList.add('playing');
   resize();
