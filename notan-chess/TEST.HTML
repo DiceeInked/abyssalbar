@@ -11,11 +11,52 @@
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#000;overscroll-behavior:none;touch-action:none;user-select:none;-webkit-user-select:none}
 body{position:fixed;inset:0}
-#game{display:block;width:100%;height:100%;touch-action:none;outline:none}
+#game{display:none;width:100%;height:100%;touch-action:none;outline:none}
+body.playing #game{display:block}
+#setup{position:fixed;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;padding:24px;background:#000;touch-action:auto}
+#setup[hidden]{display:none}
+.setup-card{width:min(100%,420px);padding:clamp(24px,6vw,38px);border:1px solid #fff;background:#000;color:#fff}
+.setup-eyebrow{margin:0 0 12px;font-size:11px;font-weight:700;letter-spacing:.2em}
+.setup-card h1{margin:0;font-size:clamp(26px,7vw,34px);font-weight:700;letter-spacing:-.04em}
+.setup-copy{margin:12px 0 30px;color:#c8c8c8;font-size:14px;line-height:1.5}
+.color-field{margin:0 0 22px}
+.color-field label{display:block;margin-bottom:9px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.color-entry{display:flex;align-items:center;gap:10px}
+.color-swatch{width:44px;height:44px;flex:0 0 44px;border:1px solid #fff;background:#fff}
+.color-field input{width:100%;min-width:0;height:44px;padding:0 12px;border:1px solid #fff;border-radius:0;background:#fff;color:#000;font:600 16px/1 Arial,Helvetica,sans-serif;letter-spacing:.04em;user-select:text;-webkit-user-select:text;touch-action:manipulation}
+.color-field input:focus{outline:2px solid #aaa;outline-offset:3px}
+.setup-error{min-height:18px;margin:0 0 16px;color:#ff8585;font-size:12px;line-height:1.5}
+.setup-error[hidden]{display:none}
+.setup-card button{width:100%;height:48px;border:1px solid #fff;border-radius:0;background:#fff;color:#000;font:700 12px/1 Arial,Helvetica,sans-serif;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;touch-action:manipulation}
+.setup-card button:disabled{opacity:.4;cursor:not-allowed}
+.setup-card button:focus-visible{outline:2px solid #aaa;outline-offset:4px}
 #a11y{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 </style>
 </head>
 <body>
+<section id="setup" aria-labelledby="setup-title">
+  <form id="setup-form" class="setup-card" novalidate>
+    <p class="setup-eyebrow">NOTAN CHESS</p>
+    <h1 id="setup-title">Choose your colors</h1>
+    <p class="setup-copy">Set the colors used by each side's pieces before starting the game.</p>
+    <div class="color-field">
+      <label for="white-color">White pieces</label>
+      <div class="color-entry">
+        <span id="white-preview" class="color-swatch" aria-hidden="true"></span>
+        <input id="white-color" name="white-color" type="text" value="#FFFFFF" maxlength="7" placeholder="#RRGGBB" autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text">
+      </div>
+    </div>
+    <div class="color-field">
+      <label for="black-color">Black pieces</label>
+      <div class="color-entry">
+        <span id="black-preview" class="color-swatch" aria-hidden="true"></span>
+        <input id="black-color" name="black-color" type="text" value="#000000" maxlength="7" placeholder="#RRGGBB" autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text">
+      </div>
+    </div>
+    <p id="setup-error" class="setup-error" aria-live="polite" hidden>Enter a valid six-digit hex code, such as #12A4C8.</p>
+    <button id="start-game" type="submit">Start game</button>
+  </form>
+</section>
 <canvas id="game" tabindex="0" aria-label="Notan Chess. Select a piece, then select a highlighted destination."></canvas>
 <div id="a11y" aria-live="polite">Notan Chess. White to move.</div>
 <script>
@@ -23,6 +64,28 @@ body{position:fixed;inset:0}
 const canvas=document.getElementById('game');
 const ctx=canvas.getContext('2d',{alpha:false});
 const a11y=document.getElementById('a11y');
+const setup=document.getElementById('setup');
+const setupForm=document.getElementById('setup-form');
+const whiteInput=document.getElementById('white-color');
+const blackInput=document.getElementById('black-color');
+const whitePreview=document.getElementById('white-preview');
+const blackPreview=document.getElementById('black-preview');
+const setupError=document.getElementById('setup-error');
+const startButton=document.getElementById('start-game');
+let pieceColors={white:'#FFFFFF',black:'#000000'};
+function normalizeHex(value){
+  const match=value.trim().match(/^#?([0-9a-f]{6})$/i);
+  return match?'#'+match[1].toUpperCase():null;
+}
+function updateSetup(){
+  const white=normalizeHex(whiteInput.value),black=normalizeHex(blackInput.value);
+  whitePreview.style.backgroundColor=white||'transparent';
+  blackPreview.style.backgroundColor=black||'transparent';
+  const validColors=!!white&&!!black;
+  setupError.hidden=validColors;
+  startButton.disabled=!validColors;
+  return{white,black};
+}
 const FILES='abcdefgh',TAU=Math.PI*2;
 const DIR={n:[-33,-31,-18,-14,14,18,31,33],b:[-17,-15,15,17],r:[-16,-1,1,16],k:[-17,-16,-15,-1,1,15,16,17]};
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -39,10 +102,7 @@ function initialState(){
   const board=Array(128).fill('.');
   const rows=['rnbqkbnr','pppppppp','........','........','........','........','PPPPPPPP','RNBQKBNR'];
   rows.forEach((row,y)=>[...row].forEach((piece,x)=>board[y*16+x]=piece));
-  const squareColors=Array(128).fill(0);
-  for(let rank=0;rank<8;rank++)for(let file=0;file<8;file++)
-    squareColors[rank*16+file]=rank<4?1:-1;
-  return{board,squareColors,turn:1,castle:15,ep:-1,half:0,full:1};
+  return{board,turn:1,castle:15,ep:-1,half:0,full:1};
 }
 function attacked(s,target,by){
   for(let from=0;from<128;from++){
@@ -68,22 +128,17 @@ function inCheck(s,color=s.turn){
   return king>=0&&attacked(s,king,-color);
 }
 function applyMove(s,m){
-  const board=s.board.slice(),squareColors=s.squareColors.slice();
+  const board=s.board.slice();
   const moving=board[m.from],captured=board[m.to];
   let castle=s.castle;
-  const flipLandingSquare=(square,color)=>{
-    if(squareColors[square]===color)squareColors[square]=-color;
-  };
   board[m.from]='.';
   board[m.to]=m.promo?(s.turn===1?m.promo.toUpperCase():m.promo):moving;
-  flipLandingSquare(m.to,s.turn);
   if(m.flag==='ep')board[m.to+16*s.turn]='.';
   if(m.flag==='castle'){
     const rookFrom=m.to>m.from?m.from+3:m.from-4;
     const rookTo=m.to>m.from?m.from+1:m.from-1;
     const rook=board[rookFrom];
     board[rookTo]=rook;board[rookFrom]='.';
-    flipLandingSquare(rookTo,side(rook));
   }
   if(moving==='K')castle&=~3;
   if(moving==='k')castle&=~12;
@@ -91,7 +146,7 @@ function applyMove(s,m){
   if(kind(moving)==='r')castle&=~(rookRights[m.from]||0);
   if(kind(captured)==='r')castle&=~(rookRights[m.to]||0);
   return{
-    board,squareColors,turn:-s.turn,castle,
+    board,turn:-s.turn,castle,
     ep:kind(moving)==='p'&&Math.abs(m.to-m.from)===32?(m.from+m.to)/2:-1,
     half:kind(moving)==='p'||captured!=='.'||m.flag==='ep'?0:s.half+1,
     full:s.full+(s.turn===-1?1:0)
@@ -239,16 +294,25 @@ function nowStatus(){if(!statusCache||statusCacheLength!==states.length||statusC
 function squareCenter(i){return{x:layout.x+(i&7)*layout.cell+layout.cell/2,y:layout.y+(i>>4)*layout.cell+layout.cell/2}}
 function squareRect(i){return{x:layout.x+(i&7)*layout.cell,y:layout.y+(i>>4)*layout.cell,w:layout.cell,h:layout.cell}}
 function drawBoard(){
-  // The background is a single horizontal split through the screen center.
+  // The board is white, with a fixed pattern of inset black eight-point cells.
+  // Tile geometry uses the same 320-unit grid and cell scale as the piece paths.
   ctx.fillStyle='#fff';ctx.fillRect(0,0,width,height);
-  ctx.fillStyle='#000';ctx.fillRect(0,height/2,width,height-height/2);
-  // The board itself has no grid or outlines. Each square keeps its own
-  // color after a piece changes it, including after that piece moves away.
-  const c=layout.cell,x=layout.x,y=layout.y,colors=current().squareColors;
+  const c=layout.cell,x=layout.x,y=layout.y,unit=c/320;
+  const inset=40*unit,bulge=10*unit;
   for(let rank=0;rank<8;rank++)for(let file=0;file<8;file++){
-    const color=colors[rank*16+file]===1?'#fff':'#000';
-    ctx.fillStyle=color;
-    ctx.fillRect(x+file*c,y+rank*c,c,c);
+    const left=x+file*c+inset,right=x+(file+1)*c-inset;
+    const top=y+rank*c+inset,bottom=y+(rank+1)*c-inset;
+    const middleX=(left+right)/2,middleY=(top+bottom)/2;
+    polygon([
+      {x:left,y:top},
+      {x:middleX,y:top-bulge},
+      {x:right,y:top},
+      {x:right+bulge,y:middleY},
+      {x:right,y:bottom},
+      {x:middleX,y:bottom+bulge},
+      {x:left,y:bottom},
+      {x:left-bulge,y:middleY}
+    ],'#000');
   }
 }
 function polygon(points,fill,stroke=null,lineWidth=1){
@@ -350,7 +414,7 @@ function drawPolygonPiece(piece,square,points,scale=1,alpha=1,flipY=1){
   const def=PIECES[kind(piece)];if(!def)return;
   scale*=.9025;
   const center=squareCenter(square),unit=layout.cell/320*scale;
-  const fill=side(piece)===1?'#fff':'#000';
+  const fill=side(piece)===1?pieceColors.white:pieceColors.black;
   ctx.save();ctx.globalAlpha=alpha;ctx.translate(center.x,center.y);
   // Flip across the horizontal x-axis: top and bottom exchange places,
   // while left and right stay unchanged for the opposing perspective.
@@ -370,7 +434,7 @@ function drawPieceAt(piece,x,y,scale=1,rotation=0,alpha=1){
   const def=PIECES[kind(piece)];if(!def)return;
   scale*=.9025;
   const unit=layout.cell/320*scale,baseline=y+layout.cell*.36;
-  const fill=side(piece)===1?'#fff':'#000';
+  const fill=side(piece)===1?pieceColors.white:pieceColors.black;
   ctx.save();ctx.globalAlpha=alpha;ctx.translate(x,baseline);ctx.translate(-def.cx*unit,-313.5*unit);ctx.scale(unit,unit);
   ctx.beginPath();ctx.moveTo(def.points[0].x,def.points[0].y);
   for(let i=1;i<def.points.length;i++)ctx.lineTo(def.points[i].x,def.points[i].y);
@@ -437,7 +501,7 @@ function drawZoomControls(){
   ctx.restore();
 }
 function render(time){
-  ctx.setTransform(dpr,0,0,dpr,0,0);ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';ctx.fillStyle='#000';ctx.fillRect(0,0,width,height);
+  ctx.setTransform(dpr,0,0,dpr,0,0);ctx.globalAlpha=1;ctx.globalCompositeOperation='source-over';ctx.fillStyle='#fff';ctx.fillRect(0,0,width,height);
   drawBoard();drawPieces(time);drawInvertingMarkers();drawZoomControls();
   if(promotion)drawPromotion();
 }
@@ -517,9 +581,30 @@ function keydown(e){
 }
 function frame(time){render(time);requestAnimationFrame(frame);}
 canvas.addEventListener('pointerdown',pointer,{passive:false});
-window.addEventListener('resize',resize);
-window.addEventListener('contextmenu',e=>e.preventDefault());window.addEventListener('selectstart',e=>e.preventDefault());
-resize();a11y.textContent=gameStatus(current(),states).text;requestAnimationFrame(frame);
+setupForm.addEventListener('submit',e=>{
+  e.preventDefault();
+  const colors=updateSetup();
+  if(!colors.white||!colors.black)return;
+  pieceColors=colors;
+  setup.hidden=true;
+  document.body.classList.add('playing');
+  resize();
+  a11y.textContent=gameStatus(current(),states).text;
+  canvas.focus({preventScroll:true});
+  requestAnimationFrame(frame);
+});
+for(const input of [whiteInput,blackInput]){
+  input.addEventListener('input',updateSetup);
+  input.addEventListener('blur',()=>{
+    const normalized=normalizeHex(input.value);
+    if(normalized)input.value=normalized;
+    updateSetup();
+  });
+}
+window.addEventListener('resize',()=>{if(document.body.classList.contains('playing'))resize();});
+window.addEventListener('contextmenu',e=>{if(!e.target.closest('#setup'))e.preventDefault();});
+window.addEventListener('selectstart',e=>{if(!e.target.closest('#setup'))e.preventDefault();});
+updateSetup();
 })();
 </script>
 </body>
