@@ -276,16 +276,18 @@ function appendPolygon(points){
 }
 function drawTurnRing(square,scale){
   if(scale<=.001)return;
-  // The outer polygon stays fixed to the cell. The inner polygon alone
-  // contracts, exposing a solid black frame around its white center.
+  // One connected polygon: its outer vertices stay fixed while the
+  // reversed inner vertices expand from the center to create the opening.
   const outer=cellPolygon(square,1);
-  const innerScale=lerp(1,.76,clamp(scale,0,1));
+  const innerScale=lerp(0,.76,clamp(scale,0,1));
   const inner=cellPolygon(square,innerScale);
+  const ringVertices=[...outer,...inner.slice().reverse()];
   ctx.save();
   ctx.globalCompositeOperation='source-over';
   ctx.fillStyle='#000';
-  ctx.beginPath();appendPolygon(outer);
-  ctx.fill();
+  ctx.beginPath();appendPolygon(ringVertices);
+  ctx.fill('evenodd');
+  // The white interior is the opening of the same polygonal frame.
   ctx.fillStyle='#fff';
   ctx.beginPath();appendPolygon(inner);
   ctx.fill();
