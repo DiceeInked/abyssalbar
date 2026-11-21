@@ -412,7 +412,7 @@ function expandedPolygon(points,distance){
 }
 function drawPolygonPiece(piece,square,points,scale=1,alpha=1,flipY=1){
   const def=PIECES[kind(piece)];if(!def)return;
-  scale*=.87;
+  scale*=.8375;
   const center=squareCenter(square),unit=layout.cell/320*scale;
   const fill=side(piece)===1?pieceColors.white:pieceColors.black;
   ctx.save();ctx.globalAlpha=alpha;ctx.translate(center.x,center.y);
@@ -432,7 +432,7 @@ function drawPiece(piece,square,scale=1,alpha=1,flipY=1){
 }
 function drawPieceAt(piece,x,y,scale=1,rotation=0,alpha=1){
   const def=PIECES[kind(piece)];if(!def)return;
-  scale*=.87;
+  scale*=.8375;
   const unit=layout.cell/320*scale,baseline=y+layout.cell*.36;
   const fill=side(piece)===1?pieceColors.white:pieceColors.black;
   ctx.save();ctx.globalAlpha=alpha;ctx.translate(x,baseline);ctx.translate(-def.cx*unit,-313.5*unit);ctx.scale(unit,unit);
