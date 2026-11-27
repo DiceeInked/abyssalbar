@@ -22,9 +22,8 @@ body.playing #game{display:block}
 .color-field{margin:0 0 22px}
 .color-field label{display:block;margin-bottom:9px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
 .color-entry{display:flex;align-items:center;gap:10px}
-.color-swatch{width:44px;height:44px;flex:0 0 44px;border:1px solid #fff;background:#fff}
-.color-field input{width:100%;min-width:0;height:44px;padding:0 12px;border:1px solid #fff;border-radius:0;background:#fff;color:#000;font:600 16px/1 Arial,Helvetica,sans-serif;letter-spacing:.04em;user-select:text;-webkit-user-select:text;touch-action:manipulation}
-.color-field input:focus{outline:2px solid #aaa;outline-offset:3px}
+.color-field input[type="color"]{display:block;width:100%;height:48px;padding:4px;border:1px solid #fff;border-radius:0;background:#000;cursor:pointer;touch-action:manipulation}
+.color-field input[type="color"]:focus{outline:2px solid #aaa;outline-offset:3px}
 .setup-error{min-height:18px;margin:0 0 16px;color:#ff8585;font-size:12px;line-height:1.5}
 .setup-error[hidden]{display:none}
 .setup-toggle{display:flex;align-items:center;justify-content:space-between;gap:18px;margin:2px 0 24px;cursor:pointer}
@@ -51,15 +50,13 @@ body.playing #game{display:block}
     <div class="color-field">
       <label for="white-color">White pieces</label>
       <div class="color-entry">
-        <span id="white-preview" class="color-swatch" aria-hidden="true"></span>
-        <input id="white-color" name="white-color" type="text" value="#FFFFFF" maxlength="7" placeholder="#RRGGBB" autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text">
+        <input id="white-color" name="white-color" type="color" value="#FF0066" aria-label="Choose white pieces color">
       </div>
     </div>
     <div class="color-field">
       <label for="black-color">Black pieces</label>
       <div class="color-entry">
-        <span id="black-preview" class="color-swatch" aria-hidden="true"></span>
-        <input id="black-color" name="black-color" type="text" value="#000000" maxlength="7" placeholder="#RRGGBB" autocomplete="off" autocapitalize="characters" spellcheck="false" inputmode="text">
+        <input id="black-color" name="black-color" type="color" value="#00FFC8" aria-label="Choose black pieces color">
       </div>
     </div>
     <label class="setup-toggle" for="brain-mode">
@@ -69,7 +66,6 @@ body.playing #game{display:block}
       </span>
       <input id="brain-mode" name="brain-mode" type="checkbox" aria-describedby="brain-mode-description">
     </label>
-    <p id="setup-error" class="setup-error" aria-live="polite" hidden>Enter a valid six-digit hex code, such as #12A4C8.</p>
     <button id="start-game" type="submit">Start game</button>
   </form>
 </section>
@@ -84,25 +80,12 @@ const setup=document.getElementById('setup');
 const setupForm=document.getElementById('setup-form');
 const whiteInput=document.getElementById('white-color');
 const blackInput=document.getElementById('black-color');
-const whitePreview=document.getElementById('white-preview');
-const blackPreview=document.getElementById('black-preview');
-const setupError=document.getElementById('setup-error');
 const startButton=document.getElementById('start-game');
 const brainModeInput=document.getElementById('brain-mode');
-let pieceColors={white:'#FFFFFF',black:'#000000'};
+let pieceColors={white:'#FF0066',black:'#00FFC8'};
 let brainMode=false;
-function normalizeHex(value){
-  const match=value.trim().match(/^#?([0-9a-f]{6})$/i);
-  return match?'#'+match[1].toUpperCase():null;
-}
 function updateSetup(){
-  const white=normalizeHex(whiteInput.value),black=normalizeHex(blackInput.value);
-  whitePreview.style.backgroundColor=white||'transparent';
-  blackPreview.style.backgroundColor=black||'transparent';
-  const validColors=!!white&&!!black;
-  setupError.hidden=validColors;
-  startButton.disabled=!validColors;
-  return{white,black};
+  return{white:whiteInput.value.toUpperCase(),black:blackInput.value.toUpperCase()};
 }
 const FILES='abcdefgh',TAU=Math.PI*2;
 const DIR={n:[-33,-31,-18,-14,14,18,31,33],b:[-17,-15,15,17],r:[-16,-1,1,16],k:[-17,-16,-15,-1,1,15,16,17]};
@@ -612,14 +595,6 @@ setupForm.addEventListener('submit',e=>{
   canvas.focus({preventScroll:true});
   requestAnimationFrame(frame);
 });
-for(const input of [whiteInput,blackInput]){
-  input.addEventListener('input',updateSetup);
-  input.addEventListener('blur',()=>{
-    const normalized=normalizeHex(input.value);
-    if(normalized)input.value=normalized;
-    updateSetup();
-  });
-}
 window.addEventListener('resize',()=>{if(document.body.classList.contains('playing'))resize();});
 window.addEventListener('contextmenu',e=>{if(!e.target.closest('#setup'))e.preventDefault();});
 window.addEventListener('selectstart',e=>{if(!e.target.closest('#setup'))e.preventDefault();});
